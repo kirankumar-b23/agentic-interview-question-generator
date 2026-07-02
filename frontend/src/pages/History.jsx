@@ -34,16 +34,25 @@ function UsageCell({ usage }) {
   )
 }
 
+function fmtTokens(n) {
+  if (!n) return '0'
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`
+  return String(n)
+}
+
 export default function History() {
   const navigate = useNavigate()
   const [runs, setRuns] = useState([])
   const [loading, setLoading] = useState(true)
+  const [usage, setUsage] = useState(null)
 
   useEffect(() => {
     api.getHistory()
       .then(d => setRuns(d.runs || []))
       .catch(() => {})
       .finally(() => setLoading(false))
+    api.getUsage().then(setUsage).catch(() => {})
   }, [])
 
   const approvedCount = runs.filter(r => r.approved).length
@@ -62,6 +71,21 @@ export default function History() {
       </header>
 
       <div className="page-content">
+        {/* Overall usage summary */}
+        {usage?.totals && (
+          <div className="usage-summary">
+            <div className="usage-tile"><span className="usage-num">{usage.totals.runs}</span><span className="usage-lbl">Runs</span></div>
+            <div className="usage-tile"><span className="usage-num">{usage.totals.llm_calls}</span><span className="usage-lbl">LLM calls</span></div>
+            <div className="usage-tile"><span className="usage-num">{fmtTokens(usage.totals.tokens)}</span><span className="usage-lbl">Tokens</span></div>
+            <div className="usage-tile"><span className="usage-num">{usage.totals.tavily_calls}</span><span className="usage-lbl">Tavily searches</span></div>
+            <div className="usage-tile"><span className="usage-num">${usage.totals.est_cost.toFixed(2)}</span><span className="usage-lbl">Est. cost</span></div>
+            <div className="usage-tile usage-tile-or">
+              <span className="usage-num">{usage.openrouter?.remaining != null ? `$${usage.openrouter.remaining.toFixed(2)}` : '—'}</span>
+              <span className="usage-lbl">OpenRouter left{usage.openrouter?.used != null ? ` · $${usage.openrouter.used.toFixed(2)} used` : ''}</span>
+            </div>
+          </div>
+        )}
+
         <section className="card">
           {loading ? (
             <p className="muted">Loading history…</p>
@@ -80,6 +104,7 @@ export default function History() {
                     <th style={{ textAlign: 'right' }}>Questions</th>
                     <th>Score</th>
                     <th>API Usage</th>
+                    <th style={{ textAlign: 'right' }}>Cost</th>
                     <th>Status</th>
                     <th></th>
                   </tr>
@@ -97,6 +122,9 @@ export default function History() {
                       <td className="hist-count">{run.question_count ?? '—'}</td>
                       <td><ScoreBadge score={run.composite_score} /></td>
                       <td><UsageCell usage={run.api_usage} /></td>
+                      <td className="hist-count" style={{ fontWeight: 600 }}>
+                        {run.cost != null ? `$${run.cost.toFixed(4)}` : '—'}
+                      </td>
                       <td>
                         <span className={`hist-status ${run.approved ? 'hist-approved' : 'hist-pending'}`}>
                           {run.approved ? 'Approved' : 'In Memory'}

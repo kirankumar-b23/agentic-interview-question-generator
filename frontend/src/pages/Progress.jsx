@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAgentRun } from '../hooks/useAgentRun.js'
+import { api } from '../lib/api.js'
 import PipelineStepper from '../components/PipelineStepper.jsx'
 
 const TOOL_ICONS = {
@@ -48,6 +49,8 @@ export default function Progress() {
   const { runId } = useParams()
   const navigate = useNavigate()
   const { phaseStatus, toolEvents, events, status, questionCount, errorDetail, apiUsage } = useAgentRun(runId)
+  const [bankCount, setBankCount] = useState(null)
+  useEffect(() => { api.getMeta().then(m => setBankCount(m.bank_count)).catch(() => {}) }, [])
 
   const isDone = status === 'done'
   const isError = status === 'error'
@@ -93,7 +96,7 @@ export default function Progress() {
         <div className="pd-header">
           <span className="pd-title">Pipeline</span>
           <span className="pd-sub">
-            1,509 questions indexed
+            {bankCount != null ? bankCount.toLocaleString() : '—'} questions indexed
             {apiUsage && ` · ${apiUsage.llm_calls} LLM calls · ${((apiUsage.prompt_tokens + apiUsage.completion_tokens) / 1000).toFixed(1)}K tokens`}
             {apiUsage?.tavily_calls > 0 && ` · ${apiUsage.tavily_calls} Tavily searches`}
           </span>

@@ -38,6 +38,9 @@ class GenerationConfig(BaseModel):
     max_questions: int = 15
     min_questions: int = 5
     model: str | None = None          # runtime-selected LLM (OpenRouter id); None → configured default
+    preview: bool = False             # TESTING: pause after Validation to inspect picked questions
+    category: str = "GEN_AI"          # course category → drives sheet branding (Tags/framework)
+    course_type: str | None = None    # theory_heavy | code_heavy | mixed (from the selected course)
     difficulty_bias: dict[str, float] = Field(
         default_factory=lambda: {"easy": 0.3, "medium": 0.5, "hard": 0.2}
     )

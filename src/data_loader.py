@@ -179,6 +179,14 @@ class DataStore:
         canonical = self._rm_norm_index.get(_normalize_session_key(session_name))
         if canonical:
             return self.reading_materials[canonical]
+        # Fall back to a user-added (custom course) session's reading material.
+        try:
+            from src import memory
+            custom = memory.get_custom_session(session_name)
+            if custom and custom.get("reading_material"):
+                return custom["reading_material"]
+        except Exception:
+            pass
         return None
 
     def get_session_info(self, session_name: str) -> dict | None:
@@ -237,6 +245,15 @@ def get_topic_for_session(session_name: str) -> str | None:
         topic = _topic_index.get(part.strip().lower())
         if topic:
             return topic
+    # Fall back to a user-added (custom course) session's topic.
+    try:
+        from src import memory
+        for part in session_name.split(" + "):
+            custom = memory.get_custom_session(part.strip())
+            if custom and custom.get("topic"):
+                return custom["topic"]
+    except Exception:
+        pass
     return None
 
 

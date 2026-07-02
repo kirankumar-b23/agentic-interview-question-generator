@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Questor · Architecture</title>
+<style>
+  :root{
+    --bg:#090c12; --surface:#11151f; --surface-2:#161c28; --border:#232c3b; --border-2:#303c50;
+    --text:#e9eef6; --text-2:#a4b0c4; --text-3:#677488;
+    --accent:#4d8df6; --accent-2:#46d6cf; --grad:linear-gradient(135deg,#4d8df6,#46d6cf);
+    --c1:#4d8df6; --c2:#43c98a; --c3:#e3b341; --c4:#b98af5; --gate:#f2705b; --review:#46d6cf; --sheets:#43c98a;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --r:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:var(--sans); color:var(--text); line-height:1.6;
+    background:
+      radial-gradient(1100px 560px at 12% -8%,rgba(77,141,246,.10),transparent 58%),
+      radial-gradient(900px 520px at 100% 0%,rgba(70,214,207,.06),transparent 55%),
+      var(--bg);
+    background-attachment:fixed; padding:2.5rem 1.5rem 4rem;
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+  .eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;color:var(--text-3)}
+  h1{font-size:2.4rem;font-weight:800;letter-spacing:-.03em;margin:.25rem 0 .1rem}
+  h1 .q{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .tagline{color:var(--text-2);max-width:60ch;margin-bottom:2.2rem}
+  h2{font-size:.72rem;font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--text-3);margin:2.4rem 0 1rem;display:flex;align-items:center;gap:.6rem}
+  h2::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  /* pipeline flow */
+  .flow{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:.5rem}
+  .node{position:relative;flex:1 0 132px;min-width:132px;background:var(--surface);border:1px solid var(--border);
+        border-top:3px solid var(--tc,var(--border-2));border-radius:var(--r);padding:.85rem .8rem;box-shadow:0 1px 2px rgba(0,0,0,.35)}
+  .node .n{font-family:var(--mono);font-size:.58rem;letter-spacing:.12em;color:var(--text-3)}
+  .node .t{font-weight:700;font-size:.9rem;margin:.15rem 0 .35rem;display:flex;align-items:center;gap:.4rem}
+  .node .d{font-size:.72rem;color:var(--text-2);line-height:1.45}
+  .node .chips{margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.25rem}
+  .chip{font-family:var(--mono);font-size:.56rem;padding:.1rem .38rem;border-radius:5px;border:1px solid var(--border-2);color:var(--text-2);white-space:nowrap}
+  .arrow{display:flex;align-items:center;color:var(--border-2);font-size:1.3rem;padding:0 .25rem;flex:0 0 auto}
+  .loop-note{margin-top:.7rem;font-size:.74rem;color:var(--gate);font-family:var(--mono)}
+  .loop-note b{color:var(--text-2)}
+
+  /* panels */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.15rem 1.2rem;box-shadow:0 1px 2px rgba(0,0,0,.35)}
+  .card h3{font-size:.95rem;font-weight:700;margin-bottom:.3rem;display:flex;align-items:center;gap:.5rem}
+  .card .sub{font-size:.72rem;color:var(--text-3);margin-bottom:.8rem}
+  .row{display:flex;gap:.7rem;padding:.55rem 0;border-top:1px solid var(--border)}
+  .row:first-of-type{border-top:none}
+  .row .k{font-family:var(--mono);font-size:.62rem;color:#06121f;background:var(--kc,var(--accent));border-radius:5px;padding:.15rem .45rem;height:fit-content;font-weight:700;white-space:nowrap}
+  .row .v{font-size:.8rem;color:var(--text-2)}
+  .row .v b{color:var(--text)}
+  ul.plain{list-style:none;font-size:.82rem;color:var(--text-2)}
+  ul.plain li{padding:.32rem 0;border-top:1px solid var(--border);display:flex;gap:.55rem}
+  ul.plain li:first-child{border-top:none}
+  ul.plain li::before{content:'▸';color:var(--accent)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:.66rem;color:var(--accent-2);border:1px solid var(--border-2);border-radius:999px;padding:.15rem .6rem;margin:.2rem .3rem 0 0}
+  .flowline{font-family:var(--mono);font-size:.78rem;color:var(--text-2);line-height:2;overflow-x:auto;white-space:nowrap}
+  .flowline b{color:var(--accent-2)}
+  footer{margin-top:3rem;color:var(--text-3);font-size:.74rem;font-family:var(--mono);border-top:1px solid var(--border);padding-top:1rem}
+  .legend{display:flex;flex-wrap:wrap;gap:.9rem;margin-top:1rem}
+  .legend span{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--text-2)}
+  .dot{width:10px;height:10px;border-radius:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Agentic interview-question workflow</div>
+  <h1><span class="q">Questor</span> 🎯</h1>
+  <p class="tagline">Pick a course topic; four cooperating agents read the session material, quest for
+  real, company-attributed interview questions, validate them, and hand a review-ready set to a human
+  for one-click export into the NxtMock portal.</p>
+
+  <h2>The pipeline</h2>
+  <div class="flow">
+    <div class="node" style="--tc:var(--text-3)">
+      <div class="n">INPUT</div>
+      <div class="t">🎛️ Select</div>
+      <div class="d">Topic → its sessions, model, question count.</div>
+      <div class="chips"><span class="chip">topic</span><span class="chip">model</span><span class="chip">count</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node" style="--tc:var(--c1)">
+      <div class="n">AGENT 01</div>
+      <div class="t">🔍 Understanding</div>
+      <div class="d">Reads each session's reading material → learning outcomes + Knowledge Points.</div>
+      <div class="chips"><span class="chip">understand_session</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node" style="--tc:var(--c2)">
+      <div class="n">AGENT 02</div>
+      <div class="t">📚 Retrieval</div>
+      <div class="d">Fetches <b>real</b> questions: bank → web → GitHub.</div>
+      <div class="chips"><span class="chip">bank</span><span class="chip">tavily</span><span class="chip">github</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node" style="--tc:var(--c3)">
+      <div class="n">AGENT 03</div>
+      <div class="t">🎯 Validation</div>
+      <div class="d">Removes off-topic questions & near-duplicates (lenient).</div>
+      <div class="chips"><span class="chip">validate_relevance</span><span class="chip">deduplicate</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node" style="--tc:var(--c4)">
+      <div class="n">AGENT 04</div>
+      <div class="t">⚖️ Evaluation</div>
+      <div class="d">Difficulty/coverage checks, coding Qs if code-heavy, then submit.</div>
+      <div class="chips"><span class="chip">balance</span><span class="chip">coverage</span><span class="chip">submit</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node" style="--tc:var(--gate)">
+      <div class="n">GATE</div>
+      <div class="t">🔬 Quality</div>
+      <div class="d">LLM critique of the final set — up to 2 revision rounds.</div>
+      <div class="chips"><span class="chip">critique</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node" style="--tc:var(--review)">
+      <div class="n">HUMAN</div>
+      <div class="t">👤 Review</div>
+      <div class="d">Accept / reject per question in the React UI.</div>
+      <div class="chips"><span class="chip">accept</span><span class="chip">reject</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node" style="--tc:var(--sheets)">
+      <div class="n">EXPORT</div>
+      <div class="t">📄 Sheets</div>
+      <div class="d">NxtMock-formatted Google Sheet.</div>
+      <div class="chips"><span class="chip">gspread</span></div>
+    </div>
+  </div>
+  <div class="loop-note">↺ <b>Reject &amp; Regenerate</b> loops back to the pipeline with the same topic; rejection reasons distil into learned rules. LLM question <b>generation is disabled</b> — real questions only.</div>
+
+  <h2>Retrieval sources <span style="flex:0"></span></h2>
+  <div class="grid">
+    <div class="card">
+      <h3>📖 Question bank <span style="font-weight:400;color:var(--text-3);font-size:.7rem">priority 1</span></h3>
+      <div class="sub">Pre-indexed, verified company questions.</div>
+      <div class="row" style="--kc:var(--c2)"><span class="k">TF-IDF</span><span class="v"><b>~1,500 questions</b> (scikit-learn cosine similarity) over <code>interview_questions.json</code>. Real company attribution.</span></div>
+    </div>
+    <div class="card">
+      <h3>🌐 Tavily web <span style="font-weight:400;color:var(--text-3);font-size:.7rem">priority 2</span></h3>
+      <div class="sub">Real company-attributed questions from the open web.</div>
+      <div class="row" style="--kc:var(--accent)"><span class="k">API</span><span class="v">Search across <b>50+ allow-listed domains</b> — Glassdoor, AmbitionBox, Exponent, LeetCode… Company parsed from the URL; unknowns labelled <b>NIAT</b>.</span></div>
+    </div>
+    <div class="card">
+      <h3>🐙 GitHub repos <span style="font-weight:400;color:var(--text-3);font-size:.7rem">priority 3</span></h3>
+      <div class="sub">Curated interview-question repositories.</div>
+      <div class="row" style="--kc:var(--c4)"><span class="k">REST</span><span class="v">Structured technical questions from a configured repo list — supplements the bank + web.</span></div>
+    </div>
+  </div>
+
+  <h2>Knowledge &amp; data</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>🧠 Session understanding</h3>
+      <ul class="plain">
+        <li><b style="color:var(--text)">Per-session reading material</b> — <code>session_map.json</code>, exact-keyed to each session, drives accurate outcomes.</li>
+        <li><b style="color:var(--text)">Knowledge graph</b> — <code>knowledge_graph.json</code>: KPs, sessions, prerequisites (networkx).</li>
+        <li><b style="color:var(--text)">Course structure</b> — <code>course_structure.json</code>: topic → sessions; also labels runs by topic.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>💾 State &amp; persistence</h3>
+      <ul class="plain">
+        <li><b style="color:var(--text)">SQLite</b> — full runs persisted, so Review &amp; re-export survive restarts and show in History.</li>
+        <li><b style="color:var(--text)">Learned rules</b> — rejection feedback distilled to sharpen future validation.</li>
+        <li><b style="color:var(--text)">Runtime controls</b> — model + light/dark theme selectable in the UI; OpenRouter credits shown.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Request &amp; data flow</h2>
+  <div class="card">
+    <div class="flowline">
+      <b>React SPA</b> &nbsp;⇄&nbsp; <b>Flask JSON API</b> &nbsp;(/api/generate · /api/stream · /api/result · /api/approve)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;↓ background thread<br>
+      <b>AgentPipeline</b> &nbsp;→&nbsp; OpenRouter (LLM tool-use) &nbsp;·&nbsp; Tavily &nbsp;·&nbsp; GitHub &nbsp;·&nbsp; TF-IDF bank<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;↓ SSE progress&nbsp;&amp;&nbsp;persisted result<br>
+      <b>Review UI</b> &nbsp;→&nbsp; approve &nbsp;→&nbsp; <b>Google Sheets</b> (NxtMock)
+    </div>
+  </div>
+
+  <h2>Tech stack</h2>
+  <div class="card">
+    <span class="pill">Flask · SSE</span><span class="pill">React + Vite</span><span class="pill">OpenRouter (Anthropic / OpenAI)</span>
+    <span class="pill">scikit-learn TF-IDF</span><span class="pill">Tavily API</span><span class="pill">GitHub REST</span>
+    <span class="pill">networkx</span><span class="pill">Pydantic v2</span><span class="pill">SQLite</span><span class="pill">gspread · OAuth</span>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--c1)"></span>Understanding</span>
+    <span><span class="dot" style="background:var(--c2)"></span>Retrieval</span>
+    <span><span class="dot" style="background:var(--c3)"></span>Validation</span>
+    <span><span class="dot" style="background:var(--c4)"></span>Evaluation</span>
+    <span><span class="dot" style="background:var(--gate)"></span>Quality gate</span>
+    <span><span class="dot" style="background:var(--review)"></span>Human review</span>
+    <span><span class="dot" style="background:var(--sheets)"></span>Export</span>
+  </div>
+
+  <footer>Questor — agentic interview-question generation · exports to the NxtMock portal · real questions only.</footer>
+</div>
+</body>
+</html>

@@ -68,9 +68,15 @@ def write_to_sheets(
     report: QualityReport,
     session_name: str,
     run_id: str,
+    category: str = "GEN_AI",
 ) -> str:
-    """Write CuratedOutput to a new Google Sheet. Returns the Sheet URL."""
+    """Write CuratedOutput to a new Google Sheet. Returns the Sheet URL.
+
+    `category` (from the course, e.g. GEN_AI / FULL_STACK) drives the topic,
+    framework and Tags branding in the portal export.
+    """
     client = _get_gspread_client()
+    cat = (category or "GEN_AI").strip().upper().replace(" ", "_")
 
     # Per-run IDs and derived values — include coding-question IDs in the count
     org_id = str(uuid.uuid4())
@@ -96,9 +102,9 @@ def write_to_sheets(
     qd_rows = [qd_headers]
     for q in output.question_details:
         qd_rows.append([
-            q.question_id, q.category, strip_question_prefix(q.content), "GEN_AI",
+            q.question_id, q.category, strip_question_prefix(q.content), cat,
             q.sub_topic or "", (q.difficulty or "").upper(),
-            q.language or "", "GEN_AI", q.tool or "",
+            q.language or "", cat, q.tool or "",
             q.attribution,
         ])
 
@@ -125,7 +131,7 @@ def write_to_sheets(
         ["video_enabled", True],
         ["is_proctoring_enabled", True],
         ["category", "TESTING_CATEGORY"],
-        ["Tags", "NIAT_GEN_AI"],
+        ["Tags", f"NIAT_{cat}"],
         ["visibility", "should_show_report"],
         [None, True],
         ["slot_start_datetime", None],
@@ -138,7 +144,7 @@ def write_to_sheets(
         # SELF_INTRO row (keep as-is)
         ["SELF_INTRO", 1, None, "SELF_INTRO"],
         # GEN_AI row (replaces JAVA; question_ids populated from QuestionDetails)
-        ["GEN_AI", q_count, "GEN_AI", None, None, None, None, None, None, None, question_ids_str],
+        [cat, q_count, cat, None, None, None, None, None, None, None, question_ids_str],
     ]
     ws_imc.update(range_name="A1", values=imc_rows)
 
@@ -169,8 +175,8 @@ def write_to_sheets(
         for q in output.coding_questions:
             cq_rows.append([
                 q.id, q.category, q.title, strip_question_prefix(q.content[:1000]), q.code_id or "",
-                "GEN_AI", q.sub_topic or "", (q.difficulty or "").upper(), q.language,
-                "GEN_AI", q.tool or "", q.attribution,
+                cat, q.sub_topic or "", (q.difficulty or "").upper(), q.language,
+                cat, q.tool or "", q.attribution,
             ])
         ws_cq.update(range_name="A1", values=cq_rows)
 

@@ -403,7 +403,12 @@ Foundational questions about the session's actual core technology should always 
     to_remove = to_remove[:max_removable]
 
     for q_id, content, reason in to_remove:
-        state.questions.pop(q_id, None)
+        q = state.questions.pop(q_id, None)
+        if q is not None:
+            state.removed.append({
+                "content": q.content, "reason": reason or "Off-topic for this session",
+                "stage": "relevance", "difficulty": q.difficulty, "company": q.attribution,
+            })
 
     kept = len(state.questions)
     removed = len(to_remove)
@@ -440,7 +445,12 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
                 to_remove.add(j if pri_i <= pri_j else i)
 
     for idx in to_remove:
-        state.questions.pop(questions[idx].question_id, None)
+        q = state.questions.pop(questions[idx].question_id, None)
+        if q is not None:
+            state.removed.append({
+                "content": q.content, "reason": "Near-duplicate of another question",
+                "stage": "duplicate", "difficulty": q.difficulty, "company": q.attribution,
+            })
 
     within_run_removed = len(to_remove)
 
@@ -462,7 +472,12 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
                 cross_sim = cosine_similarity(curr_mat, bank_mat)
                 for i, row in enumerate(cross_sim):
                     if row.max() > DEDUP_THRESHOLD:
-                        state.questions.pop(current_qs[i].question_id, None)
+                        q = state.questions.pop(current_qs[i].question_id, None)
+                        if q is not None:
+                            state.removed.append({
+                                "content": q.content, "reason": "Duplicate of a previously approved question",
+                                "stage": "duplicate", "difficulty": q.difficulty, "company": q.attribution,
+                            })
                         cross_run_removed += 1
         except Exception:
             pass
@@ -710,7 +725,7 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
         q_id = str(uuid.uuid4())
         qd = QuestionDetail(
             question_id=q_id,
-            category="GEN_AI",
+            category=getattr(state.config, "category", "GEN_AI"),
             content=rec.question_text,
             topic=session_topic,
             difficulty="Medium",
@@ -737,11 +752,13 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
 
 
 def tool_remove_question(state: AgentState, question_id: str, reason: str = "") -> dict:
-    if question_id in state.questions:
-        state.questions.pop(question_id)
-        return {"removed": True, "remaining": len(state.questions) + len(state.coding_questions)}
-    if question_id in state.coding_questions:
-        state.coding_questions.pop(question_id)
+    q = state.questions.pop(question_id, None) or state.coding_questions.pop(question_id, None)
+    if q is not None:
+        state.removed.append({
+            "content": getattr(q, "content", getattr(q, "title", "")),
+            "reason": reason or "Removed at quality gate", "stage": "curation",
+            "difficulty": getattr(q, "difficulty", None), "company": getattr(q, "attribution", None),
+        })
         return {"removed": True, "remaining": len(state.questions) + len(state.coding_questions)}
     return {"removed": False, "error": f"Question {question_id} not found"}
 

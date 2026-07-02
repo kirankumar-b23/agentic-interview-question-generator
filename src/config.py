@@ -63,6 +63,32 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")   # optional; raises GitHub API rate limit from 60→5000/hr
 TAVILY_MAX_RESULTS = int(os.getenv("TAVILY_MAX_RESULTS", "10"))
 
+# Approximate USD price per 1M tokens (input/output) for cost ESTIMATES only.
+# Update as provider pricing changes — figures are representative, not billed amounts.
+MODEL_PRICING = {
+    "anthropic/claude-haiku-4-5":  {"in": 1.00, "out": 5.00},
+    "anthropic/claude-sonnet-4-6": {"in": 3.00, "out": 15.00},
+    "anthropic/claude-opus-4.1":   {"in": 15.00, "out": 75.00},
+    "openai/gpt-4o-mini":          {"in": 0.15, "out": 0.60},
+    "openai/gpt-4o":               {"in": 2.50, "out": 10.00},
+}
+
+
+def estimate_cost(usage: dict | None) -> float | None:
+    """Estimated USD cost for a run's token usage, using MODEL_PRICING.
+    Returns None if the model is unknown/unpriced (e.g. pre-tracking runs)."""
+    if not usage:
+        return None
+    price = MODEL_PRICING.get(usage.get("model") or "")
+    if not price:
+        return None
+    return round(
+        (usage.get("prompt_tokens", 0) / 1_000_000) * price["in"]
+        + (usage.get("completion_tokens", 0) / 1_000_000) * price["out"],
+        4,
+    )
+
+
 INTERVIEW_GITHUB_REPOS = [
     "llmgenai/LLMInterviewQuestions",
     "amitshekhariitbhu/ai-engineering-interview-questions",
