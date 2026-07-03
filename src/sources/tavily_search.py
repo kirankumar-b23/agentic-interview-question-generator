@@ -19,18 +19,19 @@ from urllib.parse import urlparse
 from src.sources.base import Record, domain, looks_like_question
 from src import config
 
-_MAX_OUTCOMES = 14
+_MAX_OUTCOMES = config.TAVILY_MAX_OUTCOMES
 _PER_RESULT = 8
-_MAX_RECORDS = 800
+_MAX_RECORDS = config.TAVILY_MAX_RECORDS
 _ATTRIBUTION_DOMAINS = ["glassdoor.com", "ambitionbox.com", "tryexponent.com", "datalemur.com",
                         "levels.fyi", "interviewquery.com", "prepfully.com", "igotanoffer.com",
-                        "teamblind.com", "leetcode.com"]
+                        "teamblind.com", "leetcode.com", "1point3acres.com"]
 _BROAD_DOMAINS = [
     "glassdoor.com", "ambitionbox.com", "tryexponent.com", "datalemur.com",
     "levels.fyi", "interviewquery.com", "prepfully.com", "igotanoffer.com",
-    "teamblind.com", "leetcode.com",
+    "teamblind.com", "leetcode.com", "1point3acres.com",
     "reddit.com", "stackoverflow.com", "github.com", "medium.com", "dev.to",
     "geeksforgeeks.org", "quora.com", "hackerrank.com",
+    "interviewbit.com", "workat.tech", "hackerearth.com", "freecodecamp.org", "careercup.com",
 ]
 
 
@@ -115,7 +116,9 @@ def _valid_company(name: Optional[str]) -> Optional[str]:
     tokens = [t for t in re.split(r"\s+", name.strip()) if t]
     if not tokens:
         return None
-    if all(t.lower().strip(".&-") in _NOT_COMPANY for t in tokens):
+    # Reject an all-generic candidate only for short names (≤2 tokens) — a longer
+    # name like "Cloud Nine Hospitals" gets the benefit of the doubt.
+    if len(tokens) <= 2 and all(t.lower().strip(".&-") in _NOT_COMPANY for t in tokens):
         return None
     return name
 _COMPANY_BEFORE_INTERVIEW = re.compile(
@@ -161,6 +164,16 @@ def _strip_trailing_company(text: str, company: Optional[str]) -> str:
     return text
 
 
+_STOPWORDS = {"a", "an", "the"}
+
+
+def _dedup_key(s: str) -> str:
+    """Normalized key for near-duplicate detection: lowercase, drop punctuation
+    and leading articles so 'Write a function.' == 'write the function'."""
+    tokens = [t for t in re.sub(r"[^\w\s]", "", s.lower()).split() if t not in _STOPWORDS]
+    return " ".join(tokens)
+
+
 def _extract_from_text(text: str) -> List[str]:
     out: List[str] = []
     segments: List[str] = []
@@ -168,17 +181,33 @@ def _extract_from_text(text: str) -> List[str]:
         line = _LEAD_MARKER.sub("", line).strip()
         if not line:
             continue
-        segments.append(line)
-        segments.extend(s.strip() for s in re.split(r"(?<=[.?!])\s+", line) if s.strip())
+        # Keep a whole line that is already a valid prompt intact (don't shred a
+        # multi-sentence "You have 1M users… Design the feed." into fragments);
+        # only sentence-split lines that aren't themselves a question.
+        if looks_like_question(_clean_seg(line)):
+            segments.append(line)
+        else:
+            segments.extend(s.strip() for s in re.split(r"(?<=[.?!])\s+", line) if s.strip())
     seen = set()
     for seg in segments:
         seg = _clean_seg(seg)
-        if looks_like_question(seg) and seg.lower() not in seen:
-            seen.add(seg.lower())
+        key = _dedup_key(seg)
+        if looks_like_question(seg) and key and key not in seen:
+            seen.add(key)
             out.append(seg)
             if len(out) >= _PER_RESULT:
                 break
     return out
+
+
+_TERMINAL_PATTERNS = ("usage limit", "exceeds your plan", "forbidden",
+                      "unauthorized", "invalid api key", "401", "403")
+
+
+def _is_terminal_error(errors: list) -> bool:
+    """Quota/auth errors won't resolve within a run — worth bailing immediately."""
+    joined = " ".join(errors).lower()
+    return any(p in joined for p in _TERMINAL_PATTERNS)
 
 
 def _summarize_tavily_error(errors: list) -> str:
@@ -226,8 +255,8 @@ def _records_from_results(results, allow: set, seen: set) -> List[Record]:
         )
         for cand in _extract_from_text(text):
             cand = _strip_trailing_company(cand, company)
-            key = " ".join(cand.lower().split())
-            if key in seen:
+            key = _dedup_key(cand)
+            if not key or key in seen:
                 continue
             seen.add(key)
             out.append(Record(question_text=cand, source_url=url, company=company,
@@ -267,8 +296,9 @@ class TavilyConnector:
             search_count += 1
             if len(records) >= _MAX_RECORDS:
                 break
-            # All searches erroring (e.g. quota exceeded) — stop early, don't burn calls
-            if errors and not records and search_count >= 2:
+            # Quota/auth errors are terminal for this run — bail immediately across
+            # all outcomes rather than burning calls that can't succeed.
+            if _is_terminal_error(errors):
                 break
         error = None
         if not records and errors:
@@ -281,5 +311,6 @@ def search_question(question: str) -> List[Record]:
     if not config.TAVILY_API_KEY:
         return []
     allow = set(config.INTERVIEW_SOURCE_ALLOWLIST or [])
-    results = _search(_client(), f'"{question}" interview asked at company')
+    results = _search(_client(), f'"{question}" interview asked at company',
+                      include_domains=_ATTRIBUTION_DOMAINS + _BROAD_DOMAINS)
     return _records_from_results(results, allow, set())

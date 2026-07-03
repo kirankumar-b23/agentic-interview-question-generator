@@ -62,6 +62,8 @@ MAX_TOOL_CALLS = int(os.getenv("MAX_TOOL_CALLS", "20"))
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")   # optional; raises GitHub API rate limit from 60→5000/hr
 TAVILY_MAX_RESULTS = int(os.getenv("TAVILY_MAX_RESULTS", "10"))
+TAVILY_MAX_OUTCOMES = int(os.getenv("TAVILY_MAX_OUTCOMES", "14"))
+TAVILY_MAX_RECORDS = int(os.getenv("TAVILY_MAX_RECORDS", "800"))
 
 # Approximate USD price per 1M tokens (input/output) for cost ESTIMATES only.
 # Update as provider pricing changes — figures are representative, not billed amounts.
@@ -121,4 +123,6 @@ INTERVIEW_SOURCE_ALLOWLIST = {
     "glassdoor.co.in", "careercup.com", "comparably.com", "fishbowlapp.com",
     "educative.io", "scaler.com", "levels.fyi", "ambitionbox.in",
     "tealhq.com", "interviewkickstart.com",
+    # High-signal additions (review): first-hand experiences + curated prep
+    "1point3acres.com", "workat.tech", "hackerearth.com", "hackerrank.com", "freecodecamp.org",
 }
