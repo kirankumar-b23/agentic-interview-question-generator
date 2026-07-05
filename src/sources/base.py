@@ -63,7 +63,9 @@ class Connector(Protocol):
 
 _Q_STARTS = ("what", "why", "how", "when", "where", "explain", "describe", "compare", "define",
              "implement", "write", "design", "difference between", "list ", "name ", "can you",
-             "walk me through", "tell me", "given ", "suppose")
+             "walk me through", "tell me", "given ", "suppose",
+             "build", "solve", "find", "return", "create", "derive", "sort", "reverse",
+             "prove", "outline")
 
 
 def looks_like_question(t: str) -> bool:

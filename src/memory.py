@@ -36,6 +36,31 @@ def init_db():
             created_at      TEXT DEFAULT (datetime('now'))
         );
 
+        CREATE TABLE IF NOT EXISTS run_results (
+            run_id       TEXT PRIMARY KEY,
+            payload_json TEXT NOT NULL,
+            created_at   TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS courses (
+            course_id    TEXT PRIMARY KEY,
+            name         TEXT NOT NULL,
+            category     TEXT NOT NULL,
+            course_type  TEXT DEFAULT 'mixed',
+            created_at   TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS course_sessions (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            course_id        TEXT NOT NULL,
+            topic            TEXT NOT NULL,
+            session_name     TEXT NOT NULL,
+            reading_material TEXT,
+            session_type     TEXT,
+            kps_json         TEXT,
+            created_at       TEXT DEFAULT (datetime('now'))
+        );
+
         CREATE TABLE IF NOT EXISTS question_feedback (
             question_id TEXT NOT NULL,
             run_id      TEXT NOT NULL,
@@ -109,6 +134,109 @@ def save_run(run_id: str, session_name: str, question_count: int,
         (run_id, session_name, question_count, composite_score, loops_used, int(approved),
          json.dumps(api_usage) if api_usage else None)
     )
+    conn.commit()
+    conn.close()
+
+
+def save_run_result(run_id: str, payload: dict):
+    """Persist the full run payload ({context, output, report}) so Review and
+    re-export survive server restarts."""
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO run_results (run_id, payload_json) VALUES (?, ?)",
+        (run_id, json.dumps(payload))
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_run_result(run_id: str) -> dict | None:
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT payload_json FROM run_results WHERE run_id = ?", (run_id,)
+    ).fetchone()
+    conn.close()
+    return json.loads(row["payload_json"]) if row else None
+
+
+# --- Custom Courses (user-added, multi-course support) ---
+
+def add_course(course_id: str, name: str, category: str, course_type: str = "mixed"):
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO courses (course_id, name, category, course_type) VALUES (?, ?, ?, ?)",
+        (course_id, name, category, course_type),
+    )
+    conn.commit()
+    conn.close()
+
+
+def add_course_session(course_id: str, topic: str, session_name: str,
+                       reading_material: str = "", session_type: str | None = None,
+                       kps: list | None = None):
+    conn = get_connection()
+    conn.execute(
+        """INSERT INTO course_sessions
+           (course_id, topic, session_name, reading_material, session_type, kps_json)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (course_id, topic, session_name, reading_material, session_type,
+         json.dumps(kps) if kps else None),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_courses() -> list[dict]:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT course_id, name, category, course_type, created_at FROM courses ORDER BY created_at"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_course(course_id: str) -> dict | None:
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT course_id, name, category, course_type FROM courses WHERE course_id = ?",
+        (course_id,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_course_topics(course_id: str) -> dict:
+    """Return {topic: [session_names]} for a custom course (insertion order)."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT topic, session_name FROM course_sessions WHERE course_id = ? ORDER BY id",
+        (course_id,),
+    ).fetchall()
+    conn.close()
+    topics: dict = {}
+    for r in rows:
+        topics.setdefault(r["topic"], []).append(r["session_name"])
+    return topics
+
+
+def get_custom_session(session_name: str) -> dict | None:
+    """Reading material + course metadata for a user-added session (exact, then normalized)."""
+    conn = get_connection()
+    row = conn.execute(
+        """SELECT cs.session_name, cs.reading_material, cs.session_type, cs.topic,
+                  c.course_id, c.category, c.course_type
+           FROM course_sessions cs JOIN courses c ON c.course_id = cs.course_id
+           WHERE cs.session_name = ? ORDER BY cs.id DESC LIMIT 1""",
+        (session_name,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def delete_course(course_id: str):
+    conn = get_connection()
+    conn.execute("DELETE FROM course_sessions WHERE course_id = ?", (course_id,))
+    conn.execute("DELETE FROM courses WHERE course_id = ?", (course_id,))
     conn.commit()
     conn.close()
 

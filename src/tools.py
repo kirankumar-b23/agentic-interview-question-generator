@@ -33,22 +33,6 @@ def _usage_cb(state: "AgentState"):
     return _cb
 
 
-def _url_is_alive(url: str, timeout: float = 4.0) -> bool:
-    """HEAD-check a URL; returns True if reachable (or no URL / network error)."""
-    if not url:
-        return True
-    try:
-        import requests
-        r = requests.head(url, timeout=timeout, allow_redirects=True,
-                          headers={"User-Agent": "nxtwave-iqg-bot/1.0"})
-        # Anti-bot blocks mean the page exists
-        if r.status_code in (401, 403, 429):
-            return True
-        return r.status_code < 400
-    except Exception:
-        return True  # network error ≠ dead
-
-
 from src.config import DEDUP_THRESHOLD
 from src.question_bank import get_retriever
 
@@ -419,7 +403,12 @@ Foundational questions about the session's actual core technology should always 
     to_remove = to_remove[:max_removable]
 
     for q_id, content, reason in to_remove:
-        state.questions.pop(q_id, None)
+        q = state.questions.pop(q_id, None)
+        if q is not None:
+            state.removed.append({
+                "content": q.content, "reason": reason or "Off-topic for this session",
+                "stage": "relevance", "difficulty": q.difficulty, "company": q.attribution,
+            })
 
     kept = len(state.questions)
     removed = len(to_remove)
@@ -456,7 +445,12 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
                 to_remove.add(j if pri_i <= pri_j else i)
 
     for idx in to_remove:
-        state.questions.pop(questions[idx].question_id, None)
+        q = state.questions.pop(questions[idx].question_id, None)
+        if q is not None:
+            state.removed.append({
+                "content": q.content, "reason": "Near-duplicate of another question",
+                "stage": "duplicate", "difficulty": q.difficulty, "company": q.attribution,
+            })
 
     within_run_removed = len(to_remove)
 
@@ -478,7 +472,12 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
                 cross_sim = cosine_similarity(curr_mat, bank_mat)
                 for i, row in enumerate(cross_sim):
                     if row.max() > DEDUP_THRESHOLD:
-                        state.questions.pop(current_qs[i].question_id, None)
+                        q = state.questions.pop(current_qs[i].question_id, None)
+                        if q is not None:
+                            state.removed.append({
+                                "content": q.content, "reason": "Duplicate of a previously approved question",
+                                "stage": "duplicate", "difficulty": q.difficulty, "company": q.attribution,
+                            })
                         cross_run_removed += 1
         except Exception:
             pass
@@ -524,24 +523,12 @@ def tool_check_outcome_coverage(state: AgentState) -> dict:
 
 
 def tool_generate_expected_answers(state: AgentState) -> dict:
-    needs_answers = [q for q in state.questions.values() if not q.expected_answer]
-    if not needs_answers:
-        return {"generated": 0, "message": "All questions already have answers"}
-    batch = needs_answers[:15]
-    q_list = "\n".join(f"{i+1}. {q.content[:250]}" for i, q in enumerate(batch))
-    result = chat_completion_json(
-        system_prompt="""Generate concise expected answer outlines for these interview questions.
-For each, provide 2-3 bullet points as a SINGLE STRING with bullets separated by newlines.
-Respond in JSON: {"answers": ["- point1\\n- point2", ...]}""",
-        user_prompt=f"Questions:\n{q_list}", max_tokens=3000,
-        on_usage=_usage_cb(state),
-    )
-    answers = result.get("answers", [])
-    for i, q in enumerate(batch):
-        if i < len(answers):
-            ans = answers[i]
-            q.expected_answer = "\n".join(str(a) for a in ans) if isinstance(ans, list) else str(ans) if ans else None
-    return {"generated": min(len(answers), len(batch))}
+    """Disabled — expected answers are no longer produced."""
+    return {
+        "generated": 0,
+        "blocked": True,
+        "reason": "Expected-answer generation is disabled. Proceed to submit_question_set.",
+    }
 
 
 def tool_generate_interview_questions(state: AgentState, count: int, outcomes: list[str], difficulty_mix: str = None) -> dict:
@@ -680,17 +667,16 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
     for out in outcomes:
         if out.lower() not in {t.lower() for t in search_terms}:
             search_terms.append(out)
-    search_terms = search_terms[:8]
-    records, tavily_calls = TavilyConnector().fetch(search_terms or outcomes)
+    # Cap terms for latency — each term costs several Tavily calls; recall is already
+    # high (hundreds of records) with a handful of terms.
+    search_terms = search_terms[:4]
+    records, tavily_calls, tavily_error = TavilyConnector().fetch(search_terms or outcomes)
     state.api_usage["tavily_calls"] += tavily_calls
 
-    # Link-aliveness check: filter dead source URLs (HEAD-check first 10, keep rest unchecked)
-    if len(records) >= 5:
-        import concurrent.futures
-        to_check, rest = records[:10], records[10:]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
-            alive_flags = list(ex.map(lambda r: _url_is_alive(r.source_url), to_check))
-        records = [r for r, ok in zip(to_check, alive_flags) if ok] + rest
+    # Surface a real failure (quota/auth/rate limit) instead of silently looking
+    # like "no web questions found".
+    if tavily_error and not records:
+        return {"found": 0, "added": 0, "status": "error", "error": tavily_error}
 
     current = len(state.questions) + len(state.coding_questions)
     capacity = state.config.max_questions - current
@@ -739,7 +725,7 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
         q_id = str(uuid.uuid4())
         qd = QuestionDetail(
             question_id=q_id,
-            category="GEN_AI",
+            category=getattr(state.config, "category", "GEN_AI"),
             content=rec.question_text,
             topic=session_topic,
             difficulty="Medium",
@@ -766,11 +752,13 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
 
 
 def tool_remove_question(state: AgentState, question_id: str, reason: str = "") -> dict:
-    if question_id in state.questions:
-        state.questions.pop(question_id)
-        return {"removed": True, "remaining": len(state.questions) + len(state.coding_questions)}
-    if question_id in state.coding_questions:
-        state.coding_questions.pop(question_id)
+    q = state.questions.pop(question_id, None) or state.coding_questions.pop(question_id, None)
+    if q is not None:
+        state.removed.append({
+            "content": getattr(q, "content", getattr(q, "title", "")),
+            "reason": reason or "Removed at quality gate", "stage": "curation",
+            "difficulty": getattr(q, "difficulty", None), "company": getattr(q, "attribution", None),
+        })
         return {"removed": True, "remaining": len(state.questions) + len(state.coding_questions)}
     return {"removed": False, "error": f"Question {question_id} not found"}
 

@@ -2,94 +2,106 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 
+const PIPELINE = [
+  { icon: '🔍', label: 'Understand' },
+  { icon: '📚', label: 'Retrieve' },
+  { icon: '🎯', label: 'Validate' },
+  { icon: '⚖️', label: 'Evaluate' },
+  { icon: '🔬', label: 'Quality gate' },
+  { icon: '👤', label: 'Review' },
+  { icon: '📄', label: 'Export' },
+]
+
 export default function WelcomePage() {
   const navigate = useNavigate()
   const [topicCount, setTopicCount] = useState(null)
-  const [runs, setRuns] = useState([])
+  const [bankCount, setBankCount] = useState(null)
+  const [courses, setCourses] = useState([])
 
   useEffect(() => {
-    api.getTopics()
-      .then(d => setTopicCount(Object.keys(d.topics || {}).length))
-      .catch(() => {})
-    api.getHistory()
-      .then(d => setRuns(d.runs || []))
-      .catch(() => {})
+    api.getTopics().then(d => setTopicCount(Object.keys(d.topics || {}).length)).catch(() => {})
+    api.getMeta().then(m => setBankCount(m.bank_count)).catch(() => {})
+    api.getCourses().then(d => setCourses(d.courses || [])).catch(() => {})
   }, [])
-
-  const recentRuns = runs.slice(0, 4)
 
   return (
     <>
       <header className="topbar">
         <div className="topbar-title-group">
-          <span className="topbar-title">NxtMock Interview Generator</span>
-          <span className="topbar-sub">Topic-specific company interview questions for student mock prep</span>
+          <span className="topbar-title">Questor</span>
+          <span className="topbar-sub">Agentic interview-question workflow</span>
         </div>
       </header>
 
       <div className="page-content">
-        {/* Stats row */}
+        {/* Hero */}
+        <section className="home-hero">
+          <span className="home-eyebrow">AGENTIC · REAL QUESTIONS · EXPORT-READY</span>
+          <h1 className="home-hero-title">Questor</h1>
+          <p className="home-hero-tagline">
+            Curate real, company-attributed interview questions for any course topic — retrieved from a
+            verified bank and the web, validated against what the session actually teaches, and handed to
+            you review-ready for the NxtMock portal.
+          </p>
+        </section>
+
+        {/* Stats */}
         <div className="home-stats">
           <div className="home-stat-card">
             <span className="home-stat-num">{topicCount ?? '—'}</span>
             <span className="home-stat-label">Topics available</span>
           </div>
           <div className="home-stat-card">
-            <span className="home-stat-num">3,133</span>
+            <span className="home-stat-num">{bankCount != null ? bankCount.toLocaleString() : '—'}</span>
             <span className="home-stat-label">Questions indexed</span>
           </div>
           <div className="home-stat-card">
-            <span className="home-stat-num">{runs.length}</span>
-            <span className="home-stat-label">Runs generated</span>
+            <span className="home-stat-num">4</span>
+            <span className="home-stat-label">AI agents in pipeline</span>
           </div>
         </div>
 
-        {/* Recent runs */}
-        {recentRuns.length > 0 && (
-          <section className="card">
-            <div className="card-title-row">
-              <h2 className="card-title" style={{ marginBottom: 0 }}>Recent Runs</h2>
-              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>
-                View all ▸
-              </button>
+        {/* Mini pipeline */}
+        <section className="home-pipeline">
+          {PIPELINE.map((s, i) => (
+            <div key={s.label} className="hp-wrap">
+              <div className="hp-node">
+                <span className="hp-ico">{s.icon}</span>
+                <span className="hp-label">{s.label}</span>
+              </div>
+              {i < PIPELINE.length - 1 && <span className="hp-arrow">→</span>}
             </div>
-            <div className="recent-runs-list">
-              {recentRuns.map(run => (
-                <div
-                  key={run.run_id}
-                  className="recent-run-row"
-                  onClick={() => navigate(`/review/${run.run_id}`)}
-                >
-                  <div className="rrr-info">
-                    <span className="rrr-name">{run.session_name}</span>
-                    <span className="rrr-meta">
-                      {run.question_count != null ? `${run.question_count} questions` : '—'}
-                      {run.composite_score != null && ` · ${Math.round(run.composite_score * 100)}% score`}
-                      {run.approved ? ' · Approved' : ' · In-memory'}
-                    </span>
-                  </div>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={e => { e.stopPropagation(); navigate(`/review/${run.run_id}`) }}
-                  >
-                    Review ▸
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+          ))}
+        </section>
 
-        {/* Getting started hint */}
+        {/* Courses */}
+        <section className="card">
+          <div className="card-title-row">
+            <h2 className="card-title" style={{ marginBottom: 0 }}>Courses</h2>
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/add')}>＋ Add course</button>
+          </div>
+          <div className="course-grid">
+            {courses.map(c => (
+              <div key={c.id} className="course-card">
+                <span className="course-name">{c.name}</span>
+                <span className="course-cat">{c.category}</span>
+                {c.builtin && <span className="course-badge">built-in</span>}
+              </div>
+            ))}
+            {courses.length === 0 && <p className="muted">No courses yet.</p>}
+          </div>
+          <p className="muted" style={{ fontSize: '0.76rem', marginTop: '0.6rem' }}>
+            Pick a course &amp; topic from the sidebar to generate. Add your own via “Add course”.
+          </p>
+        </section>
+
+        {/* Getting started */}
         <div className="home-hint">
-          <span className="home-hint-step">1</span>
-          Select a topic from the sidebar dropdown
+          <span className="home-hint-step">1</span> Pick a topic in the sidebar
           <span className="home-hint-sep">·</span>
-          <span className="home-hint-step">2</span>
-          Adjust question count
+          <span className="home-hint-step">2</span> Choose model &amp; question count
           <span className="home-hint-sep">·</span>
-          <span className="home-hint-step">3</span>
-          Click Generate Questions
+          <span className="home-hint-step">3</span> Generate &amp; review
         </div>
       </div>
     </>

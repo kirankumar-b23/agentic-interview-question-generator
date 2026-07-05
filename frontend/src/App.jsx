@@ -4,6 +4,7 @@ import SessionSelector from './pages/SessionSelector.jsx'
 import Progress from './pages/Progress.jsx'
 import Review from './pages/Review.jsx'
 import History from './pages/History.jsx'
+import AddCourse from './pages/AddCourse.jsx'
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
             <Route path="/progress/:runId" element={<Progress />} />
             <Route path="/review/:runId" element={<Review />} />
             <Route path="/history" element={<History />} />
+            <Route path="/add" element={<AddCourse />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

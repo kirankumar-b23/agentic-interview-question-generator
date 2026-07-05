@@ -31,3 +31,17 @@ def run_pipeline(config, run_id: str | None = None) -> PipelineResult:
     actual_run_id = run_id or str(uuid.uuid4())
     get_progress_queue(actual_run_id)
     return AgentPipeline().run(config, actual_run_id, _emit)
+
+
+# ── TESTING: preview mode wrappers ────────────────────────────────────────────
+def run_preview_pipeline(config, run_id: str | None = None):
+    """Stages 1–3 only; returns (partial_result, state) to resume later."""
+    actual_run_id = run_id or str(uuid.uuid4())
+    get_progress_queue(actual_run_id)
+    return AgentPipeline().run_preview(config, actual_run_id, _emit)
+
+
+def finalize_pipeline(state, run_id: str) -> PipelineResult:
+    """Resume a preview run through Evaluation + quality gate."""
+    get_progress_queue(run_id)
+    return AgentPipeline().finalize(state, run_id, _emit)

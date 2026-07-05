@@ -147,6 +147,18 @@ export default function Review() {
     }
   }
 
+  // TESTING: preview mode — send the picked set through the quality gate
+  async function handleProceed() {
+    setSubmitting(true)
+    try {
+      await api.proceed(runId)
+      navigate(`/progress/${runId}`)
+    } catch (e) {
+      setError(e.message)
+      setSubmitting(false)
+    }
+  }
+
   if (loading) return (
     <>
       <header className="topbar">
@@ -154,6 +166,7 @@ export default function Review() {
           <span className="topbar-title">Review Questions</span>
         </div>
         <PipelineStepper completedUntil="gate" activeStage="review" />
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>← History</button>
       </header>
       <div className="page-content"><p className="muted loading">Loading results…</p></div>
     </>
@@ -163,6 +176,7 @@ export default function Review() {
     <>
       <header className="topbar">
         <div className="topbar-title-group"><span className="topbar-title">Review Questions</span></div>
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>← History</button>
       </header>
       <div className="page-content"><div className="alert alert-error">{error}</div></div>
     </>
@@ -184,6 +198,7 @@ export default function Review() {
         <header className="topbar">
           <div className="topbar-title-group"><span className="topbar-title">Export Complete</span></div>
           <PipelineStepper completedUntil="export" />
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>← History</button>
         </header>
         <div className="page-content">
           <div className="done-banner">
@@ -212,35 +227,50 @@ export default function Review() {
 
   const sessionName = result.context?.session_name || 'Session'
   const sessionType = result.context?.session_type
+  const displayName = result.topic || sessionName
+  const awaitingGate = !!result.awaiting_gate   // TESTING: preview mode
 
   return (
     <>
       <header className="topbar">
         <div className="topbar-title-group">
-          <span className="topbar-title">Review Questions</span>
-          <span className="topbar-sub">{sessionName}{sessionType ? ` · ${sessionType}` : ''}</span>
+          <span className="topbar-title">{awaitingGate ? 'Preview — Picked Questions' : 'Review Questions'}</span>
+          <span className="topbar-sub" title={sessionName}>{displayName}{sessionType ? ` · ${sessionType}` : ''}</span>
         </div>
         <PipelineStepper completedUntil="gate" activeStage="review" />
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>← History</button>
       </header>
 
       {/* Action banner */}
-      <div className="action-banner">
+      <div className="action-banner" style={awaitingGate ? { borderLeftColor: 'var(--warn)' } : undefined}>
         <div className="ab-text">
-          <span className="ab-title">Action needed — Review before publishing to portal</span>
+          <span className="ab-title">
+            {awaitingGate
+              ? '🧪 Testing preview — verify the picked questions (not yet quality-checked)'
+              : 'Action needed — Review before publishing to portal'}
+          </span>
           <span className="ab-sub">
-            {total} questions for <strong style={{ color: '#c9d1d9' }}>{sessionName}</strong>
+            {total} questions for <strong style={{ color: 'var(--text)' }} title={sessionName}>{displayName}</strong>
             {' · '}{questions.length} theory · {codingQs.length} coding
-            {result.report && ` · Quality ${Math.round(result.report.composite_score * 100)}/100`}
-            {result.report?.loops_used > 0 && ` · ${result.report.loops_used} revision(s)`}
+            {!awaitingGate && result.report && ` · Quality ${Math.round(result.report.composite_score * 100)}/100`}
+            {!awaitingGate && result.report?.loops_used > 0 && ` · ${result.report.loops_used} revision(s)`}
           </span>
         </div>
         <div className="ab-btns">
-          <button className="btn btn-reject-all" disabled={submitting} onClick={handleReject}>
-            ↺ Reject &amp; Regenerate
-          </button>
-          <button className="btn btn-primary" disabled={submitting} onClick={handleApprove}>
-            {submitting ? 'Exporting…' : `↑ Export to Sheets (${approvedCount})`}
-          </button>
+          {awaitingGate ? (
+            <button className="btn btn-primary" disabled={submitting} onClick={handleProceed}>
+              {submitting ? 'Submitting…' : 'Proceed to Quality Gate ▸'}
+            </button>
+          ) : (
+            <>
+              <button className="btn btn-reject-all" disabled={submitting} onClick={handleReject}>
+                ↺ Reject &amp; Regenerate
+              </button>
+              <button className="btn btn-primary" disabled={submitting} onClick={handleApprove}>
+                {submitting ? 'Exporting…' : `↑ Export to Sheets (${approvedCount})`}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -280,7 +310,7 @@ export default function Review() {
                   id={q.question_id}
                   content={q.question || q.content}
                   difficulty={q.difficulty_level || q.difficulty}
-                  company={q.asked_in_company}
+                  company={q.attribution || q.asked_in_company}
                   role={q.role}
                   topic={q.topic}
                   subTopic={q.sub_topic}
@@ -311,7 +341,7 @@ export default function Review() {
                   title={q.title}
                   content={q.problem_statement || q.content}
                   difficulty={q.difficulty}
-                  company={q.asked_in_company}
+                  company={q.attribution || q.asked_in_company}
                   topic={q.topic}
                   subTopic={q.sub_topic}
                   language={q.language}
@@ -327,6 +357,27 @@ export default function Review() {
           </div>
         </div>
       </div>
+
+      {/* Rejected questions + reasons */}
+      {result.removed?.length > 0 && (
+        <details className="card rejected-card" style={{ margin: '0 1.35rem 1.6rem' }}>
+          <summary className="rejected-summary">
+            🗑️ Rejected questions ({result.removed.length}) — why they were dropped
+          </summary>
+          <div className="rejected-list">
+            {result.removed.map((r, i) => (
+              <div key={i} className="rej-row">
+                <div className="rej-head">
+                  <span className={`rej-stage rej-${r.stage || 'other'}`}>{r.stage || 'removed'}</span>
+                  {r.difficulty && <span className="rej-diff">{r.difficulty}</span>}
+                </div>
+                <div className="rej-q">{r.content}</div>
+                {r.reason && <div className="rej-reason">↳ {r.reason}</div>}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </>
   )
 }
