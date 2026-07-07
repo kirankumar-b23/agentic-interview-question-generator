@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { api } from '../lib/api.js'
+import { api, BASE } from '../lib/api.js'
 
 const PHASES = ['understanding', 'retrieval', 'validation', 'evaluation']
 
@@ -60,7 +60,7 @@ export function useAgentRun(runId) {
   // Fetch API usage stats once the run completes
   useEffect(() => {
     if (status !== 'done' || !runId) return
-    fetch(`/api/result/${runId}`)
+    fetch(`${BASE}/api/result/${runId}`)
       .then(r => r.json())
       .then(d => { if (d?.report?.api_usage) setApiUsage(d.report.api_usage) })
       .catch(() => {})

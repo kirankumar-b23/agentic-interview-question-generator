@@ -5,6 +5,7 @@ import os
 import uuid
 import threading
 from flask import Flask, request, Response, send_from_directory, jsonify
+from flask_cors import CORS
 from src.orchestrator import (
     run_pipeline, run_preview_pipeline, finalize_pipeline,
     get_progress_queue, cleanup_progress,
@@ -22,6 +23,7 @@ app = Flask(__name__,
             static_folder=REACT_DIST if _has_react else "static",
             static_url_path="")
 app.secret_key = "iqg-dev-secret-key-change-in-production"
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
 # In-memory store for pipeline results (keyed by run_id)
 _results: dict[str, PipelineResult] = {}
