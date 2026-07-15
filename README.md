@@ -1,4 +1,4 @@
-# Questor 🎯
+# Questor
 
 **Questor** is an agentic workflow that autonomously *quests* for real, company-attributed
 interview questions for a course topic, validates them against what the session actually
@@ -16,7 +16,7 @@ review-ready set. A human approves; Questor exports.
 - **Understands the session** from its own reading material → learning outcomes + Knowledge Points.
 - **Retrieves real questions** (no LLM-invented questions) from three sources, in order:
   1. a pre-indexed **question bank** (TF-IDF over ~1,500 company-attributed questions),
-  2. **Tavily web search** across 50+ interview-question domains (Glassdoor, AmbitionBox, Exponent, …) with best-effort company attribution,
+  2. **Tavily web search** across 65+ interview-question domains (Glassdoor, AmbitionBox, Exponent, …) with best-effort company attribution,
   3. curated **GitHub** interview-question repos.
 - **Validates & de-duplicates** questions against the session's outcomes (lenient, never zeroes a set).
 - **Evaluates** difficulty balance & outcome coverage, adds coding questions for code-heavy sessions, then runs an **LLM quality gate** (up to 2 revision rounds).
@@ -50,7 +50,13 @@ Human review (React)  ──approve──▶  Google Sheets (NxtMock)
 Runs are **persisted to SQLite**, so Review and re-export survive server restarts and appear
 in History. The **model** and **light/dark theme** are selectable at runtime from the sidebar.
 
-See **`architecture.html`** (open in a browser) for an interactive diagram.
+**Multiple courses** are supported: the built-in Gen AI course ships by default, and you can
+**add or import** more courses (new topics/sessions) from the **Add Course** page — each course
+drives its own topic list in the sidebar. A **preview gate** lets you sanity-check the resolved
+session/outcomes before committing a full run, and per-run **usage** (LLM/Tavily calls, tokens,
+cost estimate) is tracked and shown in History.
+
+See **`docs/architecture.html`** (open in a browser) for an interactive diagram.
 
 ---
 
@@ -58,7 +64,7 @@ See **`architecture.html`** (open in a browser) for an interactive diagram.
 
 ```
 app.py                     # Flask JSON API + serves the React build
-architecture.html          # Standalone architecture visualization
+docs/architecture.html     # Standalone architecture visualization
 src/
   pipeline.py              # AgentPipeline — orchestrates the 4 agents + quality gate
   agents/                  # Understanding / Retrieval / Validation / Evaluation agents
@@ -74,7 +80,7 @@ src/
   models.py                # Pydantic models
   config.py                # Models list, paths, constraints
   orchestrator.py          # SSE progress queue + run_pipeline wrapper
-frontend/                  # React SPA (Vite). Pages: SessionSelector, Progress, Review, History
+frontend/                  # React SPA (Vite). Pages: SessionSelector, AddCourse, Progress, Review, History
 data/
   interview_questions.json           # ~1,500 company-attributed questions (TF-IDF bank)
   knowledge_graph.json               # KPs + sessions + prerequisites
@@ -133,7 +139,8 @@ On the first export, a browser OAuth flow authorizes Google Sheets and caches `t
 
 ## Usage
 
-1. In the sidebar pick a **Topic**, a **Model**, and the **max questions** (default 7).
+1. In the sidebar pick a **Course**, a **Topic**, a **Model**, and the **max questions** (default 7).
+   (Use **Add Course** to add or import more courses.)
 2. Click **Generate** and watch the live pipeline.
 3. On the **Review** screen, accept/reject questions.
 4. **Export to Sheets** (creates a NxtMock-formatted spreadsheet) or **Reject & Regenerate**.

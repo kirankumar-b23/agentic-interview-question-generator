@@ -27,12 +27,18 @@ Human reviews (React UI, per-question accept/reject) →
 
 ```
 app.py                              # Flask: JSON API + serves React SPA (frontend/dist); legacy Jinja fallback
-frontend/                           # React SPA (Vite). Pages: SessionSelector, Progress, Review, History
-  src/components/QuestionCard.jsx   # Per-question review card (shows honest attribution)
+frontend/                           # React SPA (Vite). Pages: SessionSelector, AddCourse, Progress, Review, History
+  src/components/Sidebar.jsx        # Course/topic/model/count controls + credit balance
+  src/components/PipelineStepper.jsx# Live pipeline stage indicator
+  src/pages/Review.jsx              # Per-question review (accept/reject); cards rendered inline
   src/pages/Progress.jsx            # Live tool log; auto-redirects to Review on completion
+  src/pages/AddCourse.jsx           # Add/import a course (new sessions/topics)
 scripts/
   prepare_data.py                   # One-time: CSV→JSON, build knowledge graph, eval sets
   build_session_reading_material.py # Build data/reading_materials/session_map.json (per-session content)
+  build_knowledge_graph.py          # Build data/knowledge_graph.json (KPs + prerequisite edges)
+  build_eval_sets.py                # Build eval/eval_sets.json (good/bad validation examples)
+  auth_sheets.py                    # One-time Google Sheets OAuth → token.json
 data/
   interview_questions.json          # 1,509 company-attributed interview questions
   knowledge_graph.json              # KPs + sessions + prerequisite edges
@@ -45,7 +51,6 @@ src/
   agents/                           # UnderstandingAgent, RetrievalAgent, ValidationAgent, EvaluationAgent
   agent.py                          # AgentState, PipelineResult, _critique_question_set (quality gate)
   tools.py                          # Tool schemas + implementations (generation tool is blocked)
-  prompts.py                        # Legacy single-agent prompt (deprecated); per-agent prompts live in agents/
   session_understanding.py          # Per-session resolution + merge → SessionContext (RM-first, KG fallback)
   question_bank.py                  # TF-IDF retriever over interview_questions.json
   sources/tavily_search.py          # Tavily web search + URL-based company extraction
@@ -66,11 +71,11 @@ eval/
 | Source | Tool | Company attribution |
 |--------|------|---------------------|
 | Pre-indexed bank (1,509 Qs) | `search_question_bank` (TF-IDF) | Yes (verified) |
-| Tavily web (56-domain allowlist) | `search_web_questions` | Best-effort from URL |
+| Tavily web (69-domain allowlist) | `search_web_questions` | Best-effort from URL |
 | GitHub interview repos | `search_github_questions` | No |
 | `generate_interview_questions` | **BLOCKED** | — |
 
-When a question has no real company, the output shows an **honest source label** (Glassdoor / GeeksforGeeks / AI-generated / the host domain) via `QuestionDetail.attribution` — never a blank or fabricated company.
+Attribution for output is computed by `attribution_label` (`src/models.py`) and surfaced via `QuestionDetail.attribution`: the **real company in UPPERCASE** when known, otherwise the placeholder **`NIAT`** — never a website name, fragment, or fabricated company. Garbage candidates are filtered upstream by Tavily's `_valid_company`.
 
 ## Reading Material → Relevance
 

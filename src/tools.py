@@ -1,16 +1,19 @@
 """Tool definitions + implementations for the agentic workflow.
 
-10 tools the agent calls autonomously via OpenRouter tool_use:
+13 tools the agent calls autonomously via OpenRouter tool_use:
 1. understand_session — extract outcomes, KPs, session type (MUST be first)
 2. search_question_bank — TF-IDF search with session-aware relevance filtering
-3. validate_relevance — LLM checks each question against session outcomes
-4. deduplicate_questions — TF-IDF dedup
-5. check_difficulty_balance — Easy/Medium/Hard distribution
-6. check_outcome_coverage — which outcomes are covered
-7. generate_expected_answers — LLM generates answer outlines
-8. generate_coding_questions — LLM generates coding problems
-9. remove_question — drop a specific question
-10. submit_question_set — finalize and end the run
+3. search_github_questions — fetch questions from curated GitHub interview repos
+4. search_web_questions — Tavily web search (real, company-attributed questions)
+5. validate_relevance — LLM checks each question against session outcomes
+6. deduplicate_questions — TF-IDF dedup
+7. check_difficulty_balance — Easy/Medium/Hard distribution
+8. check_outcome_coverage — which outcomes are covered
+9. generate_expected_answers — LLM generates answer outlines
+10. generate_interview_questions — BLOCKED (real questions only; always returns blocked)
+11. generate_coding_questions — LLM generates coding problems (code-heavy sessions only)
+12. remove_question — drop a specific question
+13. submit_question_set — finalize and end the run
 """
 
 from __future__ import annotations
@@ -35,6 +38,7 @@ def _usage_cb(state: "AgentState"):
 
 from src.config import DEDUP_THRESHOLD
 from src.question_bank import get_retriever
+from src.sources.base import split_into_clauses, looks_like_question
 
 if TYPE_CHECKING:
     from src.agent import AgentState
@@ -99,7 +103,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "search_web_questions",
-            "description": "Search 45+ verified domains (Glassdoor, AmbitionBox, Exponent, GeeksforGeeks, LeetCode, etc.) for real interview questions with company attribution via Tavily. Requires TAVILY_API_KEY. Use when you need questions that came from actual company interviews.",
+            "description": "Search 65+ verified domains (Glassdoor, AmbitionBox, Exponent, GeeksforGeeks, LeetCode, etc.) for real interview questions with company attribution via Tavily. Requires TAVILY_API_KEY. Use when you need questions that came from actual company interviews.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -653,8 +657,28 @@ def tool_search_github_questions(state: AgentState, outcomes: list) -> dict:
     }
 
 
+def _trim_to_topic(text: str, topic_keywords: set) -> str:
+    """Keep clauses from the start through the LAST on-topic clause; drop an
+    unrelated trailing clause. Return "" if no clause is on-topic (caller skips)."""
+    clauses = split_into_clauses(text)
+    if len(clauses) <= 1:                        # single ask → today's behaviour
+        low = text.lower()
+        return text if any(k in low for k in topic_keywords) else ""
+    last_hit = -1
+    for i, c in enumerate(clauses):
+        cl = c.lower()
+        if any(k in cl for k in topic_keywords):
+            last_hit = i
+    if last_hit < 0:
+        return ""
+    if last_hit == len(clauses) - 1:             # every clause on-topic → keep whole
+        return text
+    trimmed = ". ".join(clauses[:last_hit + 1]).strip()
+    return trimmed if looks_like_question(trimmed) else text
+
+
 def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
-    """Harvest real interview questions with company attribution from 45+ verified domains via Tavily."""
+    """Harvest real interview questions with company attribution from 65+ verified domains via Tavily."""
     from src import config as cfg
     if not cfg.TAVILY_API_KEY:
         return {"error": "TAVILY_API_KEY not set — skipping web search", "status": "skipped"}
@@ -713,10 +737,12 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
     take = min(len(records), capacity + 20)
     added = []
     for rec in records[:take]:
-        # Skip records with no topical relevance to this session
+        # Trim a two-part question down to its on-topic clause (drops an unrelated
+        # trailing ask); "" means no clause is on-topic → skip the whole record.
+        content = rec.question_text
         if topic_keywords:
-            q_lower = rec.question_text.lower()
-            if not any(kw in q_lower for kw in topic_keywords):
+            content = _trim_to_topic(content, topic_keywords)
+            if not content:
                 continue
 
         if len(added) >= capacity + 10:
@@ -726,7 +752,7 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
         qd = QuestionDetail(
             question_id=q_id,
             category=getattr(state.config, "category", "GEN_AI"),
-            content=rec.question_text,
+            content=content,
             topic=session_topic,
             difficulty="Medium",
             source="web",
@@ -736,7 +762,7 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
         state.questions[q_id] = qd
         added.append({
             "id": q_id,
-            "content": rec.question_text[:150],
+            "content": content[:150],
             "company": rec.company,
             "source_url": rec.source_url,
             "source_type": rec.source_type,

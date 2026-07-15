@@ -7,6 +7,7 @@ requirements) instead of httpx.
 from __future__ import annotations
 
 import ipaddress
+import re
 import socket
 import time
 from dataclasses import dataclass
@@ -76,6 +77,21 @@ def looks_like_question(t: str) -> bool:
     if t.endswith("?"):
         return True
     return t.lower().startswith(_Q_STARTS)
+
+
+# Connectives that join two separate asks into one harvested line.
+_CLAUSE_SPLIT = re.compile(
+    r"(?<=[.?!])\s+"                                    # sentence boundary
+    r"|\s*,?\s*(?:and then|then|after that|followed by|"
+    r"as well as|and also|also,|;)\s+",                # conjunction boundary
+    re.IGNORECASE,
+)
+
+
+def split_into_clauses(text: str) -> List[str]:
+    """Break a compound question into its component asks (sentence + connective boundaries)."""
+    parts = [p.strip(" ,;") for p in _CLAUSE_SPLIT.split(text or "")]
+    return [p for p in parts if p]
 
 
 def polite_get(url: str, *, headers: Optional[dict] = None,

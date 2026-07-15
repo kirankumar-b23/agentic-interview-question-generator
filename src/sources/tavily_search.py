@@ -24,7 +24,8 @@ _PER_RESULT = 8
 _MAX_RECORDS = config.TAVILY_MAX_RECORDS
 _ATTRIBUTION_DOMAINS = ["glassdoor.com", "ambitionbox.com", "tryexponent.com", "datalemur.com",
                         "levels.fyi", "interviewquery.com", "prepfully.com", "igotanoffer.com",
-                        "teamblind.com", "leetcode.com", "1point3acres.com"]
+                        "teamblind.com", "leetcode.com", "1point3acres.com",
+                        "comparably.com", "bigtechinterviews.com"]
 _BROAD_DOMAINS = [
     "glassdoor.com", "ambitionbox.com", "tryexponent.com", "datalemur.com",
     "levels.fyi", "interviewquery.com", "prepfully.com", "igotanoffer.com",
@@ -32,6 +33,10 @@ _BROAD_DOMAINS = [
     "reddit.com", "stackoverflow.com", "github.com", "medium.com", "dev.to",
     "geeksforgeeks.org", "quora.com", "hackerrank.com",
     "interviewbit.com", "workat.tech", "hackerearth.com", "freecodecamp.org", "careercup.com",
+    # GenAI/ML Q&A + forums, SWE interview-experience, extra attribution
+    "ai.stackexchange.com", "huggingface.co", "kaggle.com", "machinelearningmastery.com",
+    "techinterviewhandbook.org", "neetcode.io", "taro.co", "bigtechinterviews.com",
+    "mlstack.cafe", "comparably.com", "fishbowlapp.com",
 ]
 
 

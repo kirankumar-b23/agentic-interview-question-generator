@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { api } from '../lib/api.js'
 
@@ -10,6 +10,8 @@ export default function Sidebar() {
   const [selectedCourse, setSelectedCourse] = useState('gen_ai')
   const [topics, setTopics] = useState({})
   const [selectedTopic, setSelectedTopic] = useState('')
+  const [selectMode, setSelectMode] = useState('topic')   // 'topic' | 'session'
+  const [selectedUnit, setSelectedUnit] = useState('')
   const [maxQuestions, setMaxQuestions] = useState(7)
   const [preview, setPreview] = useState(false)   // TESTING: preview before quality gate
   const [starting, setStarting] = useState(false)
@@ -48,7 +50,11 @@ export default function Sidebar() {
   useEffect(() => {
     api.getTopics(selectedCourse).then(d => setTopics(d.topics || {})).catch(() => {})
     setSelectedTopic('')
+    setSelectedUnit('')
   }, [selectedCourse])
+
+  // Flat, de-duplicated list of every unit/session in the current course.
+  const units = useMemo(() => [...new Set(Object.values(topics).flat())], [topics])
 
   useEffect(() => {
     api.getHistory().then(d => setHistory(d.runs || [])).catch(() => {})
@@ -57,11 +63,14 @@ export default function Sidebar() {
 
   const courseObj = courses.find(c => c.id === selectedCourse)
 
+  const canGen = selectMode === 'topic' ? !!selectedTopic : !!selectedUnit
+
   async function handleGenerate() {
-    if (!selectedTopic || starting) return
+    if (!canGen || starting) return
     setStarting(true)
     try {
-      const sessionNames = topics[selectedTopic] || []
+      const sessionNames = selectMode === 'topic' ? (topics[selectedTopic] || []) : [selectedUnit]
+      if (!sessionNames.length || !sessionNames[0]) return
       const { run_id } = await api.generate(sessionNames, maxQuestions, selectedModel || undefined, preview, courseObj)
       navigate(`/progress/${run_id}`)
     } catch {
@@ -99,32 +108,71 @@ export default function Sidebar() {
           </select>
         </div>
 
-        <span className="sidebar-section-label">Topic</span>
-        <div className="sidebar-select-wrap">
-          <select
-            className="sidebar-topic-select"
-            value={selectedTopic}
-            onChange={e => setSelectedTopic(e.target.value)}
-          >
-            <option value="">{Object.keys(topics).length ? 'Select a topic…' : 'No topics in this course'}</option>
-            {Object.keys(topics).map(t => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+        {/* Choose whether to generate for a whole topic or a single unit */}
+        <span className="sidebar-section-label">Select by</span>
+        <div className="sidebar-mode-radios">
+          <label>
+            <input
+              type="radio" name="selmode" checked={selectMode === 'topic'}
+              onChange={() => { setSelectMode('topic'); setSelectedUnit('') }}
+            />
+            Topic-wise
+          </label>
+          <label>
+            <input
+              type="radio" name="selmode" checked={selectMode === 'session'}
+              onChange={() => { setSelectMode('session'); setSelectedTopic('') }}
+            />
+            Session-wise
+          </label>
         </div>
 
-        {/* Sessions included in this topic — info only */}
-        {sessions.length > 0 && (
+        {selectMode === 'topic' ? (
           <>
-            <span className="sidebar-section-label" style={{ marginTop: '0.5rem' }}>
-              Sessions included ({sessions.length})
-            </span>
-            <div className="sidebar-session-list">
-              {sessions.map(s => (
-                <div key={s} className="sidebar-session-info" title={s}>
-                  · {s}
+            <span className="sidebar-section-label">Topic</span>
+            <div className="sidebar-select-wrap">
+              <select
+                className="sidebar-topic-select"
+                value={selectedTopic}
+                onChange={e => setSelectedTopic(e.target.value)}
+              >
+                <option value="">{Object.keys(topics).length ? 'Select a topic…' : 'No topics in this course'}</option>
+                {Object.keys(topics).map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sessions included in this topic — info only */}
+            {sessions.length > 0 && (
+              <>
+                <span className="sidebar-section-label" style={{ marginTop: '0.5rem' }}>
+                  Sessions included ({sessions.length})
+                </span>
+                <div className="sidebar-session-list">
+                  {sessions.map(s => (
+                    <div key={s} className="sidebar-session-info" title={s}>
+                      · {s}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <span className="sidebar-section-label">Unit</span>
+            <div className="sidebar-select-wrap">
+              <select
+                className="sidebar-topic-select"
+                value={selectedUnit}
+                onChange={e => setSelectedUnit(e.target.value)}
+              >
+                <option value="">{units.length ? 'Select a unit…' : 'No units in this course'}</option>
+                {units.map(u => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
             </div>
           </>
         )}
@@ -147,10 +195,14 @@ export default function Sidebar() {
         </label>
         <button
           className="sidebar-gen-btn"
-          disabled={!selectedTopic || starting}
+          disabled={!canGen || starting}
           onClick={handleGenerate}
         >
-          {starting ? 'Starting…' : selectedTopic ? 'Generate Questions ▸' : 'Select a topic first'}
+          {starting
+            ? 'Starting…'
+            : canGen
+              ? 'Generate Questions ▸'
+              : selectMode === 'topic' ? 'Select a topic first' : 'Select a unit first'}
         </button>
       </div>
 

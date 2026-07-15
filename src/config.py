@@ -125,4 +125,7 @@ INTERVIEW_SOURCE_ALLOWLIST = {
     "tealhq.com", "interviewkickstart.com",
     # High-signal additions (review): first-hand experiences + curated prep
     "1point3acres.com", "workat.tech", "hackerearth.com", "hackerrank.com", "freecodecamp.org",
+    # GenAI/ML Q&A + forums, SWE interview-experience, extra attribution
+    "ai.stackexchange.com", "huggingface.co", "kaggle.com", "machinelearningmastery.com",
+    "techinterviewhandbook.org", "neetcode.io", "taro.co", "bigtechinterviews.com",
 }
