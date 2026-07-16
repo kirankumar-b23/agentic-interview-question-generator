@@ -98,6 +98,8 @@ class QuestionDetail(BaseModel):
     source: Literal["curriculum", "interview_db", "web", "generated"]
     kp_label: str | None = None
     expected_answer: str | None = None
+    relevance_score: float | None = None    # 0.0–1.0 relevance to session (set by validate_relevance)
+    session: str | None = None               # which selected session this question best matches
 
     @field_validator("expected_answer", mode="before")
     @classmethod
@@ -178,6 +180,11 @@ class CurationMetadata(BaseModel):
     dedup_removed: int = 0
     source_counts: dict[str, int] = Field(default_factory=dict)
     questions_from_web: int = 0
+    # Retrieval funnel (observability): raw fetched → pooled → removed → final
+    raw_fetched: dict[str, int] = Field(default_factory=dict)   # per-source raw hit counts
+    pool_size: int = 0                                          # candidates gathered before ranking
+    removed_by_relevance: int = 0
+    removed_by_dedup: int = 0
 
 
 class CuratedOutput(BaseModel):

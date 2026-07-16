@@ -149,11 +149,46 @@ class AgentPipeline:
         return result
 
 
+def _outcome_coverage(state: AgentState) -> float:
+    """Fraction of learning outcomes that at least one final question addresses
+    (TF-IDF cosine ≥ 0.10 between the question text and the outcome)."""
+    ctx = state.session_context
+    outcomes = ctx.learning_outcomes if ctx else []
+    questions = [q.content for q in state.questions.values()]
+    if not outcomes:
+        return 1.0
+    if not questions:
+        return 0.0
+    try:
+        # Semantic coverage (embeddings) when available, else TF-IDF.
+        from src import embeddings
+        from src.config import EMBED_COVERAGE_THRESHOLD
+        qo = embeddings.cosine_matrix(outcomes, questions)   # [n_outcomes x n_questions]
+        thresh = EMBED_COVERAGE_THRESHOLD
+        if qo is None:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.metrics.pairwise import cosine_similarity
+            vec = TfidfVectorizer(stop_words="english", max_features=5000)
+            mat = vec.fit_transform(questions + outcomes)
+            qo = cosine_similarity(mat[len(questions):], mat[:len(questions)])
+            thresh = 0.10
+        covered = sum(1 for row in qo if row.max() >= thresh)
+        return covered / len(outcomes)
+    except Exception:
+        return 0.0
+
+
 def _build_quality_report(state: AgentState, revision_round: int) -> QualityReport:
     total_q = state.total_questions
     diff = state.difficulty_counts
     sources = state.source_counts
 
+    # The two metrics that actually matter for an interview set:
+    rels = [q.relevance_score for q in state.questions.values() if q.relevance_score is not None]
+    relevance_score = round(sum(rels) / len(rels), 3) if rels else 0.5
+    coverage_score = round(_outcome_coverage(state), 3)
+
+    # Secondary hygiene metrics.
     size_score = 1.0 if MIN_QUESTIONS <= total_q <= MAX_QUESTIONS else max(0.0, 1.0 - abs(total_q - 10) / 10)
     diversity_score = min(1.0, len(sources) / 2)
     diff_target = {"Easy": 0.3, "Medium": 0.5, "Hard": 0.2}
@@ -162,19 +197,39 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
         if total_q > 0 else 0
     )
 
-    # Three weighted metrics (answers are no longer generated)
-    composite = round(0.40 * size_score + 0.25 * diversity_score + 0.35 * diff_score, 3)
+    # Relevance + coverage dominate; size/diversity/difficulty are hygiene.
+    composite = round(0.40 * relevance_score + 0.25 * coverage_score
+                      + 0.15 * size_score + 0.10 * diversity_score + 0.10 * diff_score, 3)
     if total_q < MIN_QUESTIONS:
         composite = min(composite, 0.4)
+
+    # Honest pass/fail: a set only "passes" if it is genuinely relevant AND covers the
+    # session AND meets the size floor — not merely diverse/balanced.
+    passed = (relevance_score >= 0.6 and coverage_score >= 0.6
+              and total_q >= MIN_QUESTIONS and composite >= 0.6)
+
+    # Honest, non-fabricated notes so a reviewer sees WHY a set is weak.
+    notes: list[str] = []
+    if total_q < MIN_QUESTIONS:
+        notes.append(f"Only {total_q} question(s) — few real interview questions were available "
+                     f"for this session (minimum is {MIN_QUESTIONS}).")
+    elif relevance_score < 0.6:
+        notes.append("Low mean relevance — the available real questions are only loosely on-topic "
+                     "for this session.")
+    if coverage_score < 0.6:
+        notes.append("Some learning outcomes are not covered by the available questions.")
 
     return QualityReport(
         composite_score=composite,
         metric_scores={
+            "relevance": round(relevance_score, 2),
+            "outcome_coverage": coverage_score,
             "set_size": round(size_score, 2),
             "source_diversity": round(diversity_score, 2),
             "difficulty_balance": round(diff_score, 2),
         },
-        pass_fail="pass" if composite >= 0.6 and total_q >= MIN_QUESTIONS else "fail",
+        pass_fail="pass" if passed else "fail",
+        critique=notes,
         loops_used=revision_round,
     )
 

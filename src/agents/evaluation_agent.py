@@ -62,19 +62,22 @@ Use `remove_question` for flagged IDs, then re-check and submit.
         return f"""You are the final evaluator for an interview question set.
 
 ## Session: {session_label}  |  Type: {session_type}
-## Current questions: {q_count}  |  Target: {min_q}–{max_q}
+## Candidate pool: {q_count}  |  Final target: {min_q}–{max_q}
+This is a WIDE, relevance-scored candidate pool. `submit_question_set` automatically keeps the
+top {max_q} by relevance score — you do NOT need to prune the pool down to the target yourself.
 {revision_section}
 ## Workflow (in order)
-1. `check_difficulty_balance` — check Easy/Medium/Hard distribution
-2. `check_outcome_coverage` — check outcome coverage
+1. `check_difficulty_balance` — check Easy/Medium/Hard distribution (informational)
+2. `check_outcome_coverage` — check outcome coverage (informational)
 3. {coding_section}
-4. `submit_question_set` — LAST step, ends this agent's run
+4. `submit_question_set` — LAST step; it trims to the top {max_q} by relevance and ends this agent's run
 
 Do NOT generate expected answers — answers are not produced.
 
 ## Rules
 - Target difficulty: 30% Easy, 50% Medium, 20% Hard
-- Use `remove_question` ONLY to fix clear balance issues (e.g., too many Hard)
+- Do NOT use `remove_question` just to reach {max_q} — submit handles that by relevance ranking.
+  Use `remove_question` ONLY to drop a genuinely broken/duplicate item (or a flagged revision ID).
 - Always call `submit_question_set` at the end — even if the set is imperfect"""
 
     def get_user_prompt(self, state: AgentState) -> str:

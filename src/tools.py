@@ -36,7 +36,7 @@ def _usage_cb(state: "AgentState"):
     return _cb
 
 
-from src.config import DEDUP_THRESHOLD
+from src.config import DEDUP_THRESHOLD, pool_target
 from src.question_bank import get_retriever
 from src.sources.base import split_into_clauses, looks_like_question
 
@@ -234,19 +234,30 @@ def tool_understand_session(state: AgentState) -> dict:
     state.session_context = context
     state.learning_outcomes = context.learning_outcomes
 
-    # Build KP-label queries; also add "interview"-suffixed variants for better TF-IDF recall
-    kp_queries = [
-        kp.kp_label for kp in context.matched_kp_ids if kp.relevance >= 0.5
-    ]
+    # Per-session profile text (multi-session topics) for attributing each question to the
+    # session it best matches — enables per-session representation in final selection.
+    if len(state.config.session_names) > 1:
+        for name in state.config.session_names:
+            state.session_profiles[name] = (state.data_store.get_session_content(name) or name)[:4000]
+
+    # Ground retrieval queries in what the READING MATERIAL actually teaches — the
+    # key_concepts / scope_in extracted from the RM — not the loosely-mapped global KP
+    # labels (which pulled off-topic questions). KP labels are only a last-resort fallback.
+    concept_queries = list(dict.fromkeys(
+        [c for c in (context.key_concepts + context.scope_in) if c and c.strip()]
+    ))
+    if not concept_queries:
+        concept_queries = [kp.kp_label for kp in context.matched_kp_ids if kp.relevance >= 0.5]
     # Interview-phrased variants improve matching against company question content
-    interview_queries = [f"{q} interview" for q in kp_queries[:3]]
-    all_queries = (kp_queries + interview_queries)[:8]
+    interview_queries = [f"{q} interview" for q in concept_queries[:3]]
+    all_queries = (concept_queries + interview_queries)[:8]
 
     # Probe the bank with the top query to estimate coverage for this session
     has_bank_questions = False
     estimated_bank_count = 0
     if all_queries:
-        retriever = get_retriever()
+        from src.question_bank import get_retriever_for
+        retriever = get_retriever_for(getattr(state.config, "category", None))
         probe = retriever.search(all_queries[0], limit=5)
         estimated_bank_count = len(probe) * min(len(all_queries), 5)
         has_bank_questions = len(probe) > 0
@@ -278,13 +289,16 @@ def tool_understand_session(state: AgentState) -> dict:
 
 
 def tool_search_question_bank(state: AgentState, query: str, difficulty: str = None, limit: int = 8) -> dict:
-    """Search question bank with TF-IDF + session-aware relevance filtering."""
-    retriever = get_retriever()
+    """Search question bank with TF-IDF + session-aware relevance filtering.
+    GEN_AI sessions use the curated GenAI bank; others use the Python/SWE bank."""
+    from src.question_bank import get_retriever_for
+    retriever = get_retriever_for(getattr(state.config, "category", None))
 
-    current = len(state.questions) + len(state.coding_questions)
-    max_to_add = state.config.max_questions - current
+    from src.config import BANK_POOL_CAP
+    bank_have = state.added_by_source.get("bank", 0)
+    max_to_add = BANK_POOL_CAP - bank_have
     if max_to_add <= 0:
-        return {"found": 0, "warning": f"Already at max ({state.config.max_questions}). Remove some or submit."}
+        return {"found": 0, "warning": f"Bank quota full ({BANK_POOL_CAP}). Use web/github or submit."}
 
     actual_limit = min(limit, max_to_add, 8)
     exclude_ids = set(state.questions.keys())
@@ -296,8 +310,8 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
     )
 
     # Session-aware post-retrieval relevance filter
+    scope_keywords: set[str] = set()
     if state.session_context:
-        scope_keywords = set()
         for term in (state.session_context.learning_outcomes +
                      state.session_context.key_concepts +
                      state.session_context.scope_in):
@@ -323,6 +337,11 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
 
     added = []
     for qd in results:
+        # Split a compound bank question down to its on-topic clause (same as web).
+        if scope_keywords:
+            trimmed = _trim_to_topic(qd.content, scope_keywords)
+            if trimmed:
+                qd.content = trimmed
         state.questions[qd.question_id] = qd
         added.append({
             "id": qd.question_id,
@@ -332,12 +351,15 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
             "source": qd.source,
         })
 
+    state.raw_fetched["bank"] = state.raw_fetched.get("bank", 0) + len(added)
+    state.added_by_source["bank"] = state.added_by_source.get("bank", 0) + len(added)
     total = len(state.questions) + len(state.coding_questions)
+    state.pool_size = max(state.pool_size, total)
     return {
         "found": len(added),
         "questions": added,
         "total_accumulated": total,
-        "remaining_capacity": state.config.max_questions - total,
+        "bank_remaining": BANK_POOL_CAP - state.added_by_source.get("bank", 0),
     }
 
 
@@ -360,12 +382,19 @@ def tool_validate_relevance(state: AgentState) -> dict:
     concepts_str = ", ".join(state.session_context.key_concepts)
     scope_out_str = ", ".join(state.session_context.scope_out) if state.session_context.scope_out else "none"
 
-    q_list = []
-    for q in state.questions.values():
-        q_list.append({"id": q.question_id, "content": q.content[:250]})
+    # Ground the judge in the ACTUAL reading material (the outcomes list alone is too thin —
+    # it lets keyword overlap masquerade as relevance). Include a bounded excerpt of each
+    # selected session's RM, split evenly to keep total cost in check.
+    names = state.config.session_names or [state.session_context.session_name]
+    per_cap = max(1200, 4000 // max(1, len(names)))
+    rm_parts = []
+    for name in names:
+        content = state.data_store.get_session_content(name)
+        if content:
+            rm_parts.append(f"### {name}\n{content[:per_cap]}")
+    rm_block = "\n\n".join(rm_parts) if rm_parts else "(no reading material found — use the outcomes/concepts above)"
 
-    result = chat_completion_json(
-        system_prompt=f"""{rules_block}You are evaluating interview questions for relevance to a specific session.
+    system_prompt = f"""{rules_block}You score interview questions by how well they test what a SPECIFIC session actually teaches.
 
 Session: {state.session_context.session_name}
 
@@ -373,54 +402,109 @@ Learning Outcomes:
 {outcomes_str}
 
 Key Concepts: {concepts_str}
-Out of Scope: {scope_out_str}
+Out of Scope (score these ≤0.2): {scope_out_str}
 
-For EACH question, decide:
-- "keep" — related to this session's topic, concepts, or learning outcomes
-- "remove" — clearly off-topic (tests a completely different technology or domain not covered in this session)
+## What this session actually teaches (reading material — judge against THIS, not just keywords)
+{rm_block}
 
-Respond in JSON:
-{{"evaluations": [{{"id": "...", "verdict": "keep", "reason": "Tests outcome X"}}]}}
+Give EACH question a relevance score from 0.0 to 1.0 for how well it tests a concept the session teaches:
+- 0.8–1.0 — directly tests a technical concept explained in the reading material above.
+- 0.4–0.7 — genuinely about the session's subject matter but broad or only partially on-topic.
+- 0.0–0.2 — NOT testing this session's subject matter. Score LOW even if a keyword overlaps and even
+  if it came from a real company. This INCLUDES:
+    * behavioral / HR / teamwork / leadership / "tell me about yourself",
+    * interview-logistics or process questions — e.g. "can you share your screen and open the app",
+      "walk me through your project/portal", "can you use AI tools during the interview",
+      "experience contributing to open source",
+    * product-management / roadmap / prioritization,
+    * anything in the Out-of-Scope list, or a different technology/domain than this session.
 
-IMPORTANT: Be LENIENT for borderline questions — keep a question if it genuinely touches the session's concepts.
-Only remove questions that are clearly off-topic.
-STRICT DOMAIN CHECK: The session name is the primary guide. If a question belongs to a fundamentally different AI domain than the session (e.g., RAG/retrieval questions for an image generation session, or image generation questions for a RAG session), mark it "remove" even if keywords overlap.
-Foundational questions about the session's actual core technology should always be KEPT.""",
-        user_prompt=f"Questions to evaluate:\n{json.dumps(q_list)}",
-        max_tokens=2048,
-        on_usage=_usage_cb(state),
-    )
+CRITICAL: keyword overlap is NOT relevance. "Share your screen and open the payment portal" is an
+interview-logistics question and scores ~0.1 even though the session mentions AI screen-sharing.
+The question must test the session's actual subject matter.
 
-    evaluations = result.get("evaluations", [])
-    eval_map = {e.get("id", ""): e for e in evaluations}
+Also tag each question's difficulty for THIS session's level:
+- "Easy" — recall/definition of a single concept.
+- "Medium" — apply/compare concepts or explain how something works.
+- "Hard" — multi-step reasoning, trade-offs, design, or deep internals.
+Score AND tag every item by its number.
 
-    # Determine what to remove BEFORE mutating state
-    to_remove = []
-    for q_id, q in state.questions.items():
-        ev = eval_map.get(q_id, {})
-        if ev.get("verdict") == "remove":
-            to_remove.append((q_id, q.content[:80], ev.get("reason", "")))
+Respond in JSON only:
+{{"scores": [{{"n": 1, "score": 0.0, "difficulty": "Easy|Medium|Hard"}}]}}"""
 
-    # Safety floor: never remove more than 50% of questions,
-    # and never leave 0 results — questions passed TF-IDF already.
-    max_removable = max(0, len(state.questions) // 2)
-    to_remove = to_remove[:max_removable]
+    # The pool can be large (bank+web+github) — score it in batches so no single call
+    # truncates. Each batch numbers items 1..N locally and we map back to the q_id.
+    from src.config import RELEVANCE_BATCH_SIZE
+    items = list(state.questions.items())   # [(q_id, QuestionDetail), ...]
+    score_by_qid: dict[str, float] = {}
+    diff_by_qid: dict[str, str] = {}
+    _valid_diff = {"easy": "Easy", "medium": "Medium", "hard": "Hard"}
+    for start in range(0, len(items), RELEVANCE_BATCH_SIZE):
+        batch = items[start:start + RELEVANCE_BATCH_SIZE]
+        numbered = [{"n": i + 1, "q": q.content[:220]} for i, (_, q) in enumerate(batch)]
+        result = chat_completion_json(
+            system_prompt=system_prompt,
+            user_prompt=f"Score these {len(numbered)} questions:\n{json.dumps(numbered)}",
+            max_tokens=2560,
+            on_usage=_usage_cb(state),
+        )
+        for s in (result.get("scores") or []):
+            try:
+                n = int(s["n"]); score = max(0.0, min(1.0, float(s["score"])))
+            except (TypeError, ValueError, KeyError):
+                continue
+            if 1 <= n <= len(batch):
+                q_id = batch[n - 1][0]
+                score_by_qid[q_id] = score
+                d = _valid_diff.get(str(s.get("difficulty", "")).strip().lower())
+                if d:
+                    diff_by_qid[q_id] = d
 
-    for q_id, content, reason in to_remove:
+    from src.config import RELEVANCE_THRESHOLD
+    THRESHOLD = RELEVANCE_THRESHOLD
+    min_keep = max(1, state.config.min_questions)
+
+    # Apply scores + LLM difficulty tags (difficulty was hard-coded "Medium" for web/github;
+    # the content-based tag makes difficulty real across all sources).
+    scored = []  # (q_id, score)
+    for q_id, q in items:
+        score = score_by_qid.get(q_id, 0.5)
+        q.relevance_score = score
+        if q_id in diff_by_qid:
+            q.difficulty = diff_by_qid[q_id]
+        scored.append((q_id, score))
+
+    # Drop below-threshold candidates, but keep at least `min_keep` (backfill with the
+    # highest-scored below-threshold ones so a wide-but-weak pool never underfills).
+    scored.sort(key=lambda t: t[1], reverse=True)
+    keep_ids = {q_id for q_id, s in scored if s >= THRESHOLD}
+    if len(keep_ids) < min_keep:
+        for q_id, s in scored:
+            if len(keep_ids) >= min_keep:
+                break
+            keep_ids.add(q_id)
+
+    to_remove = [q_id for q_id, s in scored if q_id not in keep_ids]
+    for q_id in to_remove:
         q = state.questions.pop(q_id, None)
         if q is not None:
             state.removed.append({
-                "content": q.content, "reason": reason or "Off-topic for this session",
+                "content": q.content,
+                "reason": f"Below relevance threshold ({q.relevance_score:.2f}) for this session",
                 "stage": "relevance", "difficulty": q.difficulty, "company": q.attribution,
+                "relevance_score": q.relevance_score,
             })
 
-    kept = len(state.questions)
-    removed = len(to_remove)
+    # Attribute each surviving question to the session it best matches (per-session
+    # representation in final selection). Profiles exist only for multi-session topics.
+    if state.session_profiles:
+        _attribute_sessions(list(state.questions.values()), state.session_profiles)
 
+    state.removed_by_relevance += len(to_remove)
     return {
-        "kept": kept,
-        "removed": removed,
-        "removed_questions": [{"id": q_id, "content": c, "reason": r} for q_id, c, r in to_remove],
+        "kept": len(state.questions),
+        "removed": len(to_remove),
+        "removed_ids": to_remove,
         "remaining_total": len(state.questions) + len(state.coding_questions),
     }
 
@@ -436,6 +520,12 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
     sim_matrix = cosine_similarity(tfidf_matrix)
 
     source_priority = {"interview_db": 0, "web": 1, "generated": 2}
+
+    def _keep_rank(q):
+        # Higher relevance wins; tie-break by source priority (lower = better).
+        return (-(q.relevance_score if q.relevance_score is not None else 0.0),
+                source_priority.get(q.source, 9))
+
     to_remove = set()
     for i in range(len(questions)):
         if i in to_remove:
@@ -444,9 +534,9 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
             if j in to_remove:
                 continue
             if sim_matrix[i][j] > DEDUP_THRESHOLD:
-                pri_i = source_priority.get(questions[i].source, 9)
-                pri_j = source_priority.get(questions[j].source, 9)
-                to_remove.add(j if pri_i <= pri_j else i)
+                # Drop the weaker of the pair (keep higher relevance / better source).
+                worse = j if _keep_rank(questions[i]) <= _keep_rank(questions[j]) else i
+                to_remove.add(worse)
 
     for idx in to_remove:
         q = state.questions.pop(questions[idx].question_id, None)
@@ -621,20 +711,26 @@ Respond in JSON: {{"coding_questions": [...]}}""",
 def tool_search_github_questions(state: AgentState, outcomes: list) -> dict:
     """Harvest real interview questions from verified GitHub repos via the GitHub REST API."""
     from src.sources.github_repo import GithubRepoConnector
+    from src.config import GITHUB_POOL_CAP
     records = GithubRepoConnector().fetch(outcomes)
 
-    current = len(state.questions) + len(state.coding_questions)
-    capacity = state.config.max_questions - current
+    capacity = GITHUB_POOL_CAP - state.added_by_source.get("github", 0)
     if capacity <= 0:
-        return {"found": 0, "warning": f"Already at max ({state.config.max_questions})."}
+        return {"found": 0, "warning": f"GitHub quota full ({GITHUB_POOL_CAP})."}
 
+    topic_keywords = _topic_keywords(state.session_context)
     added = []
     for rec in records[:capacity]:
+        content = rec.question_text
+        if topic_keywords:                       # split compound Qs to the on-topic clause
+            content = _trim_to_topic(content, topic_keywords)
+            if not content:
+                continue
         q_id = str(uuid.uuid4())
         qd = QuestionDetail(
             question_id=q_id,
             category="THEORY",
-            content=rec.question_text,
+            content=content,
             topic=rec.source_type.split(":")[-1] if ":" in rec.source_type else "Interview",
             difficulty="Medium",
             source="web",
@@ -643,18 +739,42 @@ def tool_search_github_questions(state: AgentState, outcomes: list) -> dict:
         state.questions[q_id] = qd
         added.append({
             "id": q_id,
-            "content": rec.question_text[:150],
+            "content": content[:150],
             "source_url": rec.source_url,
             "source_type": rec.source_type,
         })
 
+    state.raw_fetched["github"] = state.raw_fetched.get("github", 0) + len(records)
+    state.added_by_source["github"] = state.added_by_source.get("github", 0) + len(added)
     total = len(state.questions) + len(state.coding_questions)
+    state.pool_size = max(state.pool_size, total)
     return {
         "found": len(records),
         "added": len(added),
         "total_accumulated": total,
-        "remaining_capacity": state.config.max_questions - total,
+        "github_remaining": GITHUB_POOL_CAP - state.added_by_source.get("github", 0),
     }
+
+
+_QUERY_STOPWORDS = {
+    "with", "that", "this", "from", "what", "have", "will", "about", "using",
+    "build", "create", "learn", "your", "into", "some", "each", "when", "which",
+    "should", "between", "their", "could", "would", "does", "they", "been", "more",
+    "than", "also", "other",
+}
+
+
+def _topic_keywords(ctx) -> set:
+    """Salient (>=4-char) keywords from the session's RM-derived scope — used to trim
+    compound questions to their on-topic clause. Shared by web + github + bank paths."""
+    kws: set = set()
+    if not ctx:
+        return kws
+    for term in (ctx.scope_in + ctx.key_concepts + ctx.learning_outcomes):
+        for w in term.lower().split():
+            if len(w) >= 4 and w not in _QUERY_STOPWORDS:
+                kws.add(w)
+    return kws
 
 
 def _trim_to_topic(text: str, topic_keywords: set) -> str:
@@ -684,13 +804,26 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
         return {"error": "TAVILY_API_KEY not set — skipping web search", "status": "skipped"}
 
     from src.sources.tavily_search import TavilyConnector
-    # Use scope_in (short topic labels) as primary queries — better Tavily recall than full
-    # outcome sentences. Supplement with whatever the agent passed.
+    from src.config import WEB_POOL_CAP
     ctx = state.session_context
-    search_terms = list(ctx.scope_in[:5]) if (ctx and ctx.scope_in) else []
-    for out in outcomes:
-        if out.lower() not in {t.lower() for t in search_terms}:
-            search_terms.append(out)
+
+    # Check the web quota BEFORE calling Tavily — don't burn API calls when web is full.
+    capacity = WEB_POOL_CAP - state.added_by_source.get("web", 0)
+    if capacity <= 0:
+        return {"found": 0, "warning": f"Web quota full ({WEB_POOL_CAP})."}
+
+    # Query the session's substantive CONCEPTS (key_concepts + scope_in), not just short
+    # scope labels — so deep conceptual questions (CoT, prompting, RAG) surface, not only
+    # generic company-review noise. Supplement with whatever the agent passed.
+    seen_terms: set[str] = set()
+    search_terms: list[str] = []
+    for t in ((ctx.key_concepts[:4] if ctx and ctx.key_concepts else [])
+              + (ctx.scope_in[:4] if ctx and ctx.scope_in else [])
+              + list(outcomes)):
+        tl = t.lower().strip()
+        if tl and tl not in seen_terms:
+            seen_terms.add(tl)
+            search_terms.append(t)
     # Cap terms for latency — each term costs several Tavily calls; recall is already
     # high (hundreds of records) with a handful of terms.
     search_terms = search_terms[:4]
@@ -701,11 +834,6 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
     # like "no web questions found".
     if tavily_error and not records:
         return {"found": 0, "added": 0, "status": "error", "error": tavily_error}
-
-    current = len(state.questions) + len(state.coding_questions)
-    capacity = state.config.max_questions - current
-    if capacity <= 0:
-        return {"found": 0, "warning": f"Already at max ({state.config.max_questions})."}
 
     # Prioritise attributed company questions and premium sources over Reddit noise
     _PRIORITY_SOURCES = {"tryexponent.com", "ambitionbox.com", "glassdoor.com",
@@ -721,20 +849,12 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
                      if state.session_context and state.session_context.key_concepts
                      else "Interview")
 
-    # Build a set of topic keywords for pre-filtering (avoids off-topic guide pages)
-    topic_keywords: set[str] = set()
-    if ctx:
-        for term in (ctx.scope_in + ctx.key_concepts + ctx.learning_outcomes):
-            for w in term.lower().split():
-                if len(w) >= 4 and w not in {
-                    "with", "that", "this", "from", "what", "have", "will",
-                    "about", "using", "build", "create", "learn", "your",
-                    "into", "some", "each", "when", "which", "should",
-                }:
-                    topic_keywords.add(w)
+    # Topic keywords for the on-topic question-splitting pre-filter (shared with github/bank).
+    topic_keywords = _topic_keywords(ctx)
 
-    # Take up to capacity+10; pre-filter by topic relevance first
-    take = min(len(records), capacity + 20)
+    # Fill the web quota (relevance ranking + trim-to-max happen later); scan a
+    # generous slice of the sorted records since the keyword pre-filter drops many.
+    take = min(len(records), capacity + 40)
     added = []
     for rec in records[:take]:
         # Trim a two-part question down to its on-topic clause (drops an unrelated
@@ -745,7 +865,7 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
             if not content:
                 continue
 
-        if len(added) >= capacity + 10:
+        if len(added) >= capacity:
             break
 
         q_id = str(uuid.uuid4())
@@ -768,18 +888,33 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
             "source_type": rec.source_type,
         })
 
+    state.raw_fetched["web"] = state.raw_fetched.get("web", 0) + len(records)
+    state.added_by_source["web"] = state.added_by_source.get("web", 0) + len(added)
     total = len(state.questions) + len(state.coding_questions)
+    state.pool_size = max(state.pool_size, total)
     return {
         "found": len(records),
         "added": len(added),
         "total_accumulated": total,
-        "remaining_capacity": state.config.max_questions - total,
+        "web_remaining": WEB_POOL_CAP - state.added_by_source.get("web", 0),
     }
 
 
 def tool_remove_question(state: AgentState, question_id: str, reason: str = "") -> dict:
+    # Guarantee the minimum: refuse a theory removal that would drop below min_questions
+    # UNLESS the reserve can backfill it. This stops the quality-gate revision from
+    # collapsing a thin set (e.g. down to 1) when there's nothing to refill from.
+    total = len(state.questions) + len(state.coding_questions)
+    min_q = max(1, state.config.min_questions)
+    if (question_id in state.questions and total <= min_q
+            and not [qid for qid in state.reserve if qid not in state.excluded]):
+        return {"removed": False,
+                "warning": f"At minimum ({min_q}) with no backfill available — keeping this question.",
+                "remaining": total}
     q = state.questions.pop(question_id, None) or state.coding_questions.pop(question_id, None)
     if q is not None:
+        state.excluded.add(question_id)          # never re-add a rejected question
+        state.reserve.pop(question_id, None)
         state.removed.append({
             "content": getattr(q, "content", getattr(q, "title", "")),
             "reason": reason or "Removed at quality gate", "stage": "curation",
@@ -789,15 +924,161 @@ def tool_remove_question(state: AgentState, question_id: str, reason: str = "") 
     return {"removed": False, "error": f"Question {question_id} not found"}
 
 
+def _select_final(questions: list, k: int, outcomes: list) -> list:
+    """Pick k questions balancing relevance, diversity, outcome coverage, and difficulty mix.
+
+    Greedy per-step score for candidate c given the already-selected set S:
+        λ·relevance(c) − (1−λ)·max_{s∈S} sim(c,s)
+        + COVERAGE_BONUS   if c covers a learning outcome not yet covered by S
+        + DIFFICULTY_BONUS if c's difficulty bucket is still under its target quota
+    relevance = LLM relevance_score; sim/coverage = TF-IDF cosine (same vectorizer as dedup).
+    Seeds with the most relevant question. This is the MMR core (relevance + diversity) with
+    coverage and difficulty nudges so the final set spans the session's outcomes and levels.
+    """
+    from src.config import (MMR_LAMBDA, SELECT_COVERAGE_BONUS, SELECT_DIFFICULTY_BONUS,
+                            SELECT_SESSION_BONUS, SELECT_ATTRIBUTION_BONUS)
+
+    def _rel(q):
+        return q.relevance_score if q.relevance_score is not None else 0.0
+
+    def _attr(q):  # True if backed by a credible real company (not NIAT/source-labeled)
+        c = q.asked_in_company
+        return bool(c) and str(c).strip().upper() != "NIAT"
+
+    if k <= 0:
+        return []
+    if len(questions) <= k:
+        return sorted(questions, key=lambda q: -_rel(q))
+
+    texts = [q.content for q in questions]
+    rel = [_rel(q) for q in questions]
+
+    # Similarity for redundancy + coverage: semantic embeddings when available, else TF-IDF.
+    from src import embeddings
+    from src.config import EMBED_COVERAGE_THRESHOLD
+    sim = embeddings.cosine_matrix(texts)
+    if sim is not None:
+        qo = embeddings.cosine_matrix(texts, outcomes) if outcomes else None
+        cov_thresh = EMBED_COVERAGE_THRESHOLD
+    else:
+        vec = TfidfVectorizer(stop_words="english", max_features=5000)
+        qmat = vec.fit_transform(texts)
+        sim = cosine_similarity(qmat)
+        qo = cosine_similarity(qmat, vec.transform(outcomes)) if outcomes else None
+        cov_thresh = 0.10
+
+    # Which outcomes each question plausibly covers.
+    covers = [set() for _ in questions]
+    if outcomes and qo is not None:
+        for i in range(len(questions)):
+            covers[i] = {j for j in range(len(outcomes)) if qo[i][j] >= cov_thresh}
+
+    # Difficulty target counts for k (Easy 30% / Medium 50% / Hard 20%).
+    diff_target = {"Easy": round(k * 0.3), "Medium": round(k * 0.5), "Hard": round(k * 0.2)}
+
+    # Per-session target (multi-session topics): aim for balanced representation.
+    sessions = [q.session for q in questions if q.session]
+    distinct_sessions = list(dict.fromkeys(sessions))
+    sess_target = (k / len(distinct_sessions)) if len(distinct_sessions) > 1 else 0
+
+    # Attribution balance: only nudge when the pool actually has BOTH kinds; aim ~half
+    # company-attributed so the set mixes real-company examples with substantive ones.
+    has_attr = any(_attr(q) for q in questions)
+    has_unattr = any(not _attr(q) for q in questions)
+    attr_target = (k / 2) if (has_attr and has_unattr) else 0
+
+    seed = max(range(len(questions)), key=lambda i: rel[i])
+    selected = [seed]
+    covered = set(covers[seed])
+    diff_have = {"Easy": 0, "Medium": 0, "Hard": 0}
+    diff_have[questions[seed].difficulty or "Medium"] = 1
+    sess_have = {questions[seed].session: 1} if questions[seed].session else {}
+    attr_have = 1 if _attr(questions[seed]) else 0
+    unattr_have = 0 if _attr(questions[seed]) else 1
+
+    while len(selected) < k:
+        best, best_score = None, float("-inf")
+        for c in range(len(questions)):
+            if c in selected:
+                continue
+            div = max(sim[c][s] for s in selected)
+            cov_new = SELECT_COVERAGE_BONUS if (covers[c] - covered) else 0.0
+            bucket = questions[c].difficulty or "Medium"
+            need = SELECT_DIFFICULTY_BONUS if diff_have.get(bucket, 0) < diff_target.get(bucket, 0) else 0.0
+            sess = questions[c].session
+            # Deficit-scaled: an under-represented (esp. zero-coverage) session gets a
+            # bigger push than one already near its fair share.
+            sess_need = (SELECT_SESSION_BONUS * max(0.0, sess_target - sess_have.get(sess, 0))
+                         if (sess_target and sess) else 0.0)
+            # Attribution-balance nudge toward the under-filled bucket (company vs source-labeled).
+            if attr_target and _attr(questions[c]):
+                attr_need = SELECT_ATTRIBUTION_BONUS if attr_have < attr_target else 0.0
+            elif attr_target:
+                attr_need = SELECT_ATTRIBUTION_BONUS if unattr_have < (k - attr_target) else 0.0
+            else:
+                attr_need = 0.0
+            score = MMR_LAMBDA * rel[c] - (1 - MMR_LAMBDA) * div + cov_new + need + sess_need + attr_need
+            if score > best_score:
+                best, best_score = c, score
+        selected.append(best)
+        covered |= covers[best]
+        diff_have[questions[best].difficulty or "Medium"] = diff_have.get(questions[best].difficulty or "Medium", 0) + 1
+        if questions[best].session:
+            sess_have[questions[best].session] = sess_have.get(questions[best].session, 0) + 1
+        if _attr(questions[best]):
+            attr_have += 1
+        else:
+            unattr_have += 1
+    return [questions[i] for i in selected]
+
+
+def _attribute_sessions(questions: list, profiles: dict) -> None:
+    """Tag each question with the session profile it most resembles (TF-IDF cosine).
+    Single-session topics tag all with that session; enables per-session representation."""
+    names = list(profiles.keys())
+    if not names:
+        return
+    if len(names) == 1:
+        for q in questions:
+            q.session = names[0]
+        return
+    if not questions:
+        return
+    prof_texts = [profiles[n] for n in names]
+    qtexts = [q.content for q in questions]
+    from src import embeddings
+    sims = embeddings.cosine_matrix(qtexts, prof_texts)   # [nq x n_sessions], semantic
+    if sims is None:
+        vec = TfidfVectorizer(stop_words="english", max_features=5000)
+        mat = vec.fit_transform(prof_texts + qtexts)
+        sims = cosine_similarity(mat[len(names):], mat[:len(names)])
+    for i, q in enumerate(questions):
+        q.session = names[int(sims[i].argmax())]
+
+
 def tool_submit_question_set(state: AgentState) -> dict:
+    # Selection pool = current theory questions + reserve (validated-but-not-selected),
+    # minus anything explicitly excluded (rejected in a prior revision). This lets a
+    # revision BACKFILL from the reserve instead of the set only ever shrinking.
+    pool = {**state.reserve, **state.questions}
+    for qid in state.excluded:
+        pool.pop(qid, None)
+    outcomes = state.session_context.learning_outcomes if state.session_context else []
+    keep_theory = max(0, state.config.max_questions - len(state.coding_questions))
+
+    selected = _select_final(list(pool.values()), keep_theory, outcomes)
+    selected_ids = {q.question_id for q in selected}
+
+    # New selected set; everything else in the pool goes to the reserve (recoverable),
+    # NOT to `removed` (it wasn't rejected, just not chosen this round).
+    state.questions = {q.question_id: q for q in selected}
+    state.reserve = {qid: q for qid, q in pool.items() if qid not in selected_ids}
+
     total = len(state.questions) + len(state.coding_questions)
-    if total > state.config.max_questions:
-        excess = total - state.config.max_questions
-        for q_id in list(reversed(list(state.questions.keys())))[:excess]:
-            state.questions.pop(q_id)
-        total = len(state.questions) + len(state.coding_questions)
     state.submitted = True
-    return {"submitted": True, "total_questions": total, "theory": len(state.questions), "coding": len(state.coding_questions)}
+    return {"submitted": True, "total_questions": total,
+            "theory": len(state.questions), "coding": len(state.coding_questions),
+            "reserve": len(state.reserve)}
 
 
 # ── Dispatch ────────────────────────────────────────────────────────────────

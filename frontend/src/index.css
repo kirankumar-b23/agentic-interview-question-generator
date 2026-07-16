@@ -359,6 +359,7 @@ ul { list-style: none; }
 
 /* ── Question sets grid (Review page) ── */
 .q-sets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 0.85rem 1.35rem 1.6rem; }
+.q-sets-grid.single { grid-template-columns: 1fr; }
 .q-set-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); }
 .q-set-head { padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: var(--surface-2); }
 .q-set-title { font-size: 0.7rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: .1em; }

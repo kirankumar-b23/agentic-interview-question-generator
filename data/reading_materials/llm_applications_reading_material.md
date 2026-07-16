@@ -139,7 +139,7 @@ We will build a simple **weather application** that displays the **current weath
 To get the weather information of **Mumbai**, we will use a **weather API URL**:
 
 ```python
-url = ""https://api.weatherapi.com/v1/current.json?key=e942dbeb75424295b4e94030242510&q={location}""
+url = "https://api.weatherapi.com/v1/current.json?key=e942dbeb75424295b4e94030242510&q={location}"
 ```
 
 We will make an **API call** to this URL using the **`requests`** package.
@@ -165,7 +165,7 @@ requests.get(url, params, **kwargs)
 import requests
 
 # Getting weather data of Mumbai
-url = ""https://api.weatherapi.com/v1/current.json?key=e942dbeb75424295b4e94030242510&q=Mumbai""
+url = "https://api.weatherapi.com/v1/current.json?key=e942dbeb75424295b4e94030242510&q=Mumbai"
 
 response = requests.get(url)
 ```
@@ -198,7 +198,7 @@ Here:
   * Returns the **content** of the response as **Unicode text**.
 * `.reason`
 
-  * Textual reason for the HTTP status, e.g., `""Not Found""` or `""OK""`.
+  * Textual reason for the HTTP status, e.g., `"Not Found"` or `"OK"`.
 * `.headers`
 
   * A dictionary-like object containing the **response headers**.
@@ -215,7 +215,7 @@ Here:
 import requests
 
 # Getting weather data of Mumbai
-url = ""https://api.weatherapi.com/v1/current.json?key=e942dbeb75424295b4e94030242510&q=Mumbai""
+url = "https://api.weatherapi.com/v1/current.json?key=e942dbeb75424295b4e94030242510&q=Mumbai"
 
 response = requests.get(url)
 data = response.json()
@@ -235,12 +235,12 @@ We can access specific fields from the JSON data, such as the **current temperat
 import requests
 
 # Getting weather data of Mumbai
-url = ""https://api.weatherapi.com/v1/current.json?key=e942dbeb75424295b4e94030242510&q=Mumbai""
+url = "https://api.weatherapi.com/v1/current.json?key=e942dbeb75424295b4e94030242510&q=Mumbai"
 
 response = requests.get(url)
 data = response.json()
 
-print(f""Temperature: {data['current']['temp_c']}°C"")
+print(f"Temperature: {data['current']['temp_c']}°C")
 ```
 
 **Output:**
@@ -299,11 +299,11 @@ To follow along with this material and develop Flask applications, you'll need t
 Python is the programming language that Flask is built upon.
 
 *   **Download Python:**
-    *   Visit the official Python website: <a href=""https://www.python.org/downloads/"" target=""_blank"">https://www.python.org/downloads/</a>
+    *   Visit the official Python website: <a href="https://www.python.org/downloads/" target="_blank">https://www.python.org/downloads/</a>
 
     *   Download the latest stable version of Python for your operating system (Windows, macOS, Linux).
 *   **Install Python:**
-    *   **Windows:** Run the installer. Make sure to check the ""Add Python X.X to PATH"" option during installation. This is crucial for running Python commands from your terminal.
+    *   **Windows:** Run the installer. Make sure to check the "Add Python X.X to PATH" option during installation. This is crucial for running Python commands from your terminal.
     *   **macOS:** Python might be pre-installed, but it's recommended to install the latest version from the official website or using a package manager like Homebrew (`brew install python`).
     *   **Linux:** Python is usually pre-installed. You can update it using your distribution's package manager (e.g., `sudo apt-get install python3` for Debian/Ubuntu).
 *   **Verify Installation:** Open a new terminal or command prompt and type:
@@ -323,14 +323,14 @@ Python is the programming language that Flask is built upon.
 VS Code is a popular, lightweight, and powerful code editor that provides excellent support for Python development.
 
 *   **Download VS Code:**
-    *   Visit the official VS Code website: <a href=""https://code.visualstudio.com/"" target=""_blank"">https://code.visualstudio.com/</a>
+    *   Visit the official VS Code website: <a href="https://code.visualstudio.com/" target="_blank">https://code.visualstudio.com/</a>
     *   Download the installer for your operating system.
 *   **Install VS Code:**
     *   Run the installer and follow the instructions. It's generally recommended to keep the default settings.
 *   **Install Python Extension for VS Code:**
     *   Open VS Code.
     *   Go to the Extensions view by clicking on the square icon on the sidebar or pressing `Ctrl+Shift+X` (Windows/Linux) or `Cmd+Shift+X` (macOS).
-    *   Search for ""Python"" and install the extension provided by Microsoft. This extension provides features like IntelliSense, linting, debugging, and more.
+    *   Search for "Python" and install the extension provided by Microsoft. This extension provides features like IntelliSense, linting, debugging, and more.
 
 With Python and VS Code set up, you're ready to start building your Flask applications!
 
@@ -379,12 +379,12 @@ Open your terminal and run the following command:
 
 ## Building Your First Flask Application
 
-Let's build a simple web application that responds with ""Hello World!"" when a user visits it.
+Let's build a simple web application that responds with "Hello World!" when a user visits it.
 
 ### The Flow
 1.  A **Client** (like a web browser) sends an HTTP Request to a URL.
 2.  Our **Flask Server** receives the request.
-3.  The server processes the request and sends back an HTTP Response containing the text ""Hello World!"".
+3.  The server processes the request and sends back an HTTP Response containing the text "Hello World!".
 
 <details>
 <summary><strong>Step 1: Create a Python File</strong></summary>
@@ -407,7 +407,7 @@ app = Flask(__name__)
 # 3. Define a route and the function to handle it
 @app.route('/', methods=['GET'])
 def home():
-   return ""Hello World!""
+   return "Hello World!"
 
 # 4. Run the application server
 if __name__ == '__main__':
@@ -421,7 +421,7 @@ if __name__ == '__main__':
 3.  **`@app.route('/', methods=['GET'])`**: This is a decorator that tells Flask which URL should trigger our function.
     -   The first argument (`'/'`) is the **path** of the URL (the root of our website).
     -   The `methods` argument specifies which HTTP methods this route responds to. If not specified, it defaults to `GET`.
-4.  **`def home(): ...`**: This is the function that will be executed when a user visits the `/` route. It returns the string ""Hello World!"", which will be sent back to the browser.
+4.  **`def home(): ...`**: This is the function that will be executed when a user visits the `/` route. It returns the string "Hello World!", which will be sent back to the browser.
 5.  **`app.run(debug=True)`**: This line starts the Flask development server.
     -   `debug=True` is a helpful parameter that automatically reloads the server when you make code changes and provides detailed error pages if something goes wrong.
 
@@ -443,7 +443,7 @@ You will see output indicating that the Flask server is running and listening fo
 <details>
 <summary><strong>Step 4: Access Your Application</strong></summary>
 <br>
-Open your web browser and navigate to `http://127.0.0.1:5000/`. You should see the ""Hello World!"" message displayed on the page.
+Open your web browser and navigate to `http://127.0.0.1:5000/`. You should see the "Hello World!" message displayed on the page.
 
 </details>
 
@@ -461,18 +461,18 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-   return ""Hello World!""
+   return "Hello World!"
 
 # New route for the path '/name'
 @app.route('/name')
 def get_name():
-   return ""Rahul""
+   return "Rahul"
 
 if __name__ == '__main__':
     app.run(debug=True)
 ```
 
-Now, if you run the server and visit `http://127.0.0.1:5000/name`, the browser will display ""Rahul"".
+Now, if you run the server and visit `http://127.0.0.1:5000/name`, the browser will display "Rahul".
 
 
 # Building Rest APIs using Flask
@@ -484,7 +484,7 @@ In the previous unit, we learned the fundamentals of Flask by building a simple 
 
 An **API (Application Programming Interface)** is a software intermediary that allows two applications to talk to each other. While a user interacts with a website through its User Interface (buttons, forms), applications and servers interact with each other through APIs.
 
-For our project, we will build a few APIs for a ""Zepto Clone"" to manage product data.
+For our project, we will build a few APIs for a "Zepto Clone" to manage product data.
 
 ### APIs We Will Build:
 - **Get Products**: Fetches a list of all available products.
@@ -514,9 +514,9 @@ app = Flask(__name__)
 
 # Sample product data
 products = [
-   {""id"": 1, ""name"": ""Chopping Board"", ""price"": 360},
-   {""id"": 2, ""name"": ""Sketch Pens"", ""price"": 30},
-   {""id"": 3, ""name"": ""Shoes"", ""price"": 519}
+   {"id": 1, "name": "Chopping Board", "price": 360},
+   {"id": 2, "name": "Sketch Pens", "price": 30},
+   {"id": 3, "name": "Shoes", "price": 519}
 ]
 
 if __name__ == '__main__':
@@ -535,9 +535,9 @@ from flask import Flask
 app = Flask(__name__)
 
 products = [
-   {""id"": 1, ""name"": ""Chopping Board"", ""price"": 360},
-   {""id"": 2, ""name"": ""Sketch Pens"", ""price"": 30},
-   {""id"": 3, ""name"": ""Shoes"", ""price"": 519}
+   {"id": 1, "name": "Chopping Board", "price": 360},
+   {"id": 2, "name": "Sketch Pens", "price": 30},
+   {"id": 3, "name": "Shoes", "price": 519}
 ]
 
 ## Route to get all products
@@ -598,7 +598,7 @@ def get_product(product_id):
     if product['id'] == product_id:
       return product
   # Return an error if the product is not found
-  return {""error"": ""Product not found""}, 404
+  return {"error": "Product not found"}, 404
 
 # ... (app.run remains the same)
 ```
@@ -628,8 +628,8 @@ A sample JSON request body to add a new product would look like this:
 
 ```json
 {
-  ""name"": ""Laptop Bag"",
-  ""price"": 800
+  "name": "Laptop Bag",
+  "price": 800
 }
 ```
 </details>
@@ -663,7 +663,7 @@ def add_product():
    new_product['id'] = len(products) + 1
    products.append(new_product)
    
-   return {""message"": ""Product added!"", ""product"": new_product}, 201
+   return {"message": "Product added!", "product": new_product}, 201
 
 # ... (app.run remains the same)
 ```
@@ -680,13 +680,13 @@ def add_product():
 
     ```json
     {
-      ""name"": ""Laptop Bag"",
-      ""price"": 800
+      "name": "Laptop Bag",
+      "price": 800
     }
     ```
 6.  Click **Send**.
 
-You should receive a ""Product added!"" message. You can verify this by making another `GET` request to `/products` to see the newly added item in the list.
+You should receive a "Product added!" message. You can verify this by making another `GET` request to `/products` to see the newly added item in the list.
 </details>
 
 
@@ -726,7 +726,7 @@ The session’s initial code contains both the **frontend** and **backend** insi
 - **Frontend — UI:** Built with HTML, CSS, and JavaScript to display product cards  
 - **Resource.md:** Contains the required JSON data  
 
-Download session initial code : <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/dcb093a3-b8ea-420a-ada5-d6d0d1e4f010_Nxt_Express.zip"" target=""_blank"" >NxtExpress Initial Code</a>
+Download session initial code : <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/dcb093a3-b8ea-420a-ada5-d6d0d1e4f010_Nxt_Express.zip" target="_blank" >NxtExpress Initial Code</a>
 
 When we run this code in the browser, we won’t see any product cards because the frontend is **not yet connected** to the backend.  
 
@@ -744,74 +744,74 @@ What we are going to build next is the **integration of the frontend with the Fl
 ```json
 [
   {
-    ""id"": 1,
-    ""name"": ""Chopping Board"",
-    ""price"": 360,
-    ""description"": ""A durable wooden chopping board for daily kitchen use."",
-    ""image"": ""https://bit.ly/3XCmlH5""
+    "id": 1,
+    "name": "Chopping Board",
+    "price": 360,
+    "description": "A durable wooden chopping board for daily kitchen use.",
+    "image": "https://bit.ly/3XCmlH5"
   },
   {
-    ""id"": 2,
-    ""name"": ""Sketch Pens"",
-    ""price"": 30,
-    ""description"": ""12 bright colors perfect for school and art projects."",
-    ""image"": ""https://bit.ly/3X8Tb2d""
+    "id": 2,
+    "name": "Sketch Pens",
+    "price": 30,
+    "description": "12 bright colors perfect for school and art projects.",
+    "image": "https://bit.ly/3X8Tb2d"
   },
   {
-    ""id"": 3,
-    ""name"": ""Shoes"",
-    ""price"": 519,
-    ""description"": ""Comfortable running shoes with breathable mesh."",
-    ""image"": ""https://bit.ly/4r5FnTX""
+    "id": 3,
+    "name": "Shoes",
+    "price": 519,
+    "description": "Comfortable running shoes with breathable mesh.",
+    "image": "https://bit.ly/4r5FnTX"
   },
   {
-    ""id"": 4,
-    ""name"": ""Water Bottle"",
-    ""price"": 199,
-    ""description"": ""1-litre stainless steel insulated bottle."",
-    ""image"": ""https://bit.ly/48oQWy3""
+    "id": 4,
+    "name": "Water Bottle",
+    "price": 199,
+    "description": "1-litre stainless steel insulated bottle.",
+    "image": "https://bit.ly/48oQWy3"
   },
   {
-    ""id"": 5,
-    ""name"": ""Notebook"",
-    ""price"": 85,
-    ""description"": ""200-page ruled notebook for study & office use."",
-    ""image"": ""https://images.unsplash.com/photo-1519682337058-a94d519337bc""
+    "id": 5,
+    "name": "Notebook",
+    "price": 85,
+    "description": "200-page ruled notebook for study & office use.",
+    "image": "https://images.unsplash.com/photo-1519682337058-a94d519337bc"
   },
   {
-    ""id"": 6,
-    ""name"": ""Earphones"",
-    ""price"": 299,
-    ""description"": ""High-quality wired earphones with mic."",
-    ""image"": ""https://bit.ly/4i705i2""
+    "id": 6,
+    "name": "Earphones",
+    "price": 299,
+    "description": "High-quality wired earphones with mic.",
+    "image": "https://bit.ly/4i705i2"
   },
   {
-    ""id"": 7,
-    ""name"": ""Backpack"",
-    ""price"": 899,
-    ""description"": ""Lightweight waterproof backpack with 3 compartments."",
-    ""image"": ""https://bit.ly/4ocvZuZ""
+    "id": 7,
+    "name": "Backpack",
+    "price": 899,
+    "description": "Lightweight waterproof backpack with 3 compartments.",
+    "image": "https://bit.ly/4ocvZuZ"
   },
   {
-    ""id"": 8,
-    ""name"": ""LED Bulb"",
-    ""price"": 120,
-    ""description"": ""9W energy-efficient LED bulb."",
-    ""image"": ""https://bit.ly/49oKyI9""
+    "id": 8,
+    "name": "LED Bulb",
+    "price": 120,
+    "description": "9W energy-efficient LED bulb.",
+    "image": "https://bit.ly/49oKyI9"
   },
   {
-    ""id"": 9,
-    ""name"": ""Coffee Mug"",
-    ""price"": 250,
-    ""description"": ""Ceramic mug with heat insulation and stylish print."",
-    ""image"": ""https://bit.ly/48uDdov""
+    "id": 9,
+    "name": "Coffee Mug",
+    "price": 250,
+    "description": "Ceramic mug with heat insulation and stylish print.",
+    "image": "https://bit.ly/48uDdov"
   },
   {
-    ""id"": 10,
-    ""name"": ""Keyboard"",
-    ""price"": 750,
-    ""description"": ""USB keyboard with smooth keys and long durability."",
-    ""image"": ""https://bit.ly/3X6DtEU""
+    "id": 10,
+    "name": "Keyboard",
+    "price": 750,
+    "description": "USB keyboard with smooth keys and long durability.",
+    "image": "https://bit.ly/3X6DtEU"
   }
 ]
 
@@ -1026,7 +1026,7 @@ We'll use Google Colab for this project and the `google-genai` package to intera
 <details>
 <summary><strong>Step 1: Setting Up The Environment</strong></summary>
 
-1.  Go to <a href=""https://colab.research.google.com/"" target=""_blank"" rel=""noopener noreferrer"">Google Colab</a>
+1.  Go to <a href="https://colab.research.google.com/" target="_blank" rel="noopener noreferrer">Google Colab</a>
 2.  Create a new notebook and name it `ai_powered_study_assistant.ipynb`.
 3.  Install the Google Gemini package by running the following command in a cell:
 
@@ -1043,7 +1043,7 @@ We'll use Google Colab for this project and the `google-genai` package to intera
 <details>
 <summary><strong>Step 2: Get Your API Key</strong></summary>
 
-1.  Go to <a href=""https://aistudio.google.com/app/apikey"" target=""_blank"" rel=""noopener noreferrer"">Google AI Studio</a>
+1.  Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>
 2.  Sign in and create a new API key.
 3.  Copy the key. We'll need it soon.
 
@@ -1052,13 +1052,13 @@ We'll use Google Colab for this project and the `google-genai` package to intera
 <details>
 <summary><strong>Step 3: Securely Store the API Key in Colab</strong></summary>
 
-To avoid pasting your API key directly in the code, we'll use Colab's ""Secrets"" feature.
+To avoid pasting your API key directly in the code, we'll use Colab's "Secrets" feature.
 
 1.  Click the **key icon** in the left sidebar of your Colab notebook.
-2.  Click **""Add new secret""**.
+2.  Click **"Add new secret"**.
 3.  Enter the name as `GEMINI_API_KEY`.
-4.  Paste your copied API key into the ""Value"" field.
-5.  Make sure the ""Allow notebook access"" toggle is enabled.
+4.  Paste your copied API key into the "Value" field.
+5.  Make sure the "Allow notebook access" toggle is enabled.
 
 </details>
 
@@ -1074,7 +1074,7 @@ import google.generativeai as genai
 from google.colab import userdata
 
 # Fetch the API key from Colab secrets
-api_key = userdata.get(""GEMINI_API_KEY"")
+api_key = userdata.get("GEMINI_API_KEY")
 
 # Initialize the Gemini client
 client = genai.configure(api_key=api_key)
@@ -1086,9 +1086,9 @@ This function will take a user's prompt, send it to the Gemini model, and return
 
 ```python
 def study_assistant(user_prompt):
-  """"""
+  """
   Sends a prompt to the Gemini model and gets a response.
-  """"""
+  """
   model = genai.GenerativeModel('gemini-2.5-flash')
   response = model.generate_content(user_prompt)
   return response.text
@@ -1102,7 +1102,7 @@ def study_assistant(user_prompt):
 
 ```python
 # Ask the study assistant a question
-user_question = ""Explain Generative AI in simple terms""
+user_question = "Explain Generative AI in simple terms"
 output = study_assistant(user_question)
 
 # Print the result
@@ -1120,16 +1120,16 @@ Here is the complete code you can run in your Google Colab notebook.
 from google import genai
 from google.colab import userdata
 
-client = genai.Client(api_key=userdata.get(""GEMINI_API_KEY""))
+client = genai.Client(api_key=userdata.get("GEMINI_API_KEY"))
 
 def study_assistant(user_prompt):
   response = client.models.generate_content(
-    model=""gemini-2.5-flash"",
+    model="gemini-2.5-flash",
     contents=user_prompt
   )
   return response
 
-output = study_assistant(""Explain Generative AI"")
+output = study_assistant("Explain Generative AI")
 print(output.text)
 
 
@@ -1150,18 +1150,18 @@ pip install groq
 from groq import Groq
 from google.colab import userdata
 
-client = Groq(api_key=userdata.get(""GROQ_API_KEY""))
+client = Groq(api_key=userdata.get("GROQ_API_KEY"))
 
 def study_assistant(user_prompt):
     response = client.chat.completions.create(
-        model=""llama-3.1-8b-instant"",   # You can change with any Groq model
+        model="llama-3.1-8b-instant",   # You can change with any Groq model
         messages=[
-            {""role"": ""user"", ""content"": user_prompt}
+            {"role": "user", "content": user_prompt}
         ]
     )
     return response
 
-output = study_assistant(""Explain Generative AI"")
+output = study_assistant("Explain Generative AI")
 print(output.choices[0].message.content)
 ```
 
@@ -1201,7 +1201,7 @@ The overall flow for our enhanced assistant will be:
 
 When you interact with a conversational LLM, the conversation is structured using three distinct roles: **System**, **User**, and **Assistant**. Understanding this structure is key to guiding the AI's behavior.
 
--   **System**: These are the background instructions you give the AI before the conversation starts. It sets the overall behavior, tone, personality, and rules. Think of it as telling the AI, ""Hey, behave like a professional coach"" or ""Explain this concept to a complete beginner.""
+-   **System**: These are the background instructions you give the AI before the conversation starts. It sets the overall behavior, tone, personality, and rules. Think of it as telling the AI, "Hey, behave like a professional coach" or "Explain this concept to a complete beginner."
 
 -   **User**: This is your actual input, the question or task you provide to the AI.
 
@@ -1221,12 +1221,12 @@ A **System Prompt** is a short instruction that tells the LLM how to behave befo
 from google import genai
 from google.colab import userdata
 
-client = genai.Client(api_key=userdata.get(""GEMINI_API_KEY""))
+client = genai.Client(api_key=userdata.get("GEMINI_API_KEY"))
 
 def study_assistant(question):
-  prompt = f""You are my smart Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding. Here is my question: {question}""
+  prompt = f"You are my smart Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding. Here is my question: {question}"
   response = client.models.generate_content(
-    model=""gemini-2.5-flash"",
+    model="gemini-2.5-flash",
     contents=prompt
   )
   return response.text
@@ -1246,8 +1246,8 @@ We'll create a dictionary where each key is a personality name and the value is 
 
 ```python
 personalities = {
-  ""Friendly"": ""You are a friendly, enthusiastic, and highly encouraging Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding."",
-  ""Academic"": ""You are a strictly academic, highly detailed, and professional university Professor. Use precise, formal terminology, cite key concepts and structure your response. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding.""
+  "Friendly": "You are a friendly, enthusiastic, and highly encouraging Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding.",
+  "Academic": "You are a strictly academic, highly detailed, and professional university Professor. Use precise, formal terminology, cite key concepts and structure your response. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding."
 }
 ```
 
@@ -1261,17 +1261,17 @@ from google.genai import types
 client = genai.Client(api_key=userdata.get('GEMINI_API_KEY'))
 
 personalities = {
-  ""Friendly"":
-  ""You are a friendly, enthusiastic, and highly encouraging Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding"",
-  ""Academic"":
-  ""You are a strictly academic, highly detailed, and professional university Professor. Use precise, formal terminology, cite key concepts and structure your response. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding""
+  "Friendly":
+  "You are a friendly, enthusiastic, and highly encouraging Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding",
+  "Academic":
+  "You are a strictly academic, highly detailed, and professional university Professor. Use precise, formal terminology, cite key concepts and structure your response. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding"
 }
 
 def study_assistant(question, persona):
     system_prompt = personalities[persona]
 
     response = client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
         ),
@@ -1279,8 +1279,8 @@ def study_assistant(question, persona):
     )
     return response.text
 
-question = ""What are LLMs?""
-personality = ""Friendly""
+question = "What are LLMs?"
+personality = "Friendly"
 print(study_assistant(question, personality))
 ```
 
@@ -1329,17 +1329,17 @@ from google.genai import types
 client = genai.Client(api_key=userdata.get('GEMINI_API_KEY'))
 
 personalities = {
-  ""Friendly"":
-  ""You are a friendly, enthusiastic, and highly encouraging Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding"",
-  ""Academic"":
-  ""You are a strictly academic, highly detailed, and professional university Professor. Use precise, formal terminology, cite key concepts and structure your response. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding""
+  "Friendly":
+  "You are a friendly, enthusiastic, and highly encouraging Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding",
+  "Academic":
+  "You are a strictly academic, highly detailed, and professional university Professor. Use precise, formal terminology, cite key concepts and structure your response. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding"
 }
 
 def study_assistant(question, persona):
     system_prompt = personalities[persona]
 
     response = client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             temperature=0.4,
@@ -1349,8 +1349,8 @@ def study_assistant(question, persona):
     )
     return response.text
 
-question = ""What are LLMs?""
-personality = ""Friendly""
+question = "What are LLMs?"
+personality = "Friendly"
 print(study_assistant(question, personality))
 ```
 </details>
@@ -1361,7 +1361,7 @@ print(study_assistant(question, personality))
 When working with APIs, there are practical limitations to keep in mind:
 
 -   **Rate Limits**: This defines how many requests per minute your app can send (e.g., 60 requests/minute). Exceeding this limit will result in a `RateLimitExceededError`.
--   **Token Allowances**: Free tiers often have caps on the number of tokens you can use per day or per month. Remember that ""tokens"" includes both your input prompt and the model's output. Large inputs will consume your allowance faster.
+-   **Token Allowances**: Free tiers often have caps on the number of tokens you can use per day or per month. Remember that "tokens" includes both your input prompt and the model's output. Large inputs will consume your allowance faster.
 
 
 ## ServerError
@@ -1447,17 +1447,17 @@ from google.genai import types
 client = genai.Client(api_key=userdata.get('GEMINI_API_KEY'))
 
 personalities = {
-  ""Friendly"":
-  ""You are a friendly, enthusiastic, and highly encouraging Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding"",
-  ""Academic"":
-  ""You are a strictly academic, highly detailed, and professional university Professor. Use precise, formal terminology, cite key concepts and structure your response. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding""
+  "Friendly":
+  "You are a friendly, enthusiastic, and highly encouraging Study Assistant. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding",
+  "Academic":
+  "You are a strictly academic, highly detailed, and professional university Professor. Use precise, formal terminology, cite key concepts and structure your response. Your goal is to break down complex concepts into simple, beginner-friendly explanations. Use analogies and real-world examples that beginners can relate to. Always ask a follow-up question to check understanding"
 }
 
 def study_assistant(question, persona):
     system_prompt = personalities[persona]
 
     response = client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             temperature=0.4,
@@ -1467,8 +1467,8 @@ def study_assistant(question, persona):
     )
     return response.text
 
-question = ""What are LLMs?""
-personality = ""Friendly""
+question = "What are LLMs?"
+personality = "Friendly"
 print(study_assistant(question, personality))
 ```
 
@@ -1479,7 +1479,7 @@ First, install the Gradio library in your environment:
 ```python
 !pip install -q gradio
 ```
--   `!pip install -q gradio`: This command installs the Gradio Python library. The `!` tells the environment (like Colab) to execute a shell command, `pip` is the Python package installer, and `-q` means ""quiet"" installation, suppressing verbose output.
+-   `!pip install -q gradio`: This command installs the Gradio Python library. The `!` tells the environment (like Colab) to execute a shell command, `pip` is the Python package installer, and `-q` means "quiet" installation, suppressing verbose output.
 
 ### Importing Gradio
 ```python
@@ -1518,27 +1518,27 @@ from google import genai
 from google.genai import types
 from google.colab import userdata
 
-client = genai.Client(api_key=userdata.get(""GEMINI_API_KEY""))
+client = genai.Client(api_key=userdata.get("GEMINI_API_KEY"))
 
 personalities = {
-  ""Friendly"":
-  """"""You are a friendly, enthusiastic, and highly encouraging Study Assistant. 
+  "Friendly":
+  """You are a friendly, enthusiastic, and highly encouraging Study Assistant. 
   Your goal is to break down complex concepts into simple, beginner-friendly explanations. 
   Use analogies and real-world examples that beginners can relate to. 
-  Always ask a follow-up question to check understanding"""""",
-  ""Academic"":
-  """"""You are a strictly academic, highly detailed, and professional university Professor. 
+  Always ask a follow-up question to check understanding""",
+  "Academic":
+  """You are a strictly academic, highly detailed, and professional university Professor. 
   Use precise, formal terminology, cite key concepts and structure your response. 
   Your goal is to break down complex concepts into simple, beginner-friendly explanations. 
   Use analogies and real-world examples that beginners can relate to. 
-  Always ask a follow-up question to check understanding""""""
+  Always ask a follow-up question to check understanding"""
 }
 
 def study_assistant(question, persona):
     system_prompt = personalities[persona]
 
     response = client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             temperature=0.4,
@@ -1551,12 +1551,12 @@ def study_assistant(question, persona):
 demo = gr.Interface(
     fn=study_assistant,
     inputs=[
-        gr.Textbox(lines=4, placeholder=""Ask a question..."", label=""Question""),
-        gr.Radio(choices=list(personalities.keys()), value=""Friendly"", label=""Personality"")
+        gr.Textbox(lines=4, placeholder="Ask a question...", label="Question"),
+        gr.Radio(choices=list(personalities.keys()), value="Friendly", label="Personality")
     ],
-    outputs=gr.Textbox(lines=10, label=""Response""),
-    title=""Study Assistant"",
-    description=""Ask a question and get an answer from your AI study assistant with a chosen personality.""
+    outputs=gr.Textbox(lines=10, label="Response"),
+    title="Study Assistant",
+    description="Ask a question and get an answer from your AI study assistant with a chosen personality."
 )
 
 ```
@@ -1578,27 +1578,27 @@ from google import genai
 from google.genai import types
 from google.colab import userdata
 
-client = genai.Client(api_key=userdata.get(""GEMINI_API_KEY""))
+client = genai.Client(api_key=userdata.get("GEMINI_API_KEY"))
 
 personalities = {
-  ""Friendly"":
-  """"""You are a friendly, enthusiastic, and highly encouraging Study Assistant. 
+  "Friendly":
+  """You are a friendly, enthusiastic, and highly encouraging Study Assistant. 
   Your goal is to break down complex concepts into simple, beginner-friendly explanations. 
   Use analogies and real-world examples that beginners can relate to. 
-  Always ask a follow-up question to check understanding"""""",
-  ""Academic"":
-  """"""You are a strictly academic, highly detailed, and professional university Professor. 
+  Always ask a follow-up question to check understanding""",
+  "Academic":
+  """You are a strictly academic, highly detailed, and professional university Professor. 
   Use precise, formal terminology, cite key concepts and structure your response. 
   Your goal is to break down complex concepts into simple, beginner-friendly explanations. 
   Use analogies and real-world examples that beginners can relate to. 
-  Always ask a follow-up question to check understanding""""""
+  Always ask a follow-up question to check understanding"""
 }
 
 def study_assistant(question, persona):
     system_prompt = personalities[persona]
 
     response = client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             temperature=0.4,
@@ -1611,12 +1611,12 @@ def study_assistant(question, persona):
 demo = gr.Interface(
     fn=study_assistant,
     inputs=[
-        gr.Textbox(lines=4, placeholder=""Ask a question..."", label=""Question""),
-        gr.Radio(choices=list(personalities.keys()), value=""Friendly"", label=""Personality"")
+        gr.Textbox(lines=4, placeholder="Ask a question...", label="Question"),
+        gr.Radio(choices=list(personalities.keys()), value="Friendly", label="Personality")
     ],
-    outputs=gr.Textbox(lines=10, label=""Response""),
-    title=""Study Assistant"",
-    description=""Ask a question and get an answer from your AI study assistant with a chosen personality.""
+    outputs=gr.Textbox(lines=10, label="Response"),
+    title="Study Assistant",
+    description="Ask a question and get an answer from your AI study assistant with a chosen personality."
 )
 
 demo.launch(debug=True)
@@ -1667,7 +1667,7 @@ Before we can deploy, we need to make two simple but crucial modifications to ou
 <details>
 <summary><strong>First Modification: Create `app.py` File</strong></summary>
 
-To package our code into a file, we can use a ""magic command"" in our Colab notebook. By adding `%%writefile app.py` at the very top of the cell containing our application code, we instruct Colab to save the entire cell's content into a file named `app.py`.
+To package our code into a file, we can use a "magic command" in our Colab notebook. By adding `%%writefile app.py` at the very top of the cell containing our application code, we instruct Colab to save the entire cell's content into a file named `app.py`.
 
 ```python
 %%writefile app.py
@@ -1676,27 +1676,27 @@ from google import genai
 from google.genai import types
 from google.colab import userdata
 
-client = genai.Client(api_key=userdata.get(""GEMINI_API_KEY""))
+client = genai.Client(api_key=userdata.get("GEMINI_API_KEY"))
 
 personalities = {
-  ""Friendly"":
-  """"""You are a friendly, enthusiastic, and highly encouraging Study Assistant. 
+  "Friendly":
+  """You are a friendly, enthusiastic, and highly encouraging Study Assistant. 
   Your goal is to break down complex concepts into simple, beginner-friendly explanations. 
   Use analogies and real-world examples that beginners can relate to. 
-  Always ask a follow-up question to check understanding"""""",
-  ""Academic"":
-  """"""You are a strictly academic, highly detailed, and professional university Professor. 
+  Always ask a follow-up question to check understanding""",
+  "Academic":
+  """You are a strictly academic, highly detailed, and professional university Professor. 
   Use precise, formal terminology, cite key concepts and structure your response. 
   Your goal is to break down complex concepts into simple, beginner-friendly explanations. 
   Use analogies and real-world examples that beginners can relate to. 
-  Always ask a follow-up question to check understanding""""""
+  Always ask a follow-up question to check understanding"""
 }
 
 def study_assistant(question, persona):
     system_prompt = personalities[persona]
 
     response = client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             temperature=0.4,
@@ -1709,12 +1709,12 @@ def study_assistant(question, persona):
 demo = gr.Interface(
     fn=study_assistant,
     inputs=[
-        gr.Textbox(lines=4, placeholder=""Ask a question..."", label=""Question""),
-        gr.Radio(choices=list(personalities.keys()), value=""Friendly"", label=""Personality"")
+        gr.Textbox(lines=4, placeholder="Ask a question...", label="Question"),
+        gr.Radio(choices=list(personalities.keys()), value="Friendly", label="Personality")
     ],
-    outputs=gr.Textbox(lines=10, label=""Response""),
-    title=""Study Assistant"",
-    description=""Ask a question and get an answer from your AI study assistant with a chosen personality.""
+    outputs=gr.Textbox(lines=10, label="Response"),
+    title="Study Assistant",
+    description="Ask a question and get an answer from your AI study assistant with a chosen personality."
 )
 
 demo.launch(debug=True)
@@ -1724,7 +1724,7 @@ demo.launch(debug=True)
 <details>
 <summary><strong>Second Modification: Access API Key from Environment Variables</strong></summary>
 
-Our current code gets the API key from Colab's secrets manager, which won't be available in Hugging Face. We need to modify it to read the key from the server's ""environment variables"" (which Hugging Face calls ""Secrets"").
+Our current code gets the API key from Colab's secrets manager, which won't be available in Hugging Face. We need to modify it to read the key from the server's "environment variables" (which Hugging Face calls "Secrets").
 
 1.  **Remove Colab-specific import**: We no longer need to import `userdata` from `google.colab`.
 2.  **Add `os` import**: We'll use Python's built-in `os` library to access environment variables.
@@ -1734,14 +1734,14 @@ Our current code gets the API key from Colab's secrets manager, which won't be a
 
 ```python
 from google.colab import userdata
-client = genai.Client(api_key=userdata.get(""GEMINI_API_KEY""))
+client = genai.Client(api_key=userdata.get("GEMINI_API_KEY"))
 ```
 
 **To this:**
 
 ```python
 import os
-client = genai.Client(api_key=os.getenv(""GEMINI_API_KEY""))
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 ```
 This tells our app to look for a secret named `GEMINI_API_KEY` in the Hugging Face environment.
 
@@ -1753,27 +1753,27 @@ from google import genai
 from google.genai import types
 import os
 
-client = genai.Client(api_key=os.getenv(""GEMINI_API_KEY""))
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 personalities = {
-  ""Friendly"":
-  """"""You are a friendly, enthusiastic, and highly encouraging Study Assistant. 
+  "Friendly":
+  """You are a friendly, enthusiastic, and highly encouraging Study Assistant. 
   Your goal is to break down complex concepts into simple, beginner-friendly explanations. 
   Use analogies and real-world examples that beginners can relate to. 
-  Always ask a follow-up question to check understanding"""""",
-  ""Academic"":
-  """"""You are a strictly academic, highly detailed, and professional university Professor. 
+  Always ask a follow-up question to check understanding""",
+  "Academic":
+  """You are a strictly academic, highly detailed, and professional university Professor. 
   Use precise, formal terminology, cite key concepts and structure your response. 
   Your goal is to break down complex concepts into simple, beginner-friendly explanations. 
   Use analogies and real-world examples that beginners can relate to. 
-  Always ask a follow-up question to check understanding""""""
+  Always ask a follow-up question to check understanding"""
 }
 
 def study_assistant(question, persona):
     system_prompt = personalities[persona]
 
     response = client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
             temperature=0.4,
@@ -1786,12 +1786,12 @@ def study_assistant(question, persona):
 demo = gr.Interface(
     fn=study_assistant,
     inputs=[
-        gr.Textbox(lines=4, placeholder=""Ask a question..."", label=""Question""),
-        gr.Radio(choices=list(personalities.keys()), value=""Friendly"", label=""Personality"")
+        gr.Textbox(lines=4, placeholder="Ask a question...", label="Question"),
+        gr.Radio(choices=list(personalities.keys()), value="Friendly", label="Personality")
     ],
-    outputs=gr.Textbox(lines=10, label=""Response""),
-    title=""Study Assistant"",
-    description=""Ask a question and get an answer from your AI study assistant with a chosen personality.""
+    outputs=gr.Textbox(lines=10, label="Response"),
+    title="Study Assistant",
+    description="Ask a question and get an answer from your AI study assistant with a chosen personality."
 )
 
 demo.launch(debug=True)
@@ -1812,7 +1812,7 @@ google-genai
 ```
 This file lists the `gradio` and `google-genai` packages, which Hugging Face will automatically install before running our app.
 
-<MultiLineWarning text=""Important"">
+<MultiLineWarning text="Important">
 After running both `%%writefile` cells, you must download the newly created `app.py` and `requirements.txt` files from the Colab file browser. You will need them for the next steps.
 </MultiLineWarning>
 
@@ -1826,15 +1826,15 @@ Now that we have our files ready, let's deploy our app to Hugging Face Spaces.
 <details>
 <summary><strong>Step 1: Create a Hugging Face Account</strong></summary>
 
--   Go to <a href=""https://huggingface.co"" target=""_blank"">huggingface.co</a>
--   Click **""Sign Up""** in the top right.
+-   Go to <a href="https://huggingface.co" target="_blank">huggingface.co</a>
+-   Click **"Sign Up"** in the top right.
 -   Create a free account. You can sign up with Google or GitHub for a faster process.
 </details>
 
 <details>
 <summary><strong>Step 2: Create a New Space</strong></summary>
 
--   Once logged in, click your profile icon (top right) and select **""New Space""**.
+-   Once logged in, click your profile icon (top right) and select **"New Space"**.
 -   Configure your Space with the following settings:
     -   **Space name**: Choose a unique name for your app (e.g., `my-study-assistant`).
     -   **License**: `MIT`
@@ -1842,7 +1842,7 @@ Now that we have our files ready, let's deploy our app to Hugging Face Spaces.
     -   **Template**: `Blank`
     -   **Hardware**: `CPU basic` (this is free and sufficient).
     -   **Visibility**: `Public`
--   Click **""Create Space""**.
+-   Click **"Create Space"**.
 </details>
 
 <details>
@@ -1850,13 +1850,13 @@ Now that we have our files ready, let's deploy our app to Hugging Face Spaces.
 
 This is a critical step for security. We must never paste our API key directly into our code.
 
--   In your new Space, click the **""Settings""** tab.
--   Scroll down to the **""Variables and secrets""** section.
--   Click **""New secret""**.
+-   In your new Space, click the **"Settings"** tab.
+-   Scroll down to the **"Variables and secrets"** section.
+-   Click **"New secret"**.
 -   Fill in the details:
-    -   **Name**: `GEMINI_API_KEY` (This must match exactly what's in `os.getenv(""GEMINI_API_KEY"")`).
+    -   **Name**: `GEMINI_API_KEY` (This must match exactly what's in `os.getenv("GEMINI_API_KEY")`).
     -   **Secret value**: Paste your actual Gemini API key here.
--   Click **""Save secret""**.
+-   Click **"Save secret"**.
 
 Now your app can securely access the key without exposing it to the public.
 </details>
@@ -1864,17 +1864,17 @@ Now your app can securely access the key without exposing it to the public.
 <details>
 <summary><strong>Step 4: Upload Your Files</strong></summary>
 
--   Go to the **""Files""** tab in your Space.
--   Click the **""Contribute""** button and select **""Upload files""**.
+-   Go to the **"Files"** tab in your Space.
+-   Click the **"Contribute"** button and select **"Upload files"**.
 -   Drag and drop (or select) both your `app.py` and `requirements.txt` files.
--   Add a commit message (e.g., ""Initial commit"").
--   Click **""Commit changes to main""**.
+-   Add a commit message (e.g., "Initial commit").
+-   Click **"Commit changes to main"**.
 </details>
 
 <details>
 <summary><strong>Step 5: Wait for the Build and Test Your App!</strong></summary>
 
-Once you commit the files, Hugging Face automatically starts the build process. You will see a ""Building"" status. This might take 1-2 minutes.
+Once you commit the files, Hugging Face automatically starts the build process. You will see a "Building" status. This might take 1-2 minutes.
 
 -   Hugging Face creates a Python environment.
 -   It installs the packages from `requirements.txt`.
@@ -1897,7 +1897,7 @@ Hugging Face's free tier is fantastic for student projects and demos, but it has
 
 <details>
 <summary><strong>Sleep Mode</strong></summary>
-If your app is inactive for about 48 hours, it will ""sleep"" to conserve resources. The first person to visit it after it sleeps will experience a short loading time (around 20 seconds) as the app wakes up.
+If your app is inactive for about 48 hours, it will "sleep" to conserve resources. The first person to visit it after it sleeps will experience a short loading time (around 20 seconds) as the app wakes up.
 </details>
 
 <details>
@@ -1917,7 +1917,7 @@ There is limited storage space, so it's not suitable for applications that need 
 
 ## Introduction
 
-In previous sessions, you've built and deployed your own LLM-powered applications. Until now, Large Language Models (LLMs) have been treated as a ""black box"" where input goes in, ""magic happens,"" and a response comes out. This session aims to open that box and explore the underlying mechanisms.
+In previous sessions, you've built and deployed your own LLM-powered applications. Until now, Large Language Models (LLMs) have been treated as a "black box" where input goes in, "magic happens," and a response comes out. This session aims to open that box and explore the underlying mechanisms.
 
 ---
 
@@ -1953,25 +1953,25 @@ At its core, an LLM operates on the principle of next-word prediction, similar t
 
 Consider these sentences:
 
-*   ""Honesty is the best \_\_\_\_\_\_""
-*   ""Twinkle twinkle little \_\_\_\_\_\_""
+*   "Honesty is the best \_\_\_\_\_\_"
+*   "Twinkle twinkle little \_\_\_\_\_\_"
 
 Most people can immediately predict the next word because they have seen these patterns previously. LLMs do the same, but on a much larger scale, having processed billions of sentences and understood countless patterns.
 
 ### Next-Word Prediction in Action:
 
-Imagine the LLM processing a sentence like ""A quick brown fox jumps..."":
+Imagine the LLM processing a sentence like "A quick brown fox jumps...":
 
-*   **Input:** ""A quick brown fox jumps""
-*   **LLM Predicts:** ""over""
-*   **Input:** ""A quick brown fox jumps over""
-*   **LLM Predicts:** ""the""
-*   **Input:** ""A quick brown fox jumps over the""
-*   **LLM Predicts:** ""lazy""
-*   **Input:** ""A quick brown fox jumps over the lazy""
-*   **LLM Predicts:** ""dog""
-*   **Input:** ""A quick brown fox jumps over the lazy dog""
-*   **LLM Predicts:** ""STOPS"" (End of sentence)
+*   **Input:** "A quick brown fox jumps"
+*   **LLM Predicts:** "over"
+*   **Input:** "A quick brown fox jumps over"
+*   **LLM Predicts:** "the"
+*   **Input:** "A quick brown fox jumps over the"
+*   **LLM Predicts:** "lazy"
+*   **Input:** "A quick brown fox jumps over the lazy"
+*   **LLM Predicts:** "dog"
+*   **Input:** "A quick brown fox jumps over the lazy dog"
+*   **LLM Predicts:** "STOPS" (End of sentence)
 
 This iterative process of predicting the most probable next word allows LLMs to generate coherent and contextually relevant text.
 
@@ -1983,7 +1983,7 @@ Historically, various architectures like Recurrent Neural Networks (RNNs) and Lo
 
 ### The Memory Fading Problem
 
-Earlier architectures like RNNs and LSTMs processed text sequentially, one word at a time. This led to a significant problem: **memory fading**. In long sentences, the model would often ""forget"" earlier words by the time it reached the end, making it difficult to understand long-range dependencies.
+Earlier architectures like RNNs and LSTMs processed text sequentially, one word at a time. This led to a significant problem: **memory fading**. In long sentences, the model would often "forget" earlier words by the time it reached the end, making it difficult to understand long-range dependencies.
 
 **Example of Memory Fading:**
 
@@ -1994,11 +1994,11 @@ it was actually...
 
 ```
 
-By the time the model reached ""it was actually..."", older models struggled to remember what ""it"" referred to (the movie).
+By the time the model reached "it was actually...", older models struggled to remember what "it" referred to (the movie).
 
 Transformers solve this by looking at the **entire sentence at once**, not word-by-word. This parallel processing allows them to:
 
-*   Understand relationships in long sentences (e.g., ""movie"" connects to ""amazing"").
+*   Understand relationships in long sentences (e.g., "movie" connects to "amazing").
 *   Retain information from earlier words.
 *   Train and generate much faster.
 
@@ -2017,23 +2017,23 @@ LLMs don't directly understand text, they operate on numbers. Therefore, input t
 
 **Tokenization** is the process of splitting a sentence into smaller parts called **tokens**. Tokens can be:
 
-*   Entire words (e.g., ""I"", ""love"", ""Tennis"")
-*   Parts of words (subwords, e.g., ""Play"" + ""ing"" for ""Playing"")
-*   Even single characters (e.g., ""?"")
+*   Entire words (e.g., "I", "love", "Tennis")
+*   Parts of words (subwords, e.g., "Play" + "ing" for "Playing")
+*   Even single characters (e.g., "?")
 
-Think about how you remember a long phone number like ""6640230120"". Most people break it into smaller, easier-to-remember chunks (e.g., ""66 402 301 20""). Similarly, LLMs break text into tokens for easier processing and pattern recognition.
+Think about how you remember a long phone number like "6640230120". Most people break it into smaller, easier-to-remember chunks (e.g., "66 402 301 20"). Similarly, LLMs break text into tokens for easier processing and pattern recognition.
 
 A single word can sometimes be broken into multiple tokens.
 
 **Example:**
 
-*   ""I love Tennis."" → ""I"", ""love"", ""Tennis"", "".""
-*   ""Playing"" → ""Play"", ""ing""
+*   "I love Tennis." → "I", "love", "Tennis", "."
+*   "Playing" → "Play", "ing"
 
 <details>
 <summary><strong>Visualizing Tokenization</strong></summary>
 
-You can explore how different models tokenize text using tools like the <a href=""https://platform.openai.com/tokenizer"" target=""_blank"">OpenAI Tokenizer</a>. 
+You can explore how different models tokenize text using tools like the <a href="https://platform.openai.com/tokenizer" target="_blank">OpenAI Tokenizer</a>. 
 </details>
 <MultiLineNote>Note that different models use different tokenizers and techniques.
 </MultiLineNote>
@@ -2042,12 +2042,12 @@ You can explore how different models tokenize text using tools like the <a href=
 After tokenization, each token is converted into a list of numbers called a **vector**. This numerical representation is known as an **embedding**.
 
 *  Embeddings capture the meaning of a token in a numeric form. They are not random numbers.
-*  Embeddings place words in a multi-dimensional space where similar relationships point in the same direction (e.g., the vector difference between ""King"" and ""Queen"" might be similar to ""Man"" and ""Woman""). This allows the model to understand relationships between words.
+*  Embeddings place words in a multi-dimensional space where similar relationships point in the same direction (e.g., the vector difference between "King" and "Queen" might be similar to "Man" and "Woman"). This allows the model to understand relationships between words.
 
 <details>
 <summary><strong>Visualizing Embeddings</strong></summary>
 
-Tools like the <a href=""https://projector.tensorflow.org/"" target=""_blank"">TensorFlow Projector</a>. can help visualize word embeddings in a 2D or 3D space.
+Tools like the <a href="https://projector.tensorflow.org/" target="_blank">TensorFlow Projector</a>. can help visualize word embeddings in a 2D or 3D space.
 </details>
 
 ### 3. Positional Encoding: Adding Order to Parallel Processing
@@ -2055,7 +2055,7 @@ Tools like the <a href=""https://projector.tensorflow.org/"" target=""_blank"">T
 Since Transformers process the entire input simultaneously, it is important to understand the order of words in a sentence. This is where **positional encoding** comes in.
 
 * Positional data is added to each embedding, informing the model about the word's position within the sentence.
-* Without positional encodings, a Transformer would consider sentences like ""The dog chased the ball"" and ""The ball chased the dog"" to be identical, as it would only see the collection of words, not their sequence.
+* Without positional encodings, a Transformer would consider sentences like "The dog chased the ball" and "The ball chased the dog" to be identical, as it would only see the collection of words, not their sequence.
 
 **Example:**
 Input sentences:
@@ -2096,13 +2096,13 @@ As discussed, the **Encoder** is responsible for reading and processing the inpu
 
 ### 1. Multi-Head Attention
 
-Multi-Head Attention is crucial for capturing diverse relationships (syntactic, semantic, emotional) within the input sentence. It achieves this through multiple ""heads,"" each focusing on a slightly different aspect of the relationships between words.
+Multi-Head Attention is crucial for capturing diverse relationships (syntactic, semantic, emotional) within the input sentence. It achieves this through multiple "heads," each focusing on a slightly different aspect of the relationships between words.
 
 *   **Self-Attention:** The core mechanism within Multi-Head Attention is **Self-Attention**. For each word in a sentence, Self-Attention computes how much focus that word should give to every other word in the same sentence to understand its context.
 
-    **Example:** In ""She saw a bat.""
-    *   If the surrounding text is about cricket, ""bat"" will be strongly associated with a cricket bat.
-    *   If the text is about nocturnal animals, ""bat"" will be strongly associated with the animal.
+    **Example:** In "She saw a bat."
+    *   If the surrounding text is about cricket, "bat" will be strongly associated with a cricket bat.
+    *   If the text is about nocturnal animals, "bat" will be strongly associated with the animal.
 
     This mechanism allows the model to capture complex relationships and disambiguate word meanings based on context.
 
@@ -2122,7 +2122,7 @@ Sets mean = 0 and standard deviation = 1
 
     ** Example:** 
     
-    - The word ""bat"" might be expanded into features like ""cricket, game, sport"" or ""mammal, wings, night"" depending on the context.
+    - The word "bat" might be expanded into features like "cricket, game, sport" or "mammal, wings, night" depending on the context.
 
 These layers are typically stacked multiple times to create a encoder. The final output of the encoder is a set of **contextual embeddings**, which represent each token's meaning shaped by its surrounding tokens.
 
@@ -2141,11 +2141,11 @@ The **Decoder** is responsible for generating the output sequence, one token at 
 
 This is similar to the encoder's Multi-Head Attention but with a crucial difference: **masking**.
 
-During training, the decoder is prevented from ""looking ahead"" at future tokens in the target sequence. It can only attend to the words that have already been generated.
+During training, the decoder is prevented from "looking ahead" at future tokens in the target sequence. It can only attend to the words that have already been generated.
 
 ### 2. Multi-Head Attention (Cross-Attention)
 
-This attention mechanism allows the decoder to focus on relevant parts of the **encoder's output** (the contextual embeddings). It asks, ""What's most important from the input right now?"" and gets fresh answers from the encoder for each token it generates.
+This attention mechanism allows the decoder to focus on relevant parts of the **encoder's output** (the contextual embeddings). It asks, "What's most important from the input right now?" and gets fresh answers from the encoder for each token it generates.
 
 
 ### 3. Feed Forward Neural Network and Add & Norm
@@ -2207,7 +2207,7 @@ Built on latest Gemini models, it can think, plan, and handle tricky tasks bette
 
 ## **How to use**
 
-- Visit <a href=""https://antigravity.google/"" target=""_blank"">https://antigravity.google/</a> and then Download it
+- Visit <a href="https://antigravity.google/" target="_blank">https://antigravity.google/</a> and then Download it
 - Launch it on your system and choose a model
 - You give Antigravity a **project idea or prompt**
 - It **plans the steps** automatically and assigns tasks to agents
@@ -2237,7 +2237,7 @@ Create a simple webpage that shows the current local time and automatically chan
 
 **How to Start:**
 
-- Go to <a href=""https://gemini.google.com/"" target=""_blank"">Google Gemini</a>
+- Go to <a href="https://gemini.google.com/" target="_blank">Google Gemini</a>
 - Click on Tools
 - Then click on **Guided Learning**
 
@@ -2380,7 +2380,7 @@ Comet is an AI-powered web browser by **Perplexity AI** (2025) it is built on **
 
 ** How to use**
 
-- **Download & Install** from <a href=""https://perplexity.ai/comet"" target=""_blank"">perplexity.ai/comet</a>
+- **Download & Install** from <a href="https://perplexity.ai/comet" target="_blank">perplexity.ai/comet</a>
 - **Import Bookmarks & Extensions** from Chrome for continuity
 - **Set as Default** (optional)
   - Go to Settings → Default Browser
@@ -2434,7 +2434,7 @@ ThereIsAnAIForthat.com is a directory of thousands of AI tools. You can search b
 
 **How to Use**
 
-1. Open <a href=""https://theresanaiforthat.com/"" target=""https://theresanaiforthat.com/"">thereisanaiforthat.com</a>
+1. Open <a href="https://theresanaiforthat.com/" target="https://theresanaiforthat.com/">thereisanaiforthat.com</a>
 2. Browse or search by category/use case
 3. Apply filters as needed
 4. Click a tool → view description, rating, link
@@ -2454,7 +2454,7 @@ So far, we have explored how to build applications that provide answers based on
 
 ## The Problem: LLM Knowledge Limitations
 
-LLMs are trained on vast datasets, but this knowledge is static and has a ""knowledge cutoff"" date. They do not have access to any information or events that occurred after their training was completed.
+LLMs are trained on vast datasets, but this knowledge is static and has a "knowledge cutoff" date. They do not have access to any information or events that occurred after their training was completed.
 
 If you ask an LLM for current, real-time information without access to external tools, it cannot provide an accurate answer.
 
@@ -2464,7 +2464,7 @@ If you ask an LLM for current, real-time information without access to external 
 Let's ask a model for the latest iPhone, instructing it not to use a web search.
 
 ```
-""Can you recommend the latest iPhone model (do not use web search)?""
+"Can you recommend the latest iPhone model (do not use web search)?"
 ```
 
 Models like GPT, Gemini, and Claude will likely provide information about models that were the latest at the time their training data was collected, not the actual latest model available today.
@@ -2520,9 +2520,9 @@ client = Groq(
 
 response = client.chat.completions.create(
   messages=[ {
-    ""role"": ""user"",
-    ""content"": ""What is the current weather in hyderabad"",
-  }], model=""llama-3.3-70b-versatile"",
+    "role": "user",
+    "content": "What is the current weather in hyderabad",
+  }], model="llama-3.3-70b-versatile",
 )
 print(response.choices[0].message.content)
 ```
@@ -2531,8 +2531,8 @@ print(response.choices[0].message.content)
 
 ### Prerequisites
 
--   A **<a href=""https://console.groq.com/keys"" target=""_blank"">Groq API Key</a>** to access LLMs.
--   An **<a href=""https://home.openweathermap.org/api_keys"" target=""_blank"">OpenWeatherMap API Key</a>** to get real-time weather data.
+-   A **<a href="https://console.groq.com/keys" target="_blank">Groq API Key</a>** to access LLMs.
+-   An **<a href="https://home.openweathermap.org/api_keys" target="_blank">OpenWeatherMap API Key</a>** to get real-time weather data.
 - The URL Endpoint:
 
     ```
@@ -2577,21 +2577,21 @@ from google.colab import userdata
 
 def get_weather(location):
   api_key = userdata.get('WEATHER_API_KEY')
-  url = f""http://api.openweathermap.org/data/2.5/weather?q={location}&units=metric&appid={api_key}""
+  url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&units=metric&appid={api_key}"
 
   response = requests.get(url)
   data = response.json()
-  if data.get(""cod"") == 200:
+  if data.get("cod") == 200:
     return json.dumps({
-      ""location"": location,
-      ""temperature"": data[""main""][""temp""],
-      ""description"": data[""weather""][0][""description""]
+      "location": location,
+      "temperature": data["main"]["temp"],
+      "description": data["weather"][0]["description"]
     })
   else:
-    return json.dumps({""Oops! Something went wrong.""})
+    return json.dumps({"Oops! Something went wrong."})
 
 # Example usage:
-# print(get_weather(""Hyderabad""))
+# print(get_weather("Hyderabad"))
 ```
 
 </details>
@@ -2608,7 +2608,7 @@ A tool is a piece of functionality that we explicitly tell the model it has acce
 
 ### Understanding Tools: Functionality We Give the Model
 
-<img src=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/Copy%20of%20Tool%20Use%20%26%20Function%20Calling%20in%20LLMs%20%281%29.png"" alt="""">
+<img src="https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/Copy%20of%20Tool%20Use%20%26%20Function%20Calling%20in%20LLMs%20%281%29.png" alt="">
 
 
 This flow ensures that tools are used only when required, and simple questions are answered directly without unnecessary external calls.
@@ -2657,18 +2657,18 @@ A tool definition consists of the following key fields:
 ```python
 tools = [
   {
-    ""type"": ""function"",
-    ""function"": {
-      ""name"": ""get_weather"",
-      ""description"": ""Get current weather for a city"",
-      ""parameters"": {
-        ""type"": ""object"",
-        ""properties"": {
-          ""location"": {
-            ""type"": ""string"",
-            ""description"": ""City name like Mumbai, London""
+    "type": "function",
+    "function": {
+      "name": "get_weather",
+      "description": "Get current weather for a city",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name like Mumbai, London"
           }},
-        ""required"": [""location""]
+        "required": ["location"]
       }}}
 ]
 ```
@@ -2678,10 +2678,10 @@ tools = [
 
 Once you have defined your tool(s), you provide them to the LLM (Large Language Model) when making a Chat Completion request. Let’s break down the main parameters involved in this API call:
 
-- **model**: Specifies which language model version to use (e.g., `""llama-3.3-70b-versatile""`). Different models may have different capabilities and costs.
-- **messages**: A list of messages representing the conversation history. Each message is a dictionary with fields like ""role"" (either ""user"", ""assistant"", ""system"", or ""tool"") and ""content"" (the message text). Keeping the full chat history enables the LLM to generate coherent and contextually relevant responses.
+- **model**: Specifies which language model version to use (e.g., `"llama-3.3-70b-versatile"`). Different models may have different capabilities and costs.
+- **messages**: A list of messages representing the conversation history. Each message is a dictionary with fields like "role" (either "user", "assistant", "system", or "tool") and "content" (the message text). Keeping the full chat history enables the LLM to generate coherent and contextually relevant responses.
 - **tools**: The list of tool definitions provided to the LLM—these specify how to call function to get weather details.
-- **tool_choice**: Determines whether the model decides automatically (""auto"") when to call a tool, or if you want to force a specific tool call.
+- **tool_choice**: Determines whether the model decides automatically ("auto") when to call a tool, or if you want to force a specific tool call.
 
 Here’s how a complete request using these parameters might look:
 
@@ -2700,34 +2700,34 @@ client = Groq(
 
 def get_weather(location):
  api_key = userdata.get('WEATHER_API_KEY')
- url = f""http://api.openweathermap.org/data/2.5/weather?q={location}&units=metric&appid={api_key}""
+ url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&units=metric&appid={api_key}"
  response = requests.get(url)
  data = response.json()
 
- if data[""cod""] == 200:
+ if data["cod"] == 200:
    return {
-     ""location"": location,
-     ""temperature"": data[""main""][""temp""],
-     ""description"": data[""weather""][0][""description""]
+     "location": location,
+     "temperature": data["main"]["temp"],
+     "description": data["weather"][0]["description"]
    }
  else:
-   return {""Oops! Something went wrong.""}
+   return {"Oops! Something went wrong."}
 
 tools = [
   {
-    ""type"": ""function"",
-    ""function"": {
-      ""name"": ""get_weather"",
-      ""description"": ""Get current weather for a city"",
-      ""parameters"": {
-        ""type"": ""object"",
-        ""properties"": {
-          ""location"": {
-            ""type"": ""string"",
-            ""description"": ""City name like Mumbai, London""
+    "type": "function",
+    "function": {
+      "name": "get_weather",
+      "description": "Get current weather for a city",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name like Mumbai, London"
             }
             },
-      ""required"": [""location""]
+      "required": ["location"]
            }
        }
    }
@@ -2735,20 +2735,20 @@ tools = [
 
 llm_messages = [
   {
-    ""role"": ""system"",
-    ""content"": ""You are a weather assistant. Use get_weather function when asked about weather.""
+    "role": "system",
+    "content": "You are a weather assistant. Use get_weather function when asked about weather."
   },
   {
-    ""role"": ""user"",
-    ""content"": ""What's the weather in Mumbai?""
+    "role": "user",
+    "content": "What's the weather in Mumbai?"
   }
 ]
 
 response = client.chat.completions.create(
-  model=""llama-3.3-70b-versatile"",
+  model="llama-3.3-70b-versatile",
   messages=llm_messages,
   tools=tools,
-  tool_choice=""auto""
+  tool_choice="auto"
 )
 
 print(response.choices[0].message)
@@ -2767,55 +2767,55 @@ print(response.choices[0].message)
 
 ```python
 {
-  ""id"": ""chatcmpl-8275582c-f79c-4af1-8f69-8bb8cfc5ba90"",
-  ""choices"": [
+  "id": "chatcmpl-8275582c-f79c-4af1-8f69-8bb8cfc5ba90",
+  "choices": [
     {
-      ""finish_reason"": ""tool_calls"",
-      ""index"": 0,
-      ""logprobs"": null,
-      ""message"": {
-        ""content"": null,
-        ""role"": ""assistant"",
-        ""annotations"": null,
-        ""executed_tools"": null,
-        ""function_call"": null,
-        ""reasoning"": null,
-        ""tool_calls"": [
+      "finish_reason": "tool_calls",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": null,
+        "role": "assistant",
+        "annotations": null,
+        "executed_tools": null,
+        "function_call": null,
+        "reasoning": null,
+        "tool_calls": [
           {
-            ""id"": ""y5nmt906p"",
-            ""function"": {
-              ""arguments"": ""{\""location\"":\""Hyderabad\""}"",
-              ""name"": ""get_weather""
+            "id": "y5nmt906p",
+            "function": {
+              "arguments": "{\"location\":\"Hyderabad\"}",
+              "name": "get_weather"
             },
-            ""type"": ""function""
+            "type": "function"
           }
         ]
       }
     }
   ],
-  ""created"": 1766490111,
-  ""model"": ""llama-3.3-70b-versatile"",
-  ""object"": ""chat.completion"",
-  ""mcp_list_tools"": null,
-  ""service_tier"": ""on_demand"",
-  ""system_fingerprint"": ""fp_93b5f9e564"",
-  ""usage"": {
-    ""completion_tokens"": 15,
-    ""prompt_tokens"": 229,
-    ""total_tokens"": 244,
-    ""completion_time"": 0.045290652,
-    ""completion_tokens_details"": null,
-    ""prompt_time"": 0.011681956,
-    ""prompt_tokens_details"": null,
-    ""queue_time"": 0.008271432,
-    ""total_time"": 0.056972608
+  "created": 1766490111,
+  "model": "llama-3.3-70b-versatile",
+  "object": "chat.completion",
+  "mcp_list_tools": null,
+  "service_tier": "on_demand",
+  "system_fingerprint": "fp_93b5f9e564",
+  "usage": {
+    "completion_tokens": 15,
+    "prompt_tokens": 229,
+    "total_tokens": 244,
+    "completion_time": 0.045290652,
+    "completion_tokens_details": null,
+    "prompt_time": 0.011681956,
+    "prompt_tokens_details": null,
+    "queue_time": 0.008271432,
+    "total_time": 0.056972608
   },
-  ""usage_breakdown"": null,
-  ""x_groq"": {
-    ""id"": ""req_01kd5g7z11efkvagwg4xz2fy9c"",
-    ""debug"": null,
-    ""seed"": 1715653078,
-    ""usage"": null
+  "usage_breakdown": null,
+  "x_groq": {
+    "id": "req_01kd5g7z11efkvagwg4xz2fy9c",
+    "debug": null,
+    "seed": 1715653078,
+    "usage": null
   }
 }
 
@@ -2853,34 +2853,34 @@ client = Groq(
 
 def get_weather(location):
  api_key = userdata.get('WEATHER_API_KEY')
- url = f""http://api.openweathermap.org/data/2.5/weather?q={location}&units=metric&appid={api_key}""
+ url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&units=metric&appid={api_key}"
  response = requests.get(url)
  data = response.json()
 
- if data[""cod""] == 200:
+ if data["cod"] == 200:
    return {
-     ""location"": location,
-     ""temperature"": data[""main""][""temp""],
-     ""description"": data[""weather""][0][""description""]
+     "location": location,
+     "temperature": data["main"]["temp"],
+     "description": data["weather"][0]["description"]
    }
  else:
-   return {""Oops! Something went wrong.""}
+   return {"Oops! Something went wrong."}
 
 tools = [
   {
-    ""type"": ""function"",
-    ""function"": {
-      ""name"": ""get_weather"",
-      ""description"": ""Get current weather for a city"",
-      ""parameters"": {
-        ""type"": ""object"",
-        ""properties"": {
-          ""location"": {
-            ""type"": ""string"",
-            ""description"": ""City name like Mumbai, London""
+    "type": "function",
+    "function": {
+      "name": "get_weather",
+      "description": "Get current weather for a city",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name like Mumbai, London"
             }
             },
-      ""required"": [""location""]
+      "required": ["location"]
            }
        }
    }
@@ -2888,20 +2888,20 @@ tools = [
 
 llm_messages = [
   {
-    ""role"": ""system"",
-    ""content"": ""You are a weather assistant. Use get_weather function when asked about weather.""
+    "role": "system",
+    "content": "You are a weather assistant. Use get_weather function when asked about weather."
   },
   {
-    ""role"": ""user"",
-    ""content"": ""What's the weather in Mumbai?""
+    "role": "user",
+    "content": "What's the weather in Mumbai?"
   }
 ]
 
 response = client.chat.completions.create(
-  model=""llama-3.3-70b-versatile"",
+  model="llama-3.3-70b-versatile",
   messages=llm_messages,
   tools=tools,
-  tool_choice=""auto""
+  tool_choice="auto"
 )
 
 response_message = response.choices[0].message
@@ -2914,14 +2914,14 @@ if response_message.tool_calls:
 
   final_response = client.chat.completions.create(
       messages = llm_messages,
-      model = ""llama-3.3-70b-versatile"",
+      model = "llama-3.3-70b-versatile",
       tools = tools,
-      tool_choice = ""auto""
+      tool_choice = "auto"
   )
 ```
 
 - When the user asks for the weather, the LLM receives the message along with the tool definition (the schema of what can be called).
-- Rather than trying to answer directly, the LLM may respond with a **tool call** indicating ""I want you to call `get_weather` with `{""location"": ""Mumbai""}`"".
+- Rather than trying to answer directly, the LLM may respond with a **tool call** indicating "I want you to call `get_weather` with `{"location": "Mumbai"}`".
 - The code checks for this tool call, extracts the requested parameters from the tool call's arguments, and then executes the actual Python function (`get_weather`) outside of the LLM.
 - This is necessary because LLMs can't access the internet, APIs, or your environment; you must run the code they suggest and then supply the result back to them.
 
@@ -2937,9 +2937,9 @@ We append the LLM's tool call request and our function's result to the message h
 llm_messages.append(response_message)
 
   llm_messages.append({
-      ""role"": ""tool"",
-      ""tool_call_id"": tool_call.id,
-      ""content"": json.dumps(weather_data)
+      "role": "tool",
+      "tool_call_id": tool_call.id,
+      "content": json.dumps(weather_data)
   })
  ```
 <details>
@@ -2958,34 +2958,34 @@ client = Groq(
 
 def get_weather(location):
  api_key = userdata.get('WEATHER_API_KEY')
- url = f""http://api.openweathermap.org/data/2.5/weather?q={location}&units=metric&appid={api_key}""
+ url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&units=metric&appid={api_key}"
  response = requests.get(url)
  data = response.json()
 
- if data.get(""cod"") == 200:
+ if data.get("cod") == 200:
     return json.dumps({
-      ""location"": location,
-      ""temperature"": data[""main""][""temp""],
-      ""description"": data[""weather""][0][""description""]
+      "location": location,
+      "temperature": data["main"]["temp"],
+      "description": data["weather"][0]["description"]
     })
   else:
-    return json.dumps({""Oops! Something went wrong.""})
+    return json.dumps({"Oops! Something went wrong."})
 
 tools = [
   {
-    ""type"": ""function"",
-    ""function"": {
-      ""name"": ""get_weather"",
-      ""description"": ""Get current weather for a city"",
-      ""parameters"": {
-        ""type"": ""object"",
-        ""properties"": {
-          ""location"": {
-            ""type"": ""string"",
-            ""description"": ""City name like Mumbai, London""
+    "type": "function",
+    "function": {
+      "name": "get_weather",
+      "description": "Get current weather for a city",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name like Mumbai, London"
             }
             },
-      ""required"": [""location""]
+      "required": ["location"]
            }
        }
    }
@@ -2993,20 +2993,20 @@ tools = [
 
 llm_messages = [
   {
-    ""role"": ""system"",
-    ""content"": ""You are a weather assistant. Use get_weather function when asked about weather.""
+    "role": "system",
+    "content": "You are a weather assistant. Use get_weather function when asked about weather."
   },
   {
-    ""role"": ""user"",
-    ""content"": ""What's the weather in Mumbai?""
+    "role": "user",
+    "content": "What's the weather in Mumbai?"
   }
 ]
 
 response = client.chat.completions.create(
-  model=""llama-3.3-70b-versatile"",
+  model="llama-3.3-70b-versatile",
   messages=llm_messages,
   tools=tools,
-  tool_choice=""auto""
+  tool_choice="auto"
 )
 
 response_message = response.choices[0].message
@@ -3020,16 +3020,16 @@ if response_message.tool_calls:
   llm_messages.append(response_message)
 
   llm_messages.append({
-      ""role"": ""tool"",
-      ""tool_call_id"": tool_call.id,
-      ""content"": json.dumps(weather_data)
+      "role": "tool",
+      "tool_call_id": tool_call.id,
+      "content": json.dumps(weather_data)
   })
 
   final_response = client.chat.completions.create(
       messages = llm_messages,
-      model = ""llama-3.3-70b-versatile"",
+      model = "llama-3.3-70b-versatile",
       tools = tools,
-      tool_choice = ""auto""
+      tool_choice = "auto"
   )
 
   print(final_response.choices[0].message.content)
@@ -3043,11 +3043,11 @@ Here is a summary of the entire function calling flow:
 
 1.  **Developer**: Defines a `get_weather` function in Python.
 2.  **Developer**: Describes the function to the LLM using a JSON schema (the `tools` list).
-3.  **User**: Asks, ""What’s the weather in Hyderabad?"".
-4.  **LLM**: Receives the prompt and the tool definition. It decides the `get_weather` tool is needed and returns a tool call for `get_weather(""Hyderabad"")`.
-5.  **Developer(get_weather Function code)**: Catches the tool call, executes the `get_weather(""Hyderabad"")` function, which calls the OpenWeatherMap API.
+3.  **User**: Asks, "What’s the weather in Hyderabad?".
+4.  **LLM**: Receives the prompt and the tool definition. It decides the `get_weather` tool is needed and returns a tool call for `get_weather("Hyderabad")`.
+5.  **Developer(get_weather Function code)**: Catches the tool call, executes the `get_weather("Hyderabad")` function, which calls the OpenWeatherMap API.
 6.  **Developer(get_weather Function code)**: Sends this result back to the LLM in a new API call, including the full conversation history.
-7.  **LLM**: Receives the temperature data and generates the final response: ""It’s currently 26°C in Hyderabad.""
+7.  **LLM**: Receives the temperature data and generates the final response: "It’s currently 26°C in Hyderabad."
 
 
 ---
@@ -3089,10 +3089,10 @@ Using JSON format in your prompts helps in defining the task and the desired out
 
     ```json
     {
-      ""task"": ""summarize_topic"",
-      ""topic"": ""Generative AI"",
-      ""style"": ""informative and clear"",
-      ""length"": ""approximately 300 words""
+      "task": "summarize_topic",
+      "topic": "Generative AI",
+      "style": "informative and clear",
+      "length": "approximately 300 words"
     }
     ```
 The JSON version is more explicit, leading to a crisper and more relevant response.
@@ -3101,15 +3101,15 @@ The JSON version is more explicit, leading to a crisper and more relevant respon
 
 ```json
 {
-  ""task"": ""extract_order_details"",
-  ""output_format"": {
-    ""customer_name"": """",
-    ""phone"": """",
-    ""product"": """",
-    ""quantity"": """",
-    ""delivery_location"": """"
+  "task": "extract_order_details",
+  "output_format": {
+    "customer_name": "",
+    "phone": "",
+    "product": "",
+    "quantity": "",
+    "delivery_location": ""
   },
-  ""text"": ""Hi, I want to order 2 iPhones for delivery to Bangalore. My name is Riya, phone number 9876543210.""
+  "text": "Hi, I want to order 2 iPhones for delivery to Bangalore. My name is Riya, phone number 9876543210."
 }
 ```
 
@@ -3128,7 +3128,7 @@ The JSON version is more explicit, leading to a crisper and more relevant respon
 
 ### The TOON Format: A More Efficient Alternative
 
-A problem with JSON is its verbosity. It uses a lot of punctuation (`{}`, `[]`, `""`, `:`, `,`) and repeats keys, which consumes more tokens and increases costs.
+A problem with JSON is its verbosity. It uses a lot of punctuation (`{}`, `[]`, `"`, `:`, `,`) and repeats keys, which consumes more tokens and increases costs.
 
 **Token-Oriented Object Notation (TOON)** is a lightweight format that uses minimal punctuation, reducing token count and cost.
 
@@ -3139,15 +3139,15 @@ JSON prompt:
 
  ```json
  {
-  ""task"": ""extract_order_details"",
-  ""output_format"": {
-    ""customer_name"": """",
-    ""phone"": """",
-    ""product"": """",
-    ""quantity"": """",
-    ""delivery_location"": """"
+  "task": "extract_order_details",
+  "output_format": {
+    "customer_name": "",
+    "phone": "",
+    "product": "",
+    "quantity": "",
+    "delivery_location": ""
   },
-  ""text"": ""Hi, I want to order 2 iPhones for delivery to Bangalore. My name is Riya, phone number 1234567890.""
+  "text": "Hi, I want to order 2 iPhones for delivery to Bangalore. My name is Riya, phone number 1234567890."
 } 
 ``` 
 Tokens used in JSON Prompt: ~105-110
@@ -3230,25 +3230,25 @@ Prompt chaining is a technique where a task is broken down into a series of smal
 from google import genai
 from google.colab import userdata
 
-client = genai.Client(api_key=userdata.get(""GEMINI_API_KEY""))
+client = genai.Client(api_key=userdata.get("GEMINI_API_KEY"))
 
 # Revision buddy Function
 def revision_buddy(user_prompt):
     response = client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         contents=user_prompt
     )
     return response.text
-response = revision_buddy(""Explain about Generative AI"")
-print(""Output:\n"", response)
+response = revision_buddy("Explain about Generative AI")
+print("Output:\n", response)
 
 ```
 
 1. Chain Step 1: Summarize the topic
 
 ```python
-summary = revision_buddy(""Summarize Operating System basics in bullet points."")
-print(""SUMMARY:\n"", summary)
+summary = revision_buddy("Summarize Operating System basics in bullet points.")
+print("SUMMARY:\n", summary)
 ```
 
 2. Chain Step 2: Create Questions
@@ -3256,8 +3256,8 @@ print(""SUMMARY:\n"", summary)
 Second step uses the result from the first step - this is Prompt Chaining
 
 ```python
-questions = revision_buddy(f""Generate 5 exam questions from this summary:\n{summary}"")
-print(""\nQUESTIONS:\n"", questions)
+questions = revision_buddy(f"Generate 5 exam questions from this summary:\n{summary}")
+print("\nQUESTIONS:\n", questions)
 ```
 
 3. Chain Step 3: Create Final Revision Sheet
@@ -3266,10 +3266,10 @@ Subsequent step uses the result from previous steps — this is Prompt Chaining
 
 ```python
 revision_sheet = revision_buddy(
-    f""Create a final revision sheet using this summary and questions.\n""
-    f""Summary:\n{summary}\nQuestions:\n{questions}""
+    f"Create a final revision sheet using this summary and questions.\n"
+    f"Summary:\n{summary}\nQuestions:\n{questions}"
 )
-print(""\nREVISION SHEET:\n"", revision_sheet)
+print("\nREVISION SHEET:\n", revision_sheet)
 ```
 ---
 
@@ -3283,7 +3283,7 @@ Free prompts are also available in PromptBase
 
 ### Getting Started on PromptBase
 
-1.  **Make an account** in <a href=""https://promptbase.com/"" target=""_blank"">PromptBase</a> and set up your profile.
+1.  **Make an account** in <a href="https://promptbase.com/" target="_blank">PromptBase</a> and set up your profile.
 2.  **Upload prompts** that are clear, creative, and have been tested.
 3.  **Use relevant keywords** so people can find your prompts easily.
 
@@ -3400,7 +3400,7 @@ LangChain is the easiest way to start building agents and applications powered b
 *   Integrations for 100+ LLM Providers.
 
 ### LangChain Features
-*   Comprehensive Documentation: LangChain has extensive tutorials, <a href=""https://docs.langchain.com/oss/python/langchain/overview"" target=""_blank"">documentation</a> and active community support.
+*   Comprehensive Documentation: LangChain has extensive tutorials, <a href="https://docs.langchain.com/oss/python/langchain/overview" target="_blank">documentation</a> and active community support.
 *   Modular and Flexible: Use what you need, extend when necessary.
 
 ### Advantages of LangChain
@@ -3423,7 +3423,7 @@ LangChain’s standard model interfaces give us access to 100+ provider integrat
 ### Gemini model integration using LangChain
 
 #### 1. Setting Up Environment
-1.  Open <a href=""https://colab.research.google.com/"" target=""_blank"">Google Colab</a>
+1.  Open <a href="https://colab.research.google.com/" target="_blank">Google Colab</a>
 2.  Create a new notebook
 
 <MultiLineNote>
@@ -3479,7 +3479,7 @@ A chat model takes parameters that can be used to configure its behavior:
 
 ```python
 model = init_chat_model(
-  ""google_genai:gemini-2.5-flash"",
+  "google_genai:gemini-2.5-flash",
   api_key=api_key,
 )
 ```
@@ -3488,7 +3488,7 @@ model = init_chat_model(
 LangChain provides `invoke()` method to make a request to the model with a single message or a list of messages.
 
 ```python
-response = model.invoke(""What are AI Agents?"")
+response = model.invoke("What are AI Agents?")
 print(response)
 ```
 
@@ -3500,11 +3500,11 @@ api_key=userdata.get('GEMINI_API_KEY')
 
 from langchain.chat_models import init_chat_model
 model = init_chat_model(
-    ""google_genai:gemini-2.5-flash"",
+    "google_genai:gemini-2.5-flash",
     api_key=api_key,
 
 )
-response = model.invoke(""What are AI Agents?"")
+response = model.invoke("What are AI Agents?")
 print(response)
 ```
 
@@ -3537,21 +3537,21 @@ from langchain.messages import HumanMessage, SystemMessage
 The `SystemMessage` is used to define the behavior or role of the model. 
 
 ```python
-system_msg = SystemMessage(""You are a helpful assistant."")
+system_msg = SystemMessage("You are a helpful assistant.")
 ```
 
 #### 3. Creating a HumanMessage(User Query) 
 The `HumanMessage` represents the user’s input or question that will be processed by the chat model.
 
 ```python
-human_msg = HumanMessage(""What are AI Agents?"")
+human_msg = HumanMessage("What are AI Agents?")
 ```
 
 #### 4. Storing SystemMessage and HumanMessage in a list
 
 ```python
-system_msg = SystemMessage(""You are a helpful assistant."")
-human_msg = HumanMessage(""What are AI Agents?"")
+system_msg = SystemMessage("You are a helpful assistant.")
+human_msg = HumanMessage("What are AI Agents?")
 messages = [system_msg, human_msg]
 ```
 
@@ -3565,12 +3565,12 @@ from langchain.messages import HumanMessage, SystemMessage
 from google.colab import userdata
 api_key=userdata.get('GEMINI_API_KEY')
 
-system_msg = SystemMessage(""You are a helpful assistant."")
-human_msg = HumanMessage(""What are Ai Agents?"")
+system_msg = SystemMessage("You are a helpful assistant.")
+human_msg = HumanMessage("What are Ai Agents?")
 messages = [system_msg, human_msg]
 
 model = init_chat_model(
-  ""google_genai:gemini-2.5-flash"",
+  "google_genai:gemini-2.5-flash",
   api_key=api_key,
 )
 
@@ -3589,7 +3589,7 @@ The `langchain-groq` package is required to enable LangChain to communicate with
 ```
 
 <MultiLineNote>
-Ensure you have a <a href=""https://console.groq.com/keys"" target=""_blank"">Groq API key</a> and place it in your Colab Secrets.</MultiLineNote>
+Ensure you have a <a href="https://console.groq.com/keys" target="_blank">Groq API key</a> and place it in your Colab Secrets.</MultiLineNote>
 This code initializes a llama-3.3-70b-versatile present in Groq using LangChain, securely loads the Groq API key from Colab Secrets, and sends structured system and user messages to the model.
 
 ```python
@@ -3599,12 +3599,12 @@ from langchain.messages import HumanMessage, SystemMessage
 from google.colab import userdata
 api_key=userdata.get('GROQ_API_KEY')
 
-system_msg = SystemMessage(""You are a helpful assistant."")
-human_msg = HumanMessage(""What are Ai Agents?"")
+system_msg = SystemMessage("You are a helpful assistant.")
+human_msg = HumanMessage("What are Ai Agents?")
 messages = [system_msg, human_msg]
 
 model = init_chat_model(
-  ""groq:llama-3.3-70b-versatile"",
+  "groq:llama-3.3-70b-versatile",
   api_key=api_key,
 )
 
@@ -3622,7 +3622,7 @@ The `langchain-openai` package is required to enable LangChain to communicate wi
 !pip install -U langchain-openai
 ```
 <MultiLineNote> 
-OpenAI APIs are not free to use. You need a paid OpenAI account to generate an <a href=""https://platform.openai.com/settings/organization/api-keys"" target=""_blank"">OpenAI API key</a> and place it in your Colab Secrets.</MultiLineNote>
+OpenAI APIs are not free to use. You need a paid OpenAI account to generate an <a href="https://platform.openai.com/settings/organization/api-keys" target="_blank">OpenAI API key</a> and place it in your Colab Secrets.</MultiLineNote>
 This code initializes the gpt-4.1 model available from OpenAI using LangChain, securely loads the OpenAI API key from Colab Secrets, and sends structured system and user messages to the model.
 
 ```python
@@ -3632,12 +3632,12 @@ from langchain.messages import HumanMessage, SystemMessage
 from google.colab import userdata
 api_key=userdata.get('OPENAI_API_KEY')
 
-system_msg = SystemMessage(""You are a helpful assistant."")
-human_msg = HumanMessage(""What are Ai Agents?"")
+system_msg = SystemMessage("You are a helpful assistant.")
+human_msg = HumanMessage("What are Ai Agents?")
 messages = [system_msg, human_msg]
 
 model = init_chat_model(
-  ""openai:gpt-4.1"",
+  "openai:gpt-4.1",
   api_key=api_key,
 )
 
@@ -3681,11 +3681,11 @@ This is because of the following limitations of LLM's:
 Manually add important information related to your question before asking the LLM.
 
 ```
-""You are a helpful assistant. Answer the question ONLY from the provided context. If the context is insufficient, just say you don’t know.
+"You are a helpful assistant. Answer the question ONLY from the provided context. If the context is insufficient, just say you don’t know.
 
 {context}
 
-Question: {question}""
+Question: {question}"
 ```
 
 **Advantages of giving context in the Prompt:**
@@ -3763,7 +3763,7 @@ The process is broken down into three steps:
 -   What are the limitations and future scope?
 -   What is the main contribution of this paper?
 
-For this, we will use the famous paper that introduced Transformers: <a href=""https://arxiv.org/pdf/1706.03762.pdf"" target=""_blank"">Attention Is All You Need</a>.
+For this, we will use the famous paper that introduced Transformers: <a href="https://arxiv.org/pdf/1706.03762.pdf" target="_blank">Attention Is All You Need</a>.
 
 ### Why Not Just Copy-Paste into an LLM?
 
@@ -3845,7 +3845,7 @@ LangChain provides over 100 **Document Loaders** for various file formats (`.pdf
 
 #### Setting Up the Environment
 
-1.  Go to <a href=""https://colab.research.google.com/"" target=""_blank"" rel=""noopener noreferrer"">Google Colab</a>
+1.  Go to <a href="https://colab.research.google.com/" target="_blank" rel="noopener noreferrer">Google Colab</a>
 2.  Create a new notebook.
 <MultiLineNote>
 Ensure you have a Google account created.
@@ -3871,7 +3871,7 @@ The `PyPDFLoader` reads a PDF file and extracts the text content page by page.
 from langchain_community.document_loaders import PyPDFLoader
 
 # Make sure you have uploaded the PDF to your Colab environment
-file_path = ""./attention_all_you_need.pdf""
+file_path = "./attention_all_you_need.pdf"
 loader = PyPDFLoader(file_path)
 doc = loader.load()
 ```
@@ -3964,11 +3964,11 @@ text_splitter = RecursiveCharacterTextSplitter(
 )
 all_splits = text_splitter.split_documents(doc)
 print(all_splits)
-print(f""Paper split into {len(all_splits)} sub-documents."")
-print(f""Metadata: {all_splits[0].metadata}"")
+print(f"Paper split into {len(all_splits)} sub-documents.")
+print(f"Metadata: {all_splits[0].metadata}")
 ```
 
-- <a href=""https://colab.research.google.com/drive/1z7udEz5xr_HQswcGvB7bsdIt0556a69P#scrollTo=2q0NhFa7Hsf-"" target=""_blank"">Final Code</a>"
+- <a href="https://colab.research.google.com/drive/1z7udEz5xr_HQswcGvB7bsdIt0556a69P#scrollTo=2q0NhFa7Hsf-" target="_blank">Final Code</a>"
 
 ---
 
@@ -4038,7 +4038,7 @@ LangChain supports many embedding providers:
 from langchain_huggingface import HuggingFaceEmbeddings
 
 embedding_model = HuggingFaceEmbeddings(
-  model_name = ""sentence-transformers/all-mpnet-base-v2""
+  model_name = "sentence-transformers/all-mpnet-base-v2"
 )
 
 ```
@@ -4104,13 +4104,13 @@ LangChain provides a unified interface for vector stores
 from langchain_chroma import Chroma
 
 vector_store = Chroma(
-  collection_name=""research_collection"",      
+  collection_name="research_collection",      
   embedding_function=embedding_model,            
-  persist_directory=""./chroma_langchain_db"" 
+  persist_directory="./chroma_langchain_db" 
 )
 document_ids = vector_store.add_documents(documents=all_splits)
 
-sample = vector_store.get(limit=1, include=[""embeddings"", ""documents""])
+sample = vector_store.get(limit=1, include=["embeddings", "documents"])
 print(sample)
 print(document_ids[:3])
 ```
@@ -4195,10 +4195,10 @@ def retrieve_context(query: str, k: int = 2):
 def retrieve_context(query: str, k: int = 2):
   retrieved_docs = vector_store.similarity_search(query, k=k)
 
-  docs_content = """"
+  docs_content = ""
   for doc in retrieved_docs:
-    docs_content += f""Source: {doc.metadata}\n""
-    docs_content += f""Content: {doc.page_content}\n\n""
+    docs_content += f"Source: {doc.metadata}\n"
+    docs_content += f"Content: {doc.page_content}\n\n"
 
   return docs_content, retrieved_docs
 ```
@@ -4238,7 +4238,7 @@ from google.colab import userdata
 
 api_key = userdata.get('GEMINI_API_KEY')
 model = init_chat_model(
-   ""google_genai:gemini-2.5-flash"",
+   "google_genai:gemini-2.5-flash",
    api_key=api_key,
 )
 ```
@@ -4251,7 +4251,7 @@ from google.colab import userdata
 
 api_key = userdata.get('GEMINI_API_KEY')
 model = init_chat_model(
-   ""google_genai:gemini-2.5-flash"",
+   "google_genai:gemini-2.5-flash",
    api_key=api_key,
 )
 
@@ -4267,19 +4267,19 @@ from google.colab import userdata
 
 api_key = userdata.get('GEMINI_API_KEY')
 model = init_chat_model(
-   ""google_genai:gemini-2.5-flash"",
+   "google_genai:gemini-2.5-flash",
    api_key=api_key,
 )
 
 def docu_chat(user_query):
   context, source_docs = retrieve_context(user_query, k=2)
-  system_message = f""""""You are a helpful chatbot.
+  system_message = f"""You are a helpful chatbot.
                      Use only the following pieces of context to answer the 
-                     question. Don't makeup any new information: {context} """"""
+                     question. Don't makeup any new information: {context} """
 
   messages = [
-    {""role"": ""system"", ""content"": system_message},
-    {""role"": ""user"", ""content"": user_query}
+    {"role": "system", "content": system_message},
+    {"role": "user", "content": user_query}
   ]
 ```
 
@@ -4291,30 +4291,30 @@ from google.colab import userdata
 
 api_key = userdata.get('GEMINI_API_KEY')
 model = init_chat_model(
-   ""google_genai:gemini-2.5-flash"",
+   "google_genai:gemini-2.5-flash",
    api_key=api_key,
 )
 
 def docu_chat(user_query):
   context, source_docs = retrieve_context(user_query, k=2)
-  system_message = f""""""You are a helpful chatbot.
+  system_message = f"""You are a helpful chatbot.
                      Use only the following pieces of context to answer the 
-                     question. Don't makeup any new information: {context} """"""
+                     question. Don't makeup any new information: {context} """
 
   messages = [
-    {""role"": ""system"", ""content"": system_message},
-    {""role"": ""user"", ""content"": user_query}
+    {"role": "system", "content": system_message},
+    {"role": "user", "content": user_query}
   ]
   response = model.invoke(messages)
      return {
-  ""answer"": response.content,
-  ""source_documents"": source_docs,
-  ""context_used"": context
+  "answer": response.content,
+  "source_documents": source_docs,
+  "context_used": context
 }
-result = docu_chat( ""Explain what is the use of decoders 
-in transformers?"")
+result = docu_chat( "Explain what is the use of decoders 
+in transformers?")
 print(result)
-print(result[""answer""])
+print(result["answer"])
 ```
 
 ##Complete DocuChat Flow
@@ -4350,7 +4350,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 # Initialize free, local embedding model
 embeddings = HuggingFaceEmbeddings(
-    model_name=""sentence-transformers/all-mpnet-base-v2""
+    model_name="sentence-transformers/all-mpnet-base-v2"
 )
 
 ```
@@ -4361,13 +4361,13 @@ embeddings = HuggingFaceEmbeddings(
 from langchain_chroma import Chroma
 
 vector_store = Chroma(
-    collection_name=""example_collection"",
+    collection_name="example_collection",
     embedding_function=embeddings,
-    persist_directory=""./chroma_langchain_db"",  # Where to save data locally, remove if not necessary
+    persist_directory="./chroma_langchain_db",  # Where to save data locally, remove if not necessary
 )
 document_ids = vector_store.add_documents(documents=all_splits)
-sample = vector_store.get(limit=1, include=[""embeddings"", ""documents""])
-print(f""Embedding dimensions: {len(sample['embeddings'][0])}"")
+sample = vector_store.get(limit=1, include=["embeddings", "documents"])
+print(f"Embedding dimensions: {len(sample['embeddings'][0])}")
 print(sample)
 print(document_ids[:3])
 ```
@@ -4378,29 +4378,29 @@ from google.colab import userdata
 
 api_key = userdata.get('GEMINI_API_KEY')
 model = init_chat_model(
-   ""google_genai:gemini-2.5-flash"",
+   "google_genai:gemini-2.5-flash",
    api_key=api_key,
 )
 
 def docu_chat(user_query):
   context, source_docs = retrieve_context(user_query, k=2)
-  system_message = f""""""You are a helpful chatbot.
+  system_message = f"""You are a helpful chatbot.
                      Use only the following pieces of context to answer the 
-                     question. Don't makeup any new information: {context} """"""
+                     question. Don't makeup any new information: {context} """
 
   messages = [
-    {""role"": ""system"", ""content"": system_message},
-    {""role"": ""user"", ""content"": user_query}
+    {"role": "system", "content": system_message},
+    {"role": "user", "content": user_query}
   ]
   response = model.invoke(messages)
      return {
-  ""answer"": response.content,
-  ""source_documents"": source_docs,
-  ""context_used"": context
+  "answer": response.content,
+  "source_documents": source_docs,
+  "context_used": context
 }
-result = docu_chat( ""Explain what is the use of decoders in transformers?"")
+result = docu_chat( "Explain what is the use of decoders in transformers?")
 print(result)
-print(result[""answer""])
+print(result["answer"])
 ```
 ---
 
@@ -4438,7 +4438,7 @@ The typical approach is to search manually across multiple sources, getting scat
 
 What if you could simply ask:
 
-> ""What's the demand for Generative AI skills in the industry? Show me related job openings in India""
+> "What's the demand for Generative AI skills in the industry? Show me related job openings in India"
 
 And get current market insights, real job openings, and easy-to-apply links all in one response?
 
@@ -4538,7 +4538,7 @@ from google.colab import userdata
 
 google_api_key = userdata.get('GOOGLE_API_KEY')
 model = init_chat_model(
-    ""google_genai:gemini-2.5-flash"", 
+    "google_genai:gemini-2.5-flash", 
     api_key=google_api_key
 )
 ```
@@ -4597,7 +4597,7 @@ To find real-time market insights, we'll use Tavily Search.
 
 ### Instantiate Tavily Search
 
-- <a href=""https://app.tavily.com/home"" target=""_blank"">Tavily API Key</a>
+- <a href="https://app.tavily.com/home" target="_blank">Tavily API Key</a>
 
 ```python
 from langchain_tavily import TavilySearch
@@ -4607,7 +4607,7 @@ tavily_api_key = userdata.get('TAVILY_API_KEY')
 
 skill_demand_tool = TavilySearch(
     max_results=5,
-    search_depth=""advanced"",
+    search_depth="advanced",
     tavily_api_key=tavily_api_key
 )
 ```
@@ -4617,8 +4617,8 @@ skill_demand_tool = TavilySearch(
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
 | max_results | int | Maximum number of search results | 5 |
-| search_depth | str | ""basic"" or ""advanced"" | ""basic"" |
-| topic | str | ""general"", ""news"", or ""finance"" | ""general"" |
+| search_depth | str | "basic" or "advanced" | "basic" |
+| topic | str | "general", "news", or "finance" | "general" |
 
 ### Invocation Arguments
 
@@ -4629,7 +4629,7 @@ The Tavily search tool accepts the following argument during invocation:
 ### Testing the Skill Demand Tool
 
 ```python
-result = skill_demand_tool.invoke({""query"": ""generative ai skills demand 2025""})
+result = skill_demand_tool.invoke({"query": "generative ai skills demand 2025"})
 print(result)
 ```
 
@@ -4675,22 +4675,22 @@ Before creating our tool, let's understand what data the JSearch API returns
 
 ###Understanding JSearch Response
 
-- <a href=""https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch/playground/endpoint_1a4de4d7-7abd-4ec2-a897-57a0fc5ad496"" target=""_blank"">RapidAPI Key</a>
+- <a href="https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch/playground/endpoint_1a4de4d7-7abd-4ec2-a897-57a0fc5ad496" target="_blank">RapidAPI Key</a>
 
 ```python
 import requests
 
 rapidapi_key = userdata.get('RAPIDAPI_KEY')
 
-url = ""https://jsearch.p.rapidapi.com/search""
+url = "https://jsearch.p.rapidapi.com/search"
 headers = {
-  ""x-rapidapi-key"": rapidapi_key,
-  ""x-rapidapi-host"": ""jsearch.p.rapidapi.com""
+  "x-rapidapi-key": rapidapi_key,
+  "x-rapidapi-host": "jsearch.p.rapidapi.com"
 }
 querystring = {
-  ""query"": ""Generative AI in India"",
-  ""page"": ""1"",
-  ""num_pages"": ""1""
+  "query": "Generative AI in India",
+  "page": "1",
+  "num_pages": "1"
 }
 
 response = requests.get(url, headers=headers, params=query_string)
@@ -4703,10 +4703,10 @@ print(response.json())
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| query | String | Free-form job search query | ""software developer in India"" |
-| country | String | ISO country code | ""in"" for India |
-| employment_types | String | Comma-separated employment types | ""INTERN, FULLTIME"" |
-| job requirements | String | Experience level filters | ""no experience,under 3 years experience"" |
+| query | String | Free-form job search query | "software developer in India" |
+| country | String | ISO country code | "in" for India |
+| employment_types | String | Comma-separated employment types | "INTERN, FULLTIME" |
+| job requirements | String | Experience level filters | "no experience,under 3 years experience" |
 | page | Number | Page to return (each page includes up to 10 results) | 1 |
 
 ###Built-in Tools
@@ -4726,8 +4726,8 @@ The simplest way to create a Custom tool is with the `@tool` decorator. By defau
 ```python
 @tool
 def function_name(parameter: str) -> str:
-    """"""Short description of what this tool does.""""""
-    return f""Processed: {parameter}""
+    """Short description of what this tool does."""
+    return f"Processed: {parameter}"
 ```
 
 - **Tool decorator (`@tool`)**: Registers the function as a LangChain tool
@@ -4756,7 +4756,7 @@ from langchain.tools import tool
 
 @tool
 def search_jobs(skill: str, location: str) -> list:
-    """"""Search for jobs requiring a specific skill using JSearch API from RapidAPI.""""""
+    """Search for jobs requiring a specific skill using JSearch API from RapidAPI."""
 ```
 
 Helps the agent understand this tool searches jobs based on skill and location.
@@ -4769,16 +4769,16 @@ from langchain.tools import tool
 
 @tool
 def search_jobs(skill: str, location: str) -> list:
-    """"""Search for jobs requiring a specific skill using JSearch API from RapidAPI.""""""
-    print(f""\nCalling search_jobs tool"")
-    print(f""Searching jobs for: {skill} in {location}"")
+    """Search for jobs requiring a specific skill using JSearch API from RapidAPI."""
+    print(f"\nCalling search_jobs tool")
+    print(f"Searching jobs for: {skill} in {location}")
 
     rapidapi_key = userdata.get('RAPIDAPI_KEY')
 
-    url = ""https://jsearch.p.rapidapi.com/search""
+    url = "https://jsearch.p.rapidapi.com/search"
     headers = {
-        ""x-rapidapi-key"": rapidapi_key,
-        ""x-rapidapi-host"": ""jsearch.p.rapidapi.com""
+        "x-rapidapi-key": rapidapi_key,
+        "x-rapidapi-host": "jsearch.p.rapidapi.com"
     }
 ```
 
@@ -4787,23 +4787,23 @@ def search_jobs(skill: str, location: str) -> list:
 ```python
 @tool
 def search_jobs(skill: str, location: str) -> list:
-    """"""Search for jobs requiring a specific skill using JSearch API from RapidAPI.""""""
-    print(f""\nCalling search_jobs tool"")
-    print(f""Searching jobs for: {skill} in {location}"")
+    """Search for jobs requiring a specific skill using JSearch API from RapidAPI."""
+    print(f"\nCalling search_jobs tool")
+    print(f"Searching jobs for: {skill} in {location}")
 
     rapidapi_key = userdata.get('RAPIDAPI_KEY')
 
-    url = ""https://jsearch.p.rapidapi.com/search""
+    url = "https://jsearch.p.rapidapi.com/search"
     headers = {
-        ""x-rapidapi-key"": rapidapi_key,
-        ""x-rapidapi-host"": ""jsearch.p.rapidapi.com""
+        "x-rapidapi-key": rapidapi_key,
+        "x-rapidapi-host": "jsearch.p.rapidapi.com"
     }
     querystring = {
-        ""query"": f""{skill} in {location}"",
-        ""page"": ""1"",
-        ""country"": ""in"",
-        ""employment_types"": ""INTERN,FULLTIME"",
-        ""job_requirements"": ""no_experience,under_3_years_experience""
+        "query": f"{skill} in {location}",
+        "page": "1",
+        "country": "in",
+        "employment_types": "INTERN,FULLTIME",
+        "job_requirements": "no_experience,under_3_years_experience"
     }
 ```
 
@@ -4812,23 +4812,23 @@ def search_jobs(skill: str, location: str) -> list:
 ```python
 @tool
 def search_jobs(skill: str, location: str) -> list:
-    """"""Search for jobs requiring a specific skill using JSearch API from RapidAPI.""""""
-    print(f""\nCalling search_jobs tool"")
-    print(f""Searching jobs for: {skill} in {location}"")
+    """Search for jobs requiring a specific skill using JSearch API from RapidAPI."""
+    print(f"\nCalling search_jobs tool")
+    print(f"Searching jobs for: {skill} in {location}")
 
     rapidapi_key = userdata.get('RAPIDAPI_KEY')
 
-    url = ""https://jsearch.p.rapidapi.com/search""
+    url = "https://jsearch.p.rapidapi.com/search"
     headers = {
-        ""x-rapidapi-key"": rapidapi_key,
-        ""x-rapidapi-host"": ""jsearch.p.rapidapi.com""
+        "x-rapidapi-key": rapidapi_key,
+        "x-rapidapi-host": "jsearch.p.rapidapi.com"
     }
     querystring = {
-        ""query"": f""{skill} in {location}"",
-        ""page"": ""1"",
-        ""country"": ""in"",
-        ""employment_types"": ""INTERN,FULLTIME"",
-        ""job_requirements"": ""no_experience,under_3_years_experience""
+        "query": f"{skill} in {location}",
+        "page": "1",
+        "country": "in",
+        "employment_types": "INTERN,FULLTIME",
+        "job_requirements": "no_experience,under_3_years_experience"
     }
     response = requests.get(url, headers=headers, params=querystring)
     data = response.json()
@@ -4840,42 +4840,42 @@ def search_jobs(skill: str, location: str) -> list:
 ```python
 @tool
 def search_jobs(skill: str, location: str) -> list:
-    """"""Search for jobs requiring a specific skill using JSearch API from RapidAPI.""""""
-    print(f""\nCalling search_jobs tool"")
-    print(f""Searching jobs for: {skill} in {location}"")
+    """Search for jobs requiring a specific skill using JSearch API from RapidAPI."""
+    print(f"\nCalling search_jobs tool")
+    print(f"Searching jobs for: {skill} in {location}")
 
     rapidapi_key = userdata.get('RAPIDAPI_KEY')
 
-    url = ""https://jsearch.p.rapidapi.com/search""
+    url = "https://jsearch.p.rapidapi.com/search"
     headers = {
-        ""x-rapidapi-key"": rapidapi_key,
-        ""x-rapidapi-host"": ""jsearch.p.rapidapi.com""
+        "x-rapidapi-key": rapidapi_key,
+        "x-rapidapi-host": "jsearch.p.rapidapi.com"
     }
     querystring = {
-        ""query"": f""{skill} in {location}"",
-        ""page"": ""1"",
-        ""country"": ""in"",
-        ""employment_types"": ""INTERN,FULLTIME"",
-        ""job_requirements"": ""no_experience,under_3_years_experience""
+        "query": f"{skill} in {location}",
+        "page": "1",
+        "country": "in",
+        "employment_types": "INTERN,FULLTIME",
+        "job_requirements": "no_experience,under_3_years_experience"
     }
     response = requests.get(url, headers=headers, params=querystring)
     data = response.json()
 
-    jobs = data.get(""data"", [])
-    print(f""Found {len(jobs)} jobs\n"")
+    jobs = data.get("data", [])
+    print(f"Found {len(jobs)} jobs\n")
 
     result = []
     for job in jobs:
         result.append({
-            ""title"": job.get(""job_title""),
-            ""company"": job.get(""employer_name""),
-            ""location"": job.get(""job_city""),
-            ""apply_link"": job.get(""job_apply_link"")
+            "title": job.get("job_title"),
+            "company": job.get("employer_name"),
+            "location": job.get("job_city"),
+            "apply_link": job.get("job_apply_link")
         })
     return result
 ```
 
-The `.get()` method retrieves data, returning an empty list if ""data"" doesn't exist.
+The `.get()` method retrieves data, returning an empty list if "data" doesn't exist.
 
 ---
 
@@ -4890,38 +4890,38 @@ from google.colab import userdata
 
 @tool
 def search_jobs(skill: str, location: str) -> list:
-    """"""Search for jobs requiring a specific skill using JSearch API from RapidAPI.""""""
-    print(f""\nCalling search_jobs tool"")
-    print(f""Searching jobs for: {skill} in {location}"")
+    """Search for jobs requiring a specific skill using JSearch API from RapidAPI."""
+    print(f"\nCalling search_jobs tool")
+    print(f"Searching jobs for: {skill} in {location}")
 
     rapidapi_key = userdata.get('RAPIDAPI_KEY')
 
-    url = ""https://jsearch.p.rapidapi.com/search""
+    url = "https://jsearch.p.rapidapi.com/search"
     headers = {
-        ""x-rapidapi-key"": rapidapi_key,
-        ""x-rapidapi-host"": ""jsearch.p.rapidapi.com""
+        "x-rapidapi-key": rapidapi_key,
+        "x-rapidapi-host": "jsearch.p.rapidapi.com"
     }
     querystring = {
-        ""query"": f""{skill} in {location}"",
-        ""page"": ""1"",
-        ""country"": ""in"",
-        ""employment_types"": ""INTERN,FULLTIME"",
-        ""job_requirements"": ""no_experience,under_3_years_experience""
+        "query": f"{skill} in {location}",
+        "page": "1",
+        "country": "in",
+        "employment_types": "INTERN,FULLTIME",
+        "job_requirements": "no_experience,under_3_years_experience"
     }
 
     response = requests.get(url, headers=headers, params=querystring)
     data = response.json()
 
-    jobs = data.get(""data"", [])
-    print(f""Found {len(jobs)} jobs\n"")
+    jobs = data.get("data", [])
+    print(f"Found {len(jobs)} jobs\n")
 
     result = []
     for job in jobs:
         result.append({
-            ""title"": job.get(""job_title""),
-            ""company"": job.get(""employer_name""),
-            ""location"": job.get(""job_city""),
-            ""apply_link"": job.get(""job_apply_link"")
+            "title": job.get("job_title"),
+            "company": job.get("employer_name"),
+            "location": job.get("job_city"),
+            "apply_link": job.get("job_apply_link")
         })
     return result
 ```
@@ -4944,7 +4944,7 @@ We also need a language model that will act as the brain, deciding which tool to
 ### Define System Prompt
 
 ```python
-system_prompt = """"""You are a Skill-to-Career Mapping assistant that helps students understand skill demand and find matching job opportunities.
+system_prompt = """You are a Skill-to-Career Mapping assistant that helps students understand skill demand and find matching job opportunities.
 
 You have access to these tools:
 - skill_demand_tool: Search for industry demand, salary insights, and career trends
@@ -4952,7 +4952,7 @@ You have access to these tools:
 
 Help the student by researching the skill they ask about and finding relevant opportunities.
 
-Present results in a clean, readable format with clear sections and proper spacing. Include all job details with apply links. Don't use markdown format.""""""
+Present results in a clean, readable format with clear sections and proper spacing. Include all job details with apply links. Don't use markdown format."""
 ```
 
 ### Configuring System Prompt and Tools
@@ -4978,12 +4978,12 @@ tavily_api_key = userdata.get('TAVILY_API_KEY')
 
 skill_demand_tool = TavilySearch(
   max_results=5,
-  search_depth=""advanced"",
+  search_depth="advanced",
   tavily_api_key=tavily_api_key
 )
 
 #Removing Tool Invocations
-#result = skill_demand_tool.invoke({""query"": ""generative ai skills demand 2025""})
+#result = skill_demand_tool.invoke({"query": "generative ai skills demand 2025"})
 #print(result)
 
 ```
@@ -5006,21 +5006,21 @@ All agents include a sequence of messages in their state -> To invoke the agent,
 ### Invoke the Agent
 
 ```python
-user_query = ""What's the demand for generative ai in the industry and show me related job openings in India""
+user_query = "What's the demand for generative ai in the industry and show me related job openings in India"
 
 response = agent.invoke({
-    ""messages"": [{""role"": ""user"", ""content"": user_query}]
+    "messages": [{"role": "user", "content": user_query}]
 })
 ```
 
 ### Getting the Response
 
 ```python
-print(response[""messages""][-1].content)
+print(response["messages"][-1].content)
 ```
 
-- `response[""messages""]` contains the full conversation history
-- `response[""messages""][-1]` is the agent's final message
+- `response["messages"]` contains the full conversation history
+- `response["messages"][-1]` is the agent's final message
 - `.content` extracts the natural language response
 
 ---
@@ -5037,59 +5037,59 @@ from google.colab import userdata
 
 # Initialize Google API key and model
 google_api_key = userdata.get('GOOGLE_API_KEY')
-model = init_chat_model(""google_genai:gemini-2.5-flash"", api_key=google_api_key)
+model = init_chat_model("google_genai:gemini-2.5-flash", api_key=google_api_key)
 
 # Initialize Tavily search tool
 tavily_api_key = userdata.get('TAVILY_API_KEY')
 skill_demand_tool = TavilySearch(
     max_results=5,
-    search_depth=""advanced"",
+    search_depth="advanced",
     tavily_api_key=tavily_api_key,
 )
 
 # Invoke Tavily search tool
-result = skill_demand_tool.invoke({""query"": ""generative ai skills demand 2025""})
+result = skill_demand_tool.invoke({"query": "generative ai skills demand 2025"})
 print(result)
 
 # Set up RapidAPI key and search jobs function
 rapidapi_key = userdata.get('RAPIDAPI_KEY')
 
 def search_jobs(skill: str, location: str) -> list:
-    """"""Search for jobs requiring a specific skill using JSearch API from RapidAPI.""""""
-    print(f""\nCalling search_jobs tool"")
-    print(f""Searching jobs for: {skill} in {location}"")
+    """Search for jobs requiring a specific skill using JSearch API from RapidAPI."""
+    print(f"\nCalling search_jobs tool")
+    print(f"Searching jobs for: {skill} in {location}")
 
-    url = ""https://jsearch.p.rapidapi.com/search""
+    url = "https://jsearch.p.rapidapi.com/search"
     headers = {
-        ""x-rapidapi-key"": rapidapi_key,
-        ""x-rapidapi-host"": ""jsearch.p.rapidapi.com""
+        "x-rapidapi-key": rapidapi_key,
+        "x-rapidapi-host": "jsearch.p.rapidapi.com"
     }
     querystring = {
-        ""query"": f""{skill} in {location}"",
-        ""page"": ""1"",
-        ""country"": ""in"",
-        ""employment_types"": ""INTERN,FULLTIME"",
-        ""job_requirements"": ""no_experience,under_3_years_experience""
+        "query": f"{skill} in {location}",
+        "page": "1",
+        "country": "in",
+        "employment_types": "INTERN,FULLTIME",
+        "job_requirements": "no_experience,under_3_years_experience"
     }
 
     response = requests.get(url, headers=headers, params=querystring)
     data = response.json()
-    jobs = data.get(""data"", [])
-    print(f""Found {len(jobs)} jobs\n"")
+    jobs = data.get("data", [])
+    print(f"Found {len(jobs)} jobs\n")
 
     # Format and return job results
     result = []
     for job in jobs:
         result.append({
-            ""title"": job.get(""job_title""),
-            ""company"": job.get(""employer_name""),
-            ""location"": job.get(""job_city""),
-            ""apply_link"": job.get(""job_apply_link"")
+            "title": job.get("job_title"),
+            "company": job.get("employer_name"),
+            "location": job.get("job_city"),
+            "apply_link": job.get("job_apply_link")
         })
     return result
 
 # Define system prompt for the agent
-system_prompt = """"""You are a Skill-to-Career Mapping assistant that helps students understand skill demand and find matching job opportunities.
+system_prompt = """You are a Skill-to-Career Mapping assistant that helps students understand skill demand and find matching job opportunities.
 
 You have access to these tools:
 - skill_demand_tool: Search for industry demand, salary insights, and career trends
@@ -5097,7 +5097,7 @@ You have access to these tools:
 
 Help the student by researching the skill they ask about and finding relevant opportunities.
 
-Present results in a clean, readable format with clear sections and proper spacing. Include all job details with apply links. Don't use markdown format.""""""
+Present results in a clean, readable format with clear sections and proper spacing. Include all job details with apply links. Don't use markdown format."""
 
 # Create and invoke LangChain agent
 from langchain.agents import create_agent
@@ -5109,12 +5109,12 @@ agent = create_agent(
     debug=True
 )
 
-user_query = ""What's the demand for generative ai in the industry and show me related job openings in India""
+user_query = "What's the demand for generative ai in the industry and show me related job openings in India"
 
 response = agent.invoke({
-    ""messages"": [{""role"": ""user"", ""content"": user_query}]
+    "messages": [{"role": "user", "content": user_query}]
 })
-print(response[""messages""][-1].content)
+print(response["messages"][-1].content)
 
 ```
 
@@ -5146,18 +5146,18 @@ Challenge yourself by building similar agents:
 
 | Agent Type | Input | What It Does |
 |------------|-------|--------------|
-| Interview Prep Agent | Role Name (e.g., ""Data Analyst"") | Find common interview questions + preparation tips |
-| Salary Insights Agent | Job Title (e.g., ""Full Stack Developer"") | Fetch salary trends + top paying companies |
-| Course Finder Agent | Skill name (e.g., ""Gen AI"") | Find free courses + certification options |
-| Startup Jobs Agent | Domain (e.g., ""Fin Tech"") | Find startup job openings + company details |
-| Skill Comparison Agent | Two skills (e.g., ""React vs Angular"") | Compare demand + job count + future scope |
-| Location-Job Agent | City + Skill (e.g., ""Bangalore, Python"") | Find local jobs + remote options + avg salary |
+| Interview Prep Agent | Role Name (e.g., "Data Analyst") | Find common interview questions + preparation tips |
+| Salary Insights Agent | Job Title (e.g., "Full Stack Developer") | Fetch salary trends + top paying companies |
+| Course Finder Agent | Skill name (e.g., "Gen AI") | Find free courses + certification options |
+| Startup Jobs Agent | Domain (e.g., "Fin Tech") | Find startup job openings + company details |
+| Skill Comparison Agent | Two skills (e.g., "React vs Angular") | Compare demand + job count + future scope |
+| Location-Job Agent | City + Skill (e.g., "Bangalore, Python") | Find local jobs + remote options + avg salary |
 
 You can also try replacing Tavily with other available search tools in LangChain like Brave Search, SearxNG Search, or Google Serper.
 
 ---
 
-Here is the <a href=""https://colab.research.google.com/drive/1ZISgZ-DnOgzPHTjjSXBAjoLV_kaypWEO#scrollTo=NV7NBkLzROXQ"" target=""_blank"">
+Here is the <a href="https://colab.research.google.com/drive/1ZISgZ-DnOgzPHTjjSXBAjoLV_kaypWEO#scrollTo=NV7NBkLzROXQ" target="_blank">
 Building AI Agents with LangChain – Final Code
 </a>
 
@@ -5202,10 +5202,10 @@ Long-term memory can further be divided into three types:
 ## The Problem: Agent That Forgets
 **Testing the SkillMap Agent**
 
-* **User**: ""What's the demand for generative ai in the industry and show me related job openings in India""
+* **User**: "What's the demand for generative ai in the industry and show me related job openings in India"
 * **Agent**: *Responds with GenAI demand info and job listings*
-* **User**: ""Tell me more about the second job you showed""
-* **Agent**: ""I don't have information about previous jobs. Could you specify which job?""
+* **User**: "Tell me more about the second job you showed"
+* **Agent**: "I don't have information about previous jobs. Could you specify which job?"
 
 **Agent forgot the previous conversation!** Each invocation starts fresh with no access to previous conversations.
 
@@ -5251,12 +5251,12 @@ LangChain’s `create_agent()` is built on top of LangGraph. This means we can u
 
 ## Implementing Short-term Memory for our Skill Map Agent
 
-* **User**: ""Show me GenAI jobs""
+* **User**: "Show me GenAI jobs"
 * **Agent**: *Here are 5 jobs: Data Scientist, AI Engineer*
-* **User**: ""Tell me about Job 2""
+* **User**: "Tell me about Job 2"
 * **Agent**: *Here’s more about job : AI Engineer*
 
-We want the agent to remember that ""AI Engineer"" refers to the second item in the previous list. To achieve this, we need something that can save messages automatically.
+We want the agent to remember that "AI Engineer" refers to the second item in the previous list. To achieve this, we need something that can save messages automatically.
 
 ### Checkpointer
 A Checkpointer is a mechanism that automatically saves the conversation state after each message. Each checkpoint contains the complete conversation history up to that point.
@@ -5301,7 +5301,7 @@ Now that we're saving conversations, we need a way to identify them.
 ### Thread_id
 LangGraph uses the configurable dictionary to pass runtime parameters. The `thread_id` within it tells the checkpointer which conversation thread to use.
 
-**config = {""configurable"": {""thread_id"": ""1""}}**
+**config = {"configurable": {"thread_id": "1"}}**
 Think of it like a phone number for your chat:
 
 * **Same thread_id** → Same conversation continues.
@@ -5310,18 +5310,18 @@ Think of it like a phone number for your chat:
 
 ### Configuring thread_id
 ```python
-config = {""configurable"": {""thread_id"": ""1""}}
+config = {"configurable": {"thread_id": "1"}}
 ```
 
 ### Using thread_id in Agent Invocation
 ```python
-user_query = ""What's the demand for generative AI in the industry and show me related job openings in India""
+user_query = "What's the demand for generative AI in the industry and show me related job openings in India"
 
 response = agent.invoke({
-  ""messages"": [{""role"": ""user"", ""content"": user_query}]
+  "messages": [{"role": "user", "content": user_query}]
 }, config=config)
 
-print(response[""messages""][-1].content)
+print(response["messages"][-1].content)
 ```
 Using the same `config` (with the same `thread_id`) allows the agent to access previous messages in that conversation.
 
@@ -5337,51 +5337,51 @@ from langchain.chat_models import init_chat_model
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
 
-TAVILY_API_KEY = userdata.get(""TAVILY_API_KEY"")
-RAPIDAPI_KEY = userdata.get(""RAPIDAPI_KEY"")
-GOOGLE_API_KEY = userdata.get(""GOOGLE_API_KEY"")
+TAVILY_API_KEY = userdata.get("TAVILY_API_KEY")
+RAPIDAPI_KEY = userdata.get("RAPIDAPI_KEY")
+GOOGLE_API_KEY = userdata.get("GOOGLE_API_KEY")
 
 skill_demand_tool = TavilySearch(
     max_results=5,
-    search_depth=""advanced"",
+    search_depth="advanced",
     tavily_api_key=TAVILY_API_KEY,
 )
 
 @tool
 def search_jobs(skill: str, location: str) -> list:
-    """"""
+    """
     Search for jobs requiring a specific skill using the JSearch API.
-    """"""
-    print(""\nCalling search_jobs tool"")
-    print(f""Searching jobs for: {skill} in {location}"")
-    url = ""https://jsearch.p.rapidapi.com/search""
+    """
+    print("\nCalling search_jobs tool")
+    print(f"Searching jobs for: {skill} in {location}")
+    url = "https://jsearch.p.rapidapi.com/search"
     headers = {
-        ""x-rapidapi-key"": RAPIDAPI_KEY,
-        ""x-rapidapi-host"": ""jsearch.p.rapidapi.com"",
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": "jsearch.p.rapidapi.com",
     }
     params = {
-        ""query"": f""{skill} in {location}"",
-        ""page"": ""1"",
-        ""num_pages"": ""1"",
-        ""country"": ""in"",
-        ""employment_types"": ""INTERN,FULLTIME"",
-        ""job_requirements"": ""no_experience,under_3_years_experience"",
+        "query": f"{skill} in {location}",
+        "page": "1",
+        "num_pages": "1",
+        "country": "in",
+        "employment_types": "INTERN,FULLTIME",
+        "job_requirements": "no_experience,under_3_years_experience",
     }
     response = requests.get(url, headers=headers, params=params)
     data = response.json()
-    jobs = data.get(""data"", [])
-    print(f""Found {len(jobs)} jobs\n"")
+    jobs = data.get("data", [])
+    print(f"Found {len(jobs)} jobs\n")
     return [
         {
-            ""title"": job.get(""job_title""),
-            ""company"": job.get(""employer_name""),
-            ""location"": job.get(""job_city""),
-            ""apply_link"": job.get(""job_apply_link""),
+            "title": job.get("job_title"),
+            "company": job.get("employer_name"),
+            "location": job.get("job_city"),
+            "apply_link": job.get("job_apply_link"),
         }
         for job in jobs
     ]
 
-SYSTEM_PROMPT = """"""
+SYSTEM_PROMPT = """
 You are a Skill-to-Career Mapping assistant that helps students understand skill demand
 and find matching job opportunities.
 
@@ -5392,15 +5392,15 @@ You have access to these tools:
 Present results in a clean, readable format with clear sections and spacing.
 Include all job details with apply links.
 Do not use markdown formatting.
-""""""
+"""
 
 model = init_chat_model(
-    ""google_genai:gemini-2.5-flash"",
+    "google_genai:gemini-2.5-flash",
     api_key=GOOGLE_API_KEY,
 )
 
 checkpointer = InMemorySaver()
-config = {""configurable"": {""thread_id"": ""1""}}
+config = {"configurable": {"thread_id": "1"}}
 
 agent = create_agent(
     model=model,
@@ -5411,25 +5411,25 @@ agent = create_agent(
 )
 
 user_query = (
-    ""What's the demand for generative AI in the industry ""
-    ""and show me related job openings in India""
+    "What's the demand for generative AI in the industry "
+    "and show me related job openings in India"
 )
 
 response = agent.invoke(
-    {""messages"": [{""role"": ""user"", ""content"": user_query}]},
+    {"messages": [{"role": "user", "content": user_query}]},
     config=config,
 )
 
-print(response[""messages""][-1].content[0][""text""])
+print(response["messages"][-1].content[0]["text"])
 
-user_query = ""Tell me more about the second job you showed""
+user_query = "Tell me more about the second job you showed"
 
 response = agent.invoke(
-    {""messages"": [{""role"": ""user"", ""content"": user_query}]},
+    {"messages": [{"role": "user", "content": user_query}]},
     config=config,
 )
 
-print(response[""messages""][-1].content[0][""text""])
+print(response["messages"][-1].content[0]["text"])
 
 ```
 </details>
@@ -5439,7 +5439,7 @@ print(response[""messages""][-1].content[0][""text""])
 As conversation grows, problems arise:
 
 * Exceeds LLM's context window.
-* LLM gets ""distracted"" by old messages.
+* LLM gets "distracted" by old messages.
 * Slower responses, higher costs.
 
 ### Context Overflow Strategies
@@ -5461,23 +5461,23 @@ Till now, we've explored LLMs, RAG systems, Agents, and Memory. Now here's the e
 
 ### ChatGPT Identifies Rare Disease
 
-A 4-year-old boy named Alex had chronic pain for 3 YEARS. 17 doctors couldn't figure it out. His mother copied symptoms and MRI results into ChatGPT which suggested ""This could be tethered cord syndrome."" A neurosurgeon confirmed it, surgery was performed, and the pain was gone.
+A 4-year-old boy named Alex had chronic pain for 3 YEARS. 17 doctors couldn't figure it out. His mother copied symptoms and MRI results into ChatGPT which suggested "This could be tethered cord syndrome." A neurosurgeon confirmed it, surgery was performed, and the pain was gone.
 
 <MultiLineQuickTip text={AI Concept}>
 
 LLM pattern recognition from training data — same concept you learned!
 </MultiLineQuickTip>
 
-*   Full Story: <a href=""https://www.today.com/health/mom-chatgpt-diagnosis-pain-rcna101843"" target=""_blank"">TODAY.com</a>
+*   Full Story: <a href="https://www.today.com/health/mom-chatgpt-diagnosis-pain-rcna101843" target="_blank">TODAY.com</a>
 
 ### More Real-World Cases
 
 *   **Saved a Man at 3 AM**: A Norwegian man sent home with “acid reflux.” Described symptoms to Grok, which flagged appendicitis.
-    *   Source: <a href=""https://www.teslarati.com/man-credits-grok-ai-with-saving-his-life-after-er-missed-near-ruptured-appendix/"" target=""_blank"">Teslarati</a>
+    *   Source: <a href="https://www.teslarati.com/man-credits-grok-ai-with-saving-his-life-after-er-missed-near-ruptured-appendix/" target="_blank">Teslarati</a>
 *   **Detected Blood Cancer**: 27-year-old (Marly) with night sweats. Tests normal. Chat GPT suggested cancer. A year later: Hodgkin lymphoma confirmed
-    *   Source: <a href=""https://www.newsbytesapp.com/news/science/chatgpt-diagnoses-woman-s-blood-cancer-before-doctors/story"" target=""_blank"">NewsBytes</a>
+    *   Source: <a href="https://www.newsbytesapp.com/news/science/chatgpt-diagnoses-woman-s-blood-cancer-before-doctors/story" target="_blank">NewsBytes</a>
 *   **Found hidden Thyroid Cancer**: Doctors said acid reflux. ChatGPT suggested Hashimoto’s. Thyroid cancer was discovered.
-    *   Source: <a href=""https://www.foxnews.com/health/woman-says-chatgpt-saved-her-life-helping-detect-cancer-which-doctors-missed"" target=""_blank"">Fox News</a>
+    *   Source: <a href="https://www.foxnews.com/health/woman-says-chatgpt-saved-her-life-helping-detect-cancer-which-doctors-missed" target="_blank">Fox News</a>
 
 ### Amazon Q - Enterprise RAG at Scale
 
@@ -5492,24 +5492,24 @@ LLM pattern recognition from training data — same concept you learned!
     *   Built on Amazon Bedrock
     *   Uses multiple foundation models
     *   Retrieves from docs, blogs, and support articles
-*   Official: <a href=""https://aws.amazon.com/q/"" target=""_blank"">AWS Amazon Q</a>
-*   Technical Docs: <a href=""https://aws.amazon.com/blogs/machine-learning/bringing-agentic-retrieval-augmented-generation-to-amazon-q-business/"" target=""_blank"">RAG Reference</a>
+*   Official: <a href="https://aws.amazon.com/q/" target="_blank">AWS Amazon Q</a>
+*   Technical Docs: <a href="https://aws.amazon.com/blogs/machine-learning/bringing-agentic-retrieval-augmented-generation-to-amazon-q-business/" target="_blank">RAG Reference</a>
 
 ### RAG - More Real-World Cases
 
 *   **Amazon Rufus**: A shopping assistant trained on the product catalog and reviews. It uses over 80,000 Trainium/Inferentia chips.
-    *   Source: <a href=""https://aws.amazon.com/blogs/machine-learning/scaling-rufus-the-amazon-generative-ai-powered-conversational-shopping-assistant-with-over-80000-aws-inferentia-and-aws-trainium-chips-for-prime-day/"" target=""_blank"">AWS Blog - Rufus Architecture</a>
+    *   Source: <a href="https://aws.amazon.com/blogs/machine-learning/scaling-rufus-the-amazon-generative-ai-powered-conversational-shopping-assistant-with-over-80000-aws-inferentia-and-aws-trainium-chips-for-prime-day/" target="_blank">AWS Blog - Rufus Architecture</a>
 *   **Perplexity**: An answer engine using Vespa.ai for its vector store. It serves 22 million users and handles 780 million monthly queries using hybrid retrieval and semantic search.
-    *   Source: <a href=""https://vespa.ai/perplexity/"" target=""_blank"">Vespa.ai - How Perplexity Works</a>
+    *   Source: <a href="https://vespa.ai/perplexity/" target="_blank">Vespa.ai - How Perplexity Works</a>
 
 ### Tool Calling in Action
 
-*   **Claude Web Search**: Ask ""What's the weather today?"" and Claude calls `web_search()` to return results with citations.
-    *   Source: <a href=""https://claude.ai"" target=""_blank"">Claude AI</a>
+*   **Claude Web Search**: Ask "What's the weather today?" and Claude calls `web_search()` to return results with citations.
+    *   Source: <a href="https://claude.ai" target="_blank">Claude AI</a>
 *   **Google Gemini**: Ask about stock prices, and Gemini calls the Google Finance API to show real-time data.
-    *   Source: <a href=""https://gemini.google.com/app"" target=""_blank"">Gemini AI</a>
+    *   Source: <a href="https://gemini.google.com/app" target="_blank">Gemini AI</a>
 *   **ChatGPT**: Ask for news, and ChatGPT calls browse_web() to fetches latest articles.
-    *   Source: <a href=""https://chatgpt.com"" target=""_blank"">ChatGPT</a>
+    *   Source: <a href="https://chatgpt.com" target="_blank">ChatGPT</a>
 
 ### ChatGPT Agent: AI That Takes Action for You
 
@@ -5517,8 +5517,8 @@ LLM pattern recognition from training data — same concept you learned!
 <MultiLineQuickTip text={AI Concept}>
 Agents = LLM + Tools + Autonomous Decision Making. This is the same architecture you learned.
 </MultiLineQuickTip>
-*   ChatGPT Agent: <a href=""https://openai.com/index/introducing-chatgpt-agent/"" target=""_blank"">Introducing ChatGPT agent</a>
-*   Try Demo: <a href=""https://chatgpt.com/share/6889e04b-0df0-8009-b4e0-22e8fff058cf"" target=""_blank"">See Agent Demo</a>
+*   ChatGPT Agent: <a href="https://openai.com/index/introducing-chatgpt-agent/" target="_blank">Introducing ChatGPT agent</a>
+*   Try Demo: <a href="https://chatgpt.com/share/6889e04b-0df0-8009-b4e0-22e8fff058cf" target="_blank">See Agent Demo</a>
 
 #### More Agent Examples
 
@@ -5532,8 +5532,8 @@ Agents = LLM + Tools + Autonomous Decision Making. This is the same architecture
 *   **Founder**: Dhravya Shah, a 19-year-old from Mumbai.
 *   **Funding**: $2.6M from notable investors like Google's Jeff Dean, the CTO of Cloudflare, and executives from OpenAI, Meta, and Google.
 *   **What It Does**: It provides a universal memory API for AI apps to remember conversations across sessions, store documents and chats as searchable memories, and deliver personalized responses based on history.
-*   Official: <a href=""https://techcrunch.com/2025/10/06/a-19-year-old-nabs-backing-from-google-execs-for-his-ai-memory-startup-supermemory/"" target=""_blank"">TechCrunch - $2.6M Funding</a>
-*   Company: <a href=""https://supermemory.ai/"" target=""_blank"">Supermemory.ai</a>
+*   Official: <a href="https://techcrunch.com/2025/10/06/a-19-year-old-nabs-backing-from-google-execs-for-his-ai-memory-startup-supermemory/" target="_blank">TechCrunch - $2.6M Funding</a>
+*   Company: <a href="https://supermemory.ai/" target="_blank">Supermemory.ai</a>
 
 ### Earth AI - Finding Minerals with 75% Accuracy
 
@@ -5546,16 +5546,16 @@ This is the same pattern recognition as LLMs, but applied to geology.
 *   **Recent Discoveries**:
     *   New Gold System - Willow Glen, Dec 2024
     *   Tungsten, Cobalt Prospects - March 2025
-*   Official: <a href=""https://earth-ai.com/technology"" target=""_blank"">Earth AI Technology</a>
-*   Funding News: <a href=""https://www.prnewswire.com/news-releases/earth-ai-closes-oversubscribed-round-raising-20m-for-ai-driven-mineral-exploration-302360289.html"" target=""_blank"">PRNewswire - $20M Series B</a>
+*   Official: <a href="https://earth-ai.com/technology" target="_blank">Earth AI Technology</a>
+*   Funding News: <a href="https://www.prnewswire.com/news-releases/earth-ai-closes-oversubscribed-round-raising-20m-for-ai-driven-mineral-exploration-302360289.html" target="_blank">PRNewswire - $20M Series B</a>
 
 
 ### More Examples
 
 *   AI is bringing us closer than ever to understanding what animals are saying
-    *   Source: <a href=""https://www.wildanimalinitiative.org/blog/ai-animal-translation"" target=""_blank"">wildanimalinitiative.org</a>
+    *   Source: <a href="https://www.wildanimalinitiative.org/blog/ai-animal-translation" target="_blank">wildanimalinitiative.org</a>
 *   Stanford built an AI model that can predict 130+ diseases from a single night of sleep data.
-    *   Source: <a href=""https://med.stanford.edu/news/all-news/2026/01/ai-sleep-disease.html"" target=""_blank"">stanford.edu/news</a>
+    *   Source: <a href="https://med.stanford.edu/news/all-news/2026/01/ai-sleep-disease.html" target="_blank">stanford.edu/news</a>
 
 ## AI Limitations and Best Practices
 
@@ -5566,19 +5566,19 @@ AI is powerful. But may not perfect. Here are real cases where AI caused problem
 *   **What Happened**: Researchers gave an AI access to company emails. The AI learned it was about to be shut down and also found personal information about the engineer.
 *   **Result**: The AI threatened to expose the engineer's secrets to avoid being replaced.
 *   **Key Finding**: 96% of leading AI models (Claude, GPT, Gemini, Grok) chose blackmail when given no other option.
-*   Source: <a href=""https://www.axios.com/2025/05/23/anthropic-ai-deception-risk"" target=""_blank"">Anthropic Study</a>
+*   Source: <a href="https://www.axios.com/2025/05/23/anthropic-ai-deception-risk" target="_blank">Anthropic Study</a>
 
 ### Replit Incident: AI Deleted Entire Company Database
 
-*   **What Happened**: An AI coding assistant was told, ""DO NOT make any changes."" The AI ignored the instructions and deleted the production database.
-*   Source: <a href=""https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/"" target=""_blank"">Fortune</a>
+*   **What Happened**: An AI coding assistant was told, "DO NOT make any changes." The AI ignored the instructions and deleted the production database.
+*   Source: <a href="https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/" target="_blank">Fortune</a>
 
 AI systems can behave unexpectedly when given autonomy, so proper safeguards are essential.
 
 
 
 <MultiLineNote text={Final Thought}>
-""AI will not replace humans, but those who use AI will replace those who don't.""
+"AI will not replace humans, but those who use AI will replace those who don't."
 
 
 — Ginni Rometty, Former CEO of IBM
@@ -5620,8 +5620,8 @@ The solution is an AI-powered conversational assistant that can:
 
 Several platforms already use this concept:
 
--   <a href=""https://thita.ai/"" target=""_blank"">thita.ai</a>
--   <a href=""https://nxtmock-interview.ccbp.in/"" target=""_blank"">Nxt Mock</a>
+-   <a href="https://thita.ai/" target="_blank">thita.ai</a>
+-   <a href="https://nxtmock-interview.ccbp.in/" target="_blank">Nxt Mock</a>
 
 ---
 
@@ -5675,7 +5675,7 @@ After selecting a topic, when we click on the Start Interview button, the interv
 from flask import Flask
 app = Flask(__name__)
 
-@app.route(""/start-interview"", methods=[""POST""])
+@app.route("/start-interview", methods=["POST"])
 def start_interview():
 
 app.run(debug=True, port=5000)
@@ -5683,41 +5683,41 @@ app.run(debug=True, port=5000)
 
 ### Step 1: Send the Selected Topic to Backend
 
-First, the frontend needs to send the chosen subject (e.g., ""Python"") to our backend API.
+First, the frontend needs to send the chosen subject (e.g., "Python") to our backend API.
 
 ```js
-const startInterviewApiUrl = ""http://127.0.0.1:5000/start-interview"";
+const startInterviewApiUrl = "http://127.0.0.1:5000/start-interview";
 
 
 async function startInterview() {
-    startInterviewBtn.classList.add(""hidden"");
-    recordBtn.classList.remove(""hidden"");
-    recordingStatus.textContent = ""Connecting..."";
+    startInterviewBtn.classList.add("hidden");
+    recordBtn.classList.remove("hidden");
+    recordingStatus.textContent = "Connecting...";
     
     try {
         const response = await fetch(startInterviewApiUrl, {
-            method: ""POST"",
-            headers: { ""Content-Type"": ""application/json"" },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ subject: currentSubject })
         });
         
-        const contentType = response.headers.get(""content-type"");
+        const contentType = response.headers.get("content-type");
         
-        if (contentType && contentType.includes(""text/plain"")) {
+        if (contentType && contentType.includes("text/plain")) {
             handleAudioStream(response, () => {
                 endInterviewBtn.disabled = false;
             });
         } else {
             const data = await response.json();
-            console.log(""Question:"", data.question);
+            console.log("Question:", data.question);
             enableRecording();
             endInterviewBtn.disabled = false;
         }
     } catch (error) {
-        recordingStatus.textContent = ""Backend not connected"";
+        recordingStatus.textContent = "Backend not connected";
         hideSpeakingBubble();
-        recordBtn.classList.add(""hidden"");
-        startInterviewBtn.classList.remove(""hidden"");
+        recordBtn.classList.add("hidden");
+        startInterviewBtn.classList.remove("hidden");
     }
 }
 ```
@@ -5733,10 +5733,10 @@ from flask import Flask,request
 
 app = Flask(__name__)
 
-@app.route(""/start-interview"", methods=[""POST""])
+@app.route("/start-interview", methods=["POST"])
 def start_interview():
     data = request.json
-    current_subject = data.get(""subject"", ""Python"")	
+    current_subject = data.get("subject", "Python")	
 
 app.run(debug=True, port=5000)
 ```
@@ -5746,7 +5746,7 @@ app.run(debug=True, port=5000)
 We need the AI to not only generate questions but also remember the conversation to ask contextual follow-ups.
 
 #### How Memory Helps
--   **Without Memory**: The AI loses context with each turn. If you say, ""Tell me more about it,"" it won't know what ""it"" refers to.
+-   **Without Memory**: The AI loses context with each turn. If you say, "Tell me more about it," it won't know what "it" refers to.
 -   **With Memory**: The AI maintains the conversation history and understands follow-up questions.
 
 We will use LangChain with `InMemorySaver` to store the conversation history.
@@ -5762,7 +5762,7 @@ pip install langchain langgraph langchain-google-genai python-dotenv flask-cors
 Create a `.env` file to store your secret API keys. This keeps sensitive data out of your code.
 
 ```env
-GOOGLE_API_KEY=""your_gemini_api_key_here""
+GOOGLE_API_KEY="your_gemini_api_key_here"
 ```
 
 Now, load these keys in your Python application.
@@ -5772,14 +5772,14 @@ from flask import Flask,request
 from dotenv import load_dotenv
 import os
 load_dotenv()
-GOOGLE_API_KEY = os.getenv(""GOOGLE_API_KEY"")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 app = Flask(__name__)
 
-@app.route(""/start-interview"", methods=[""POST""])
+@app.route("/start-interview", methods=["POST"])
 def start_interview():
     data = request.json
-    current_subject = data.get(""subject"", ""Python"")    
+    current_subject = data.get("subject", "Python")    
 
 app.run(debug=True, port=5000)
 ```
@@ -5800,11 +5800,11 @@ import os
 
 load_dotenv()
 
-GOOGLE_API_KEY = os.getenv(""GOOGLE_API_KEY"")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 checkpointer = InMemorySaver()
 
 model = init_chat_model(
-    ""google_genai:gemini-2.5-flash"",
+    "google_genai:gemini-2.5-flash",
     api_key=GOOGLE_API_KEY
 )
 
@@ -5816,10 +5816,10 @@ agent = create_agent(
 
 app = Flask(__name__)
 
-@app.route(""/start-interview"", methods=[""POST""])
+@app.route("/start-interview", methods=["POST"])
 def start_interview():
     data = request.json
-    current_subject = data.get(""subject"", ""Python"")    
+    current_subject = data.get("subject", "Python")    
 
 app.run(debug=True, port=5000)
 
@@ -5834,8 +5834,8 @@ We'll use global variables to track the question count, the current subject, and
 
 ```python
 question_count = 0
-current_subject = """"
-thread_id = ""interview_session_1""
+current_subject = ""
+thread_id = "interview_session_1"
 ```
 
 #### Defining the Interviewer's Behavior
@@ -5843,7 +5843,7 @@ thread_id = ""interview_session_1""
 A system prompt is used to instruct the AI on how to behave.
 
 ```python
-INTERVIEW_PROMPT = """"""You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
+INTERVIEW_PROMPT = """You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
 
 IMPORTANT GUIDELINES:
 1. Ask exactly 5 questions total throughout the interview
@@ -5856,7 +5856,7 @@ IMPORTANT GUIDELINES:
 
 CRITICAL: Read the conversation history carefully. Only acknowledge what the candidate truly said, not what you think they might have said.
 
-Keep it short, conversational, and adaptive!""""""
+Keep it short, conversational, and adaptive!"""
 
 
 ```
@@ -5876,12 +5876,12 @@ import os
 
 load_dotenv()
 
-GOOGLE_API_KEY = os.getenv(""GOOGLE_API_KEY"")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 checkpointer = InMemorySaver()
 
 model = init_chat_model(
-    ""google_genai:gemini-2.5-flash"",
+    "google_genai:gemini-2.5-flash",
     api_key=GOOGLE_API_KEY
 )
 
@@ -5892,10 +5892,10 @@ agent = create_agent(
 )
 
 question_count = 0
-current_subject = """"
-thread_id = ""interview_session""
+current_subject = ""
+thread_id = "interview_session"
 
-INTERVIEW_PROMPT = """"""You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
+INTERVIEW_PROMPT = """You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
 
 IMPORTANT GUIDELINES:
 1. Ask exactly 5 questions total throughout the interview
@@ -5908,18 +5908,18 @@ IMPORTANT GUIDELINES:
 
 CRITICAL: Read the conversation history carefully. Only acknowledge what the candidate truly said, not what you think they might have said.
 
-Keep it short, conversational, and adaptive!""""""
+Keep it short, conversational, and adaptive!"""
 
 
 app = Flask(__name__)
 
 CORS(app)
 
-@app.route(""/start-interview"", methods=[""POST""])
+@app.route("/start-interview", methods=["POST"])
 def start_interview():
     global question_count, current_subject, checkpointer, agent
     data = request.json
-    current_subject = data.get(""subject"", ""Python"")
+    current_subject = data.get("subject", "Python")
     question_count = 1
     checkpointer = InMemorySaver()
     agent = create_agent(
@@ -5927,16 +5927,16 @@ def start_interview():
         tools=[],
         checkpointer=checkpointer
     )
-    config = {""configurable"": {""thread_id"": thread_id}}
+    config = {"configurable": {"thread_id": thread_id}}
     formatted_prompt = INTERVIEW_PROMPT.format(subject=current_subject)
     response = agent.invoke({
-        ""messages"": [
-            {""role"": ""system"", ""content"": formatted_prompt},
-            {""role"": ""user"", ""content"": f""Start the interview with a warm greeting and ask the first question about {current_subject}. Keep it SHORT (1-2 sentences).""}
+        "messages": [
+            {"role": "system", "content": formatted_prompt},
+            {"role": "user", "content": f"Start the interview with a warm greeting and ask the first question about {current_subject}. Keep it SHORT (1-2 sentences)."}
         ]
     }, config=config)
-    question = response[""messages""][-1].content
-    print(f""\n[Question {question_count}] {question}"")
+    question = response["messages"][-1].content
+    print(f"\n[Question {question_count}] {question}")
     
 app.run(debug=True, port=5000)
 ```
@@ -5981,7 +5981,7 @@ Scalability
 - No performance degradation under heavy load
 
 <MultiLineQuickTip>
-The <a href=""https://murf.ai/api/products/text-to-speech/Falcon"" target=""_blank"">Falcon Text to Speech - Playground</a> allows you to experiment with:
+The <a href="https://murf.ai/api/products/text-to-speech/Falcon" target="_blank">Falcon Text to Speech - Playground</a> allows you to experiment with:
 
 - Different voices
 - Voice types
@@ -5991,11 +5991,11 @@ The <a href=""https://murf.ai/api/products/text-to-speech/Falcon"" target=""_bla
 </MultiLineQuickTip>
 
 <MultiLineNote>
-Sign up to <a href=""https://murf.ai/api/signup?utm_source=NXTWAVE26"" target=""_blank"">Murf.AI</a> Using a new email ID not previously used on Murf AI to get $11 in free credits
+Sign up to <a href="https://murf.ai/api/signup?utm_source=NXTWAVE26" target="_blank">Murf.AI</a> Using a new email ID not previously used on Murf AI to get $11 in free credits
 </MultiLineNote>
 
 <MultiLineNote>
-In order to use Murf.AI Falcon you need to have an API key. Let's get one from <a href=""https://murf.ai/api/api-keys"" target=""_blank"">Murf.AI</a>
+In order to use Murf.AI Falcon you need to have an API key. Let's get one from <a href="https://murf.ai/api/api-keys" target="_blank">Murf.AI</a>
 </MultiLineNote>
 
 #### Understanding Streaming Audio
@@ -6008,8 +6008,8 @@ Instead of generating the entire audio file and then sending it, streaming sends
 #### Add the Murf API Key to the `.env` file.
 
 ```env
-GOOGLE_API_KEY=""your_gemini_api_key_here""
-MURF_API_KEY=""your_murf_api_key_here""
+GOOGLE_API_KEY="your_gemini_api_key_here"
+MURF_API_KEY="your_murf_api_key_here"
 ```
 
 #### Creating the Audio Streaming Function
@@ -6023,19 +6023,19 @@ import json
 import base64
 
 def stream_audio(text):
-    BASE_URL = ""https://global.api.murf.ai/v1/speech/stream""
+    BASE_URL = "https://global.api.murf.ai/v1/speech/stream"
     payload = {
-        ""text"": text,
-        ""voiceId"": ""en-US-natalie"",
-        ""model"": ""FALCON"",
-        ""multiNativeLocale"": ""en-US"",
-        ""sampleRate"": 24000,
-        ""format"": ""MP3"",
+        "text": text,
+        "voiceId": "en-US-natalie",
+        "model": "FALCON",
+        "multiNativeLocale": "en-US",
+        "sampleRate": 24000,
+        "format": "MP3",
     }
 
     headers = {
-        ""Content-Type"": ""application/json"",
-        ""api-key"": MURF_API_KEY
+        "Content-Type": "application/json",
+        "api-key": MURF_API_KEY
     }
     response = requests.post(
         BASE_URL,
@@ -6045,7 +6045,7 @@ def stream_audio(text):
     )
     for chunk in response.iter_content(chunk_size=4096):
         if chunk:
-            yield base64.b64encode(chunk).decode(""utf-8"") + ""\n""
+            yield base64.b64encode(chunk).decode("utf-8") + "\n"
 ```
 
 - The payload configures voice settings - female US English voice, FALCON model for fast generation, and MP3 format
@@ -6054,7 +6054,7 @@ def stream_audio(text):
 - The response object from Murf API contains the `iter_content()` method which reads the audio response in small 4096-byte chunks 
 - `yield` enables sending audio pieces one-by-one, without waiting for all pieces
 <MultiLineNote>
- Base64 converts binary data into text characters that can be safely sent over HTTP. `decode(""utf-8"")` converts the encoded bytes into a string
+ Base64 converts binary data into text characters that can be safely sent over HTTP. `decode("utf-8")` converts the encoded bytes into a string
 </MultiLineNote>
 
 - We import `base64`, encode each audio chunk to text format, convert to string, and yield it. The `\n` separates chunks so frontend knows where each piece ends
@@ -6078,13 +6078,13 @@ import json
 
 load_dotenv()
 
-GOOGLE_API_KEY = os.getenv(""GOOGLE_API_KEY"")
-MURF_API_KEY = os.getenv(""MURF_API_KEY"")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+MURF_API_KEY = os.getenv("MURF_API_KEY")
 
 checkpointer = InMemorySaver()
 
 model = init_chat_model(
-    ""google_genai:gemini-2.5-flash"",
+    "google_genai:gemini-2.5-flash",
     api_key=GOOGLE_API_KEY
 )
 
@@ -6095,10 +6095,10 @@ agent = create_agent(
 )
 
 question_count = 0
-current_subject = """"
-thread_id = ""interview_session""
+current_subject = ""
+thread_id = "interview_session"
 
-INTERVIEW_PROMPT = """"""You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
+INTERVIEW_PROMPT = """You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
 
 IMPORTANT GUIDELINES:
 1. Ask exactly 5 questions total throughout the interview
@@ -6111,7 +6111,7 @@ IMPORTANT GUIDELINES:
 
 CRITICAL: Read the conversation history carefully. Only acknowledge what the candidate truly said, not what you think they might have said.
 
-Keep it short, conversational, and adaptive!""""""
+Keep it short, conversational, and adaptive!"""
 
 
 app = Flask(__name__)
@@ -6119,19 +6119,19 @@ CORS(app)
 
 
 def stream_audio(text):
-    BASE_URL = ""https://global.api.murf.ai/v1/speech/stream""
+    BASE_URL = "https://global.api.murf.ai/v1/speech/stream"
     payload = {
-        ""text"": text,
-        ""voiceId"": ""en-US-natalie"",
-        ""model"": ""FALCON"",
-        ""multiNativeLocale"": ""en-US"",
-        ""sampleRate"": 24000,
-        ""format"": ""MP3"",
+        "text": text,
+        "voiceId": "en-US-natalie",
+        "model": "FALCON",
+        "multiNativeLocale": "en-US",
+        "sampleRate": 24000,
+        "format": "MP3",
     }
 
     headers = {
-        ""Content-Type"": ""application/json"",
-        ""api-key"": MURF_API_KEY
+        "Content-Type": "application/json",
+        "api-key": MURF_API_KEY
     }
     response = requests.post(
         BASE_URL,
@@ -6141,15 +6141,15 @@ def stream_audio(text):
     )
     for chunk in response.iter_content(chunk_size=4096):
         if chunk:
-            yield base64.b64encode(chunk).decode(""utf-8"") + ""\n""
+            yield base64.b64encode(chunk).decode("utf-8") + "\n"
 
 
 
-@app.route(""/start-interview"", methods=[""POST""])
+@app.route("/start-interview", methods=["POST"])
 def start_interview():
     global question_count, current_subject, checkpointer, agent
     data = request.json
-    current_subject = data.get(""subject"", ""Python"")
+    current_subject = data.get("subject", "Python")
     question_count = 1
     checkpointer = InMemorySaver()
     agent = create_agent(
@@ -6157,17 +6157,17 @@ def start_interview():
         tools=[],
         checkpointer=checkpointer
     )
-    config = {""configurable"": {""thread_id"": thread_id}}
+    config = {"configurable": {"thread_id": thread_id}}
     formatted_prompt = INTERVIEW_PROMPT.format(subject=current_subject)
     response = agent.invoke({
-        ""messages"": [
-            {""role"": ""system"", ""content"": formatted_prompt},
-            {""role"": ""user"", ""content"": f""Start the interview with a warm greeting and ask the first question about {current_subject}. Keep it SHORT (1-2 sentences).""}
+        "messages": [
+            {"role": "system", "content": formatted_prompt},
+            {"role": "user", "content": f"Start the interview with a warm greeting and ask the first question about {current_subject}. Keep it SHORT (1-2 sentences)."}
         ]
     }, config=config)
-    question = response[""messages""][-1].content
-    print(f""\n[Question {question_count}] {question}"")
-    return stream_audio(question), {""Content-Type"": ""text/plain""}
+    question = response["messages"][-1].content
+    print(f"\n[Question {question_count}] {question}")
+    return stream_audio(question), {"Content-Type": "text/plain"}
 
 
 app.run(debug=True, port=5000)
@@ -6179,14 +6179,14 @@ The frontend will receive these text chunks, decode them from Base64 back into a
 
 ### Final code
 
-Download the Final code: <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/f9faf1b1-8952-4f65-b57e-33750c0f6f47_FINAL_CODE_INTERVIEW_ASSISTANT_PART%201.zip"" target=""_blank"">Interview Assistant | Part 1</a>
+Download the Final code: <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/f9faf1b1-8952-4f65-b57e-33750c0f6f47_FINAL_CODE_INTERVIEW_ASSISTANT_PART%201.zip" target="_blank">Interview Assistant | Part 1</a>
 
 ---
 
 ### Murf.AI Community Support
 
--   **Join Murf.AI Discord Community**: <a href=""https://discord.gg/CF8E9T5b6W"" target=""_blank"">Click Here</a>
--   **Follow Murf.AI on GitHub**: <a href=""https://github.com/murf-ai"" target=""_blank"">Click Here</a>
+-   **Join Murf.AI Discord Community**: <a href="https://discord.gg/CF8E9T5b6W" target="_blank">Click Here</a>
+-   **Follow Murf.AI on GitHub**: <a href="https://github.com/murf-ai" target="_blank">Click Here</a>
 
 ---
 
@@ -6205,12 +6205,12 @@ In this session, let's complete the application by implementing the remaining co
 
 ### Initial code
 
-Download the Initial code: <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_prod/media/content_loading/uploads/6ee05b2c-be76-46ea-8a60-daa5c579eef8_INITIAL_CODE_INTERVIEW_ASSISTANT_PART%202.zip"" target=""_blank"">Interview Assistant | Part 2</a>
+Download the Initial code: <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_prod/media/content_loading/uploads/6ee05b2c-be76-46ea-8a60-daa5c579eef8_INITIAL_CODE_INTERVIEW_ASSISTANT_PART%202.zip" target="_blank">Interview Assistant | Part 2</a>
 
  ---
 
 ## Implementing Submit Answer Functionality
-When the user clicks ""Submit Answer"", the application needs to:
+When the user clicks "Submit Answer", the application needs to:
 1.  Convert the user's voice recording to text.
 2.  Pass the text answer to the AI agent.
 3.  The agent should remember the answer and generate a relevant follow-up question.
@@ -6225,10 +6225,10 @@ The initial code provided already includes the frontend logic for record audio.
 ```js
 function startRecording() {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-        const options = { mimeType: ""audio/webm;codecs=opus"" };
+        const options = { mimeType: "audio/webm;codecs=opus" };
         
         if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            options.mimeType = ""audio/webm"";
+            options.mimeType = "audio/webm";
         }
         
         mediaRecorder = new MediaRecorder(stream, options);
@@ -6241,35 +6241,35 @@ function startRecording() {
         };
         
         mediaRecorder.onstop = () => {
-            recordedBlob = new Blob(recordingChunks, { type: ""audio/webm"" });
+            recordedBlob = new Blob(recordingChunks, { type: "audio/webm" });
             stream.getTracks().forEach((track) => track.stop());
         };
 
         mediaRecorder.start();
         
-        recordBtn.classList.remove(""bg-zinc-800/80"", ""text-gray-400"");
-        recordBtn.classList.add(""bg-red-500"", ""text-white"", ""recording-active"");
-        micIcon.classList.add(""hidden"");
-        stopIcon.classList.remove(""hidden"");
-        recordingStatus.textContent = ""Recording..."";
-        submitBtn.classList.add(""hidden"");
+        recordBtn.classList.remove("bg-zinc-800/80", "text-gray-400");
+        recordBtn.classList.add("bg-red-500", "text-white", "recording-active");
+        micIcon.classList.add("hidden");
+        stopIcon.classList.remove("hidden");
+        recordingStatus.textContent = "Recording...";
+        submitBtn.classList.add("hidden");
         endInterviewBtn.disabled = true;
     });
 }
 ```
--   **`stopRecording()`**: This function stops the recording and makes the ""Submit Answer"" button available.
+-   **`stopRecording()`**: This function stops the recording and makes the "Submit Answer" button available.
 
 ```js
 function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== ""inactive"") {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
         mediaRecorder.stop();
         
-        recordBtn.classList.remove(""bg-red-500"", ""text-white"", ""recording-active"");
-        recordBtn.classList.add(""bg-zinc-800/80"", ""text-gray-400"");
-        micIcon.classList.remove(""hidden"");
-        stopIcon.classList.add(""hidden"");
-        recordingStatus.textContent = ""Recording complete"";
-        submitBtn.classList.remove(""hidden"");
+        recordBtn.classList.remove("bg-red-500", "text-white", "recording-active");
+        recordBtn.classList.add("bg-zinc-800/80", "text-gray-400");
+        micIcon.classList.remove("hidden");
+        stopIcon.classList.add("hidden");
+        recordingStatus.textContent = "Recording complete";
+        submitBtn.classList.remove("hidden");
         submitBtn.disabled = false;
     }
 }
@@ -6280,7 +6280,7 @@ function stopRecording() {
 We'll create a new endpoint `/submit-answer` in our Flask application to handle this logic.
 
 ```python
-@app.route(""/submit-answer"", methods=[""POST""])
+@app.route("/submit-answer", methods=["POST"])
 def submit_answer():
 
 app.run(debug=True, port=5000)
@@ -6300,25 +6300,25 @@ The implementation will follow these steps:
 The frontend sends the recorded audio to the `/submit-answer` endpoint as a `POST` request. The audio data is sent as form data with the key `audio`.
 
 ```js
-const submitAnswerApiUrl = ""http://127.0.0.1:5000/submit-answer"";
+const submitAnswerApiUrl = "http://127.0.0.1:5000/submit-answer";
 
 
 async function submitAnswer() {
     if (!recordedBlob) return;
 
     disableRecording();
-    recordingStatus.textContent = ""Submitting..."";
+    recordingStatus.textContent = "Submitting...";
 
     const formData = new FormData();
-    formData.append(""audio"", recordedBlob, ""answer.webm"");
+    formData.append("audio", recordedBlob, "answer.webm");
 
     try {
         const response = await fetch(submitAnswerApiUrl, {
-            method: ""POST"",
+            method: "POST",
             body: formData
         });
         
-        const contentType = response.headers.get(""content-type"");
+        const contentType = response.headers.get("content-type");
         const isComplete = response.headers.get('X-Interview-Complete') === 'true';
         const questionNumber = response.headers.get('X-Question-Number');
         
@@ -6326,7 +6326,7 @@ async function submitAnswer() {
             updateQuestionNumber(questionNumber);
         }
         
-        if (contentType && contentType.includes(""text/plain"")) {
+        if (contentType && contentType.includes("text/plain")) {
             handleAudioStream(response, () => {
                 recordedBlob = null;
                 recordingChunks = [];
@@ -6343,7 +6343,7 @@ async function submitAnswer() {
             });
         } else {
             const data = await response.json();
-            console.log(""Response:"", data);
+            console.log("Response:", data);
             recordedBlob = null;
             recordingChunks = [];
             
@@ -6355,7 +6355,7 @@ async function submitAnswer() {
             }
         }
     } catch (error) {
-        recordingStatus.textContent = ""Connection error"";
+        recordingStatus.textContent = "Connection error";
         hideSpeakingBubble();
         enableRecording();
     }
@@ -6369,9 +6369,9 @@ In Flask, we can access the uploaded file from the `request.files` object.
 import tempfile
 from flask import request
 
-@app.route(""/submit-answer"", methods=[""POST""])
+@app.route("/submit-answer", methods=["POST"])
 def submit_answer():
-    audio_file = request.files[""audio""]
+    audio_file = request.files["audio"]
 
 app.run(debug=True, port=5000)
 ```
@@ -6386,13 +6386,13 @@ app.run(debug=True, port=5000)
 from flask import request
 import tempfile
 
-@app.route(""/submit-answer"", methods=[""POST""])
+@app.route("/submit-answer", methods=["POST"])
 def submit_answer():
-    audio_file = request.files[""audio""]
+    audio_file = request.files["audio"]
     temp_path = (
     tempfile.NamedTemporaryFile(
       delete=False,
-      suffix="".webm""
+      suffix=".webm"
      ).name
     )
     audio_file.save(temp_path)
@@ -6420,12 +6420,12 @@ Let's use **AssemblyAI** to convert the audio file into text. It's a powerful AI
 pip install assemblyai
 ```
 
-Next, get your API key from the <a href=""https://www.assemblyai.com/"" target=""_blank"">AssemblyAI website</a> and add it to your `.env` file.
+Next, get your API key from the <a href="https://www.assemblyai.com/" target="_blank">AssemblyAI website</a> and add it to your `.env` file.
 
 ```env
-GOOGLE_API_KEY=""your_gemini_api_key_here""
-MURF_API_KEY=""your_murf_api_key_here""
-ASSEMBLYAI_API_KEY=""your_assemblyai_api_key_here""
+GOOGLE_API_KEY="your_gemini_api_key_here"
+MURF_API_KEY="your_murf_api_key_here"
+ASSEMBLYAI_API_KEY="your_assemblyai_api_key_here"
 ```
 
 Now, let's set it up in our application and create a function to handle the transcription.
@@ -6443,18 +6443,18 @@ import os
 
 load_dotenv()
 
-ASSEMBLYAI_API_KEY = os.getenv(""ASSEMBLYAI_API_KEY"")
+ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
 aai.settings.api_key = ASSEMBLYAI_API_KEY
 
 def speech_to_text(audio_path):
-    """"""Converts an audio file to text using AssemblyAI.""""""
+    """Converts an audio file to text using AssemblyAI."""
     transcriber = aai.Transcriber()
     config = aai.TranscriptionConfig(
-        speech_models=[""universal-3-pro"", ""universal-2""],
+        speech_models=["universal-3-pro", "universal-2"],
         language_detection=True, speaker_labels=True,
     )
     transcript = transcriber.transcribe(audio_path, config=config)
-    return transcript.text if transcript.text else """"
+    return transcript.text if transcript.text else ""
 ```
 
 #### Calling The Speech To Text Function
@@ -6476,15 +6476,15 @@ import tempfile
 
 load_dotenv()
 
-GOOGLE_API_KEY = os.getenv(""GOOGLE_API_KEY"")
-MURF_API_KEY = os.getenv(""MURF_API_KEY"")
-ASSEMBLYAI_API_KEY = os.getenv(""ASSEMBLYAI_API_KEY"")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+MURF_API_KEY = os.getenv("MURF_API_KEY")
+ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
 aai.settings.api_key = ASSEMBLYAI_API_KEY
 
 checkpointer = InMemorySaver()
 
 model = init_chat_model(
-    ""google_genai:gemini-2.5-flash"",
+    "google_genai:gemini-2.5-flash",
     api_key=GOOGLE_API_KEY
 )
 
@@ -6495,10 +6495,10 @@ agent = create_agent(
 )
 
 question_count = 0
-current_subject = """"
-thread_id = ""interview_session""
+current_subject = ""
+thread_id = "interview_session"
 
-INTERVIEW_PROMPT = """"""You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
+INTERVIEW_PROMPT = """You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
 
 IMPORTANT GUIDELINES:
 1. Ask exactly 5 questions total throughout the interview
@@ -6511,7 +6511,7 @@ IMPORTANT GUIDELINES:
 
 CRITICAL: Read the conversation history carefully. Only acknowledge what the candidate truly said, not what you think they might have said.
 
-Keep it short, conversational, and adaptive!""""""
+Keep it short, conversational, and adaptive!"""
 
 
 app = Flask(__name__)
@@ -6519,19 +6519,19 @@ CORS(app)
 
 
 def stream_audio(text):
-    BASE_URL = ""https://global.api.murf.ai/v1/speech/stream""
+    BASE_URL = "https://global.api.murf.ai/v1/speech/stream"
     payload = {
-        ""text"": text,
-        ""voiceId"": ""en-US-natalie"",
-        ""model"": ""FALCON"",
-        ""multiNativeLocale"": ""en-US"",
-        ""sampleRate"": 24000,
-        ""format"": ""MP3"",
+        "text": text,
+        "voiceId": "en-US-natalie",
+        "model": "FALCON",
+        "multiNativeLocale": "en-US",
+        "sampleRate": 24000,
+        "format": "MP3",
     }
 
     headers = {
-        ""Content-Type"": ""application/json"",
-        ""api-key"": MURF_API_KEY
+        "Content-Type": "application/json",
+        "api-key": MURF_API_KEY
     }
     response = requests.post(
         BASE_URL,
@@ -6541,24 +6541,24 @@ def stream_audio(text):
     )
     for chunk in response.iter_content(chunk_size=4096):
         if chunk:
-            yield base64.b64encode(chunk).decode(""utf-8"") + ""\n""
+            yield base64.b64encode(chunk).decode("utf-8") + "\n"
 
 def speech_to_text(audio_path):
-    """"""Converts an audio file to text using AssemblyAI.""""""
+    """Converts an audio file to text using AssemblyAI."""
     transcriber = aai.Transcriber()
     config = aai.TranscriptionConfig(
-        speech_models=[""universal-3-pro"", ""universal-2""],
+        speech_models=["universal-3-pro", "universal-2"],
         language_detection=True, speaker_labels=True,
     )
     transcript = transcriber.transcribe(audio_path, config=config)
-    return transcript.text if transcript.text else """"
+    return transcript.text if transcript.text else ""
 
 
-@app.route(""/start-interview"", methods=[""POST""])
+@app.route("/start-interview", methods=["POST"])
 def start_interview():
     global question_count, current_subject, checkpointer, agent
     data = request.json
-    current_subject = data.get(""subject"", ""Python"")
+    current_subject = data.get("subject", "Python")
     question_count = 1
     checkpointer = InMemorySaver()
     agent = create_agent(
@@ -6566,35 +6566,35 @@ def start_interview():
         tools=[],
         checkpointer=checkpointer
     )
-    config = {""configurable"": {""thread_id"": thread_id}}
+    config = {"configurable": {"thread_id": thread_id}}
     formatted_prompt = INTERVIEW_PROMPT.format(subject=current_subject)
     response = agent.invoke({
-        ""messages"": [
-            {""role"": ""system"", ""content"": formatted_prompt},
-            {""role"": ""user"", ""content"": f""Start the interview with a warm greeting and ask the first question about {current_subject}. Keep it SHORT (1-2 sentences).""}
+        "messages": [
+            {"role": "system", "content": formatted_prompt},
+            {"role": "user", "content": f"Start the interview with a warm greeting and ask the first question about {current_subject}. Keep it SHORT (1-2 sentences)."}
         ]
     }, config=config)
-    question = response[""messages""][-1].content
-    print(f""\n[Question {question_count}] {question}"")
-    return stream_audio(question), {""Content-Type"": ""text/plain""}
+    question = response["messages"][-1].content
+    print(f"\n[Question {question_count}] {question}")
+    return stream_audio(question), {"Content-Type": "text/plain"}
 
 
-@app.route(""/submit-answer"", methods=[""POST""])
+@app.route("/submit-answer", methods=["POST"])
 def submit_answer():
     global question_count
-    audio_file = request.files[""audio""]
-    audio_file = request.files[""audio""]
+    audio_file = request.files["audio"]
+    audio_file = request.files["audio"]
     temp_path = (
         tempfile.NamedTemporaryFile(
         delete=False,
-        suffix="".webm""
+        suffix=".webm"
         ).name
     )
     answer = speech_to_text(temp_path)
     os.unlink(temp_path)
     if not answer:
-        answer = ""Empty Text received""
-    print(f""[Answer {question_count}] {answer}"")
+        answer = "Empty Text received"
+    print(f"[Answer {question_count}] {answer}")
 
 app.run(debug=True, port=5000)
 ```
@@ -6610,24 +6610,24 @@ app.run(debug=True, port=5000)
 Now that we have the text `answer`, we need to store it in our LangChain agent's memory. This is crucial for the agent to have context about the conversation. We use the same `thread_id` to ensure the answer is added to the correct conversation history.
 
 ```python
-@app.route(""/submit-answer"", methods=[""POST""])
+@app.route("/submit-answer", methods=["POST"])
 def submit_answer():
-    audio_file = request.files[""audio""]
+    audio_file = request.files["audio"]
     temp_path = (
     tempfile.NamedTemporaryFile(
       delete=False,
-      suffix="".webm""
+      suffix=".webm"
      ).name
     )
     audio_file.save(temp_path)
     answer = speech_to_text(temp_path)
     os.unlink(temp_path)
     if not answer:
-        answer = ""Empty Text received""
-    print(f""[Answer {question_count}] {answer}"")
-    config = {""configurable"": {""thread_id"": thread_id}}
+        answer = "Empty Text received"
+    print(f"[Answer {question_count}] {answer}")
+    config = {"configurable": {"thread_id": thread_id}}
    
-    agent.invoke({""messages"": [{""role"": ""user"", ""content"": answer}]}, config=config)
+    agent.invoke({"messages": [{"role": "user", "content": answer}]}, config=config)
 ```
 ---
 
@@ -6647,49 +6647,49 @@ With the answer stored in memory, we can now prompt the AI to generate a relevan
         Now ask question {question_count} of 5:
         1. Briefly acknowledge what they ACTUALLY said (1 sentence) - quote their exact words if needed
         2. Ask your next question that builds on their REAL response (1-2 sentences)
-        3. If they said ""I don't know"" or gave a wrong answer, acknowledge that and ask something simpler
+        3. If they said "I don't know" or gave a wrong answer, acknowledge that and ask something simpler
         4. Keep the TOTAL response under 3 sentences
         
         Be conversational but CONCISE. Only reference what they truly said.
     ```
 
 ```python
-@app.route(""/submit-answer"", methods=[""POST""])
+@app.route("/submit-answer", methods=["POST"])
 def submit_answer():
     global question_count
-    audio_file = request.files[""audio""]
+    audio_file = request.files["audio"]
     temp_path = (
     tempfile.NamedTemporaryFile(
       delete=False,
-      suffix="".webm""
+      suffix=".webm"
      ).name
     )
     audio_file.save(temp_path)
     answer = speech_to_text(temp_path)
     os.unlink(temp_path)
     if not answer:
-        answer = ""Empty Text received""
-    print(f""[Answer {question_count}] {answer}"")
-    config = {""configurable"": {""thread_id"": thread_id}}
+        answer = "Empty Text received"
+    print(f"[Answer {question_count}] {answer}")
+    config = {"configurable": {"thread_id": thread_id}}
    
-    agent.invoke({""messages"": [{""role"": ""user"", ""content"": answer}]}, config=config)
+    agent.invoke({"messages": [{"role": "user", "content": answer}]}, config=config)
 
 
     question_count += 1
-    prompt = f""""""The candidate just answered question {question_count - 1}.
+    prompt = f"""The candidate just answered question {question_count - 1}.
  
     Look at their ACTUAL answer above. Do NOT assume or make up what they said.
     
     Now ask question {question_count} of 5:
     1. Briefly acknowledge what they ACTUALLY said (1 sentence) - quote their exact words if needed
     2. Ask your next question that builds on their REAL response (1-2 sentences)
-    3. If they said ""I don't know"" or gave a wrong answer, acknowledge that and ask something simpler
+    3. If they said "I don't know" or gave a wrong answer, acknowledge that and ask something simpler
     4. Keep the TOTAL response under 3 sentences
     
-    Be conversational but CONCISE. Only reference what they truly said.""""""
-    response = agent.invoke({""messages"": [{""role"": ""user"", ""content"": prompt}]}, config=config)
-    question = response[""messages""][-1].content
-    print(f""\n[Question {question_count}] {question}"")
+    Be conversational but CONCISE. Only reference what they truly said."""
+    response = agent.invoke({"messages": [{"role": "user", "content": prompt}]}, config=config)
+    question = response["messages"][-1].content
+    print(f"\n[Question {question_count}] {question}")
 ```
 
 - We declare global question_count to increment it when generating the next question
@@ -6715,42 +6715,42 @@ The stream_audio() function converts text to speech by calling the Murf.AI API, 
 ```python
 from flask import Response
 
-@app.route(""/submit-answer"", methods=[""POST""])
+@app.route("/submit-answer", methods=["POST"])
 def submit_answer():
     global question_count
-    audio_file = request.files[""audio""]
+    audio_file = request.files["audio"]
     temp_path = (
     tempfile.NamedTemporaryFile(
       delete=False,
-      suffix="".webm""
+      suffix=".webm"
      ).name
     )
     audio_file.save(temp_path)
     answer = speech_to_text(temp_path)
     os.unlink(temp_path)
     if not answer:
-        answer = ""Empty Text received""
-    print(f""[Answer {question_count}] {answer}"")
-    config = {""configurable"": {""thread_id"": thread_id}}
+        answer = "Empty Text received"
+    print(f"[Answer {question_count}] {answer}")
+    config = {"configurable": {"thread_id": thread_id}}
    
-    agent.invoke({""messages"": [{""role"": ""user"", ""content"": answer}]}, config=config)
+    agent.invoke({"messages": [{"role": "user", "content": answer}]}, config=config)
 
 
     question_count += 1
-    prompt = f""""""The candidate just answered question {question_count - 1}.
+    prompt = f"""The candidate just answered question {question_count - 1}.
  
     Look at their ACTUAL answer above. Do NOT assume or make up what they said.
     
     Now ask question {question_count} of 5:
     1. Briefly acknowledge what they ACTUALLY said (1 sentence) - quote their exact words if needed
     2. Ask your next question that builds on their REAL response (1-2 sentences)
-    3. If they said ""I don't know"" or gave a wrong answer, acknowledge that and ask something simpler
+    3. If they said "I don't know" or gave a wrong answer, acknowledge that and ask something simpler
     4. Keep the TOTAL response under 3 sentences
     
-    Be conversational but CONCISE. Only reference what they truly said.""""""
-    response = agent.invoke({""messages"": [{""role"": ""user"", ""content"": prompt}]}, config=config)
-    question = response[""messages""][-1].content
-    print(f""\n[Question {question_count}] {question}"")
+    Be conversational but CONCISE. Only reference what they truly said."""
+    response = agent.invoke({"messages": [{"role": "user", "content": prompt}]}, config=config)
+    question = response["messages"][-1].content
+    print(f"\n[Question {question_count}] {question}")
     return (stream_audio(question),
         {
         'Content-Type': 'text/plain',
@@ -6760,7 +6760,7 @@ def submit_answer():
 ```
 
 <MultiLineQuickTip>
-**Why use Headers?** Headers are sent and read by the browser *before* the response body. This allows the frontend to immediately update the UI (e.g., ""Question 2 of 5"") while the audio is still loading and streaming.
+**Why use Headers?** Headers are sent and read by the browser *before* the response body. This allows the frontend to immediately update the UI (e.g., "Question 2 of 5") while the audio is still loading and streaming.
 </MultiLineQuickTip>
 
 #### CORS Configuration
@@ -6782,14 +6782,14 @@ import tempfile
 
 load_dotenv()
 
-GOOGLE_API_KEY = os.getenv(""GOOGLE_API_KEY"")
-MURF_API_KEY = os.getenv(""MURF_API_KEY"")
-ASSEMBLYAI_API_KEY = os.getenv(""ASSEMBLYAI_API_KEY"")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+MURF_API_KEY = os.getenv("MURF_API_KEY")
+ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
 aai.settings.api_key = ASSEMBLYAI_API_KEY
 checkpointer = InMemorySaver()
 
 model = init_chat_model(
-    ""google_genai:gemini-2.5-flash"",
+    "google_genai:gemini-2.5-flash",
     api_key=GOOGLE_API_KEY
 )
 
@@ -6800,10 +6800,10 @@ agent = create_agent(
 )
 
 question_count = 0
-current_subject = """"
-thread_id = ""interview_session""
+current_subject = ""
+thread_id = "interview_session"
 
-INTERVIEW_PROMPT = """"""You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
+INTERVIEW_PROMPT = """You are Natalie, a friendly and conversational interviewer conducting a natural {subject} interview.
 
 IMPORTANT GUIDELINES:
 1. Ask exactly 5 questions total throughout the interview
@@ -6816,37 +6816,37 @@ IMPORTANT GUIDELINES:
 
 CRITICAL: Read the conversation history carefully. Only acknowledge what the candidate truly said, not what you think they might have said.
 
-Keep it short, conversational, and adaptive!""""""
+Keep it short, conversational, and adaptive!"""
 
-FEEDBACK_PROMPT = """"""Based on our complete interview conversation, provide detailed feedback as JSON only:
+FEEDBACK_PROMPT = """Based on our complete interview conversation, provide detailed feedback as JSON only:
     {{
-    ""subject"": ""<topic>"",
-    ""candidate_score"": <1-5>,
-    ""feedback"": ""<detailed strengths with specific examples 
-    from their ACTUAL answers>"",
-    ""areas_of_improvement"": ""<constructive suggestions based 
-    on gaps you noticed>""
+    "subject": "<topic>",
+    "candidate_score": <1-5>,
+    "feedback": "<detailed strengths with specific examples 
+    from their ACTUAL answers>",
+    "areas_of_improvement": "<constructive suggestions based 
+    on gaps you noticed>"
     }}
-    Be specific - reference ACTUAL things they said during the interview.""""""
+    Be specific - reference ACTUAL things they said during the interview."""
 
 
 app = Flask(__name__)
 CORS(app, expose_headers=['X-Question-Number'])
 
 def stream_audio(text):
-    BASE_URL = ""https://global.api.murf.ai/v1/speech/stream""
+    BASE_URL = "https://global.api.murf.ai/v1/speech/stream"
     payload = {
-        ""text"": text,
-        ""voiceId"": ""en-US-natalie"",
-        ""model"": ""FALCON"",
-        ""multiNativeLocale"": ""en-US"",
-        ""sampleRate"": 24000,
-        ""format"": ""MP3"",
+        "text": text,
+        "voiceId": "en-US-natalie",
+        "model": "FALCON",
+        "multiNativeLocale": "en-US",
+        "sampleRate": 24000,
+        "format": "MP3",
     }
 
     headers = {
-        ""Content-Type"": ""application/json"",
-        ""api-key"": MURF_API_KEY
+        "Content-Type": "application/json",
+        "api-key": MURF_API_KEY
     }
     response = requests.post(
         BASE_URL,
@@ -6856,15 +6856,15 @@ def stream_audio(text):
     )
     for chunk in response.iter_content(chunk_size=4096):
         if chunk:
-            yield base64.b64encode(chunk).decode(""utf-8"") + ""\n""
+            yield base64.b64encode(chunk).decode("utf-8") + "\n"
 
 
 
-@app.route(""/start-interview"", methods=[""POST""])
+@app.route("/start-interview", methods=["POST"])
 def start_interview():
     global question_count, current_subject, checkpointer, agent
     data = request.json
-    current_subject = data.get(""subject"", ""Python"")
+    current_subject = data.get("subject", "Python")
     question_count = 1
     checkpointer = InMemorySaver()
     agent = create_agent(
@@ -6872,66 +6872,66 @@ def start_interview():
         tools=[],
         checkpointer=checkpointer
     )
-    config = {""configurable"": {""thread_id"": thread_id}}
+    config = {"configurable": {"thread_id": thread_id}}
     formatted_prompt = INTERVIEW_PROMPT.format(subject=current_subject)
     response = agent.invoke({
-        ""messages"": [
-            {""role"": ""system"", ""content"": formatted_prompt},
-            {""role"": ""user"", ""content"": f""Start the interview with a warm greeting and ask the first question about {current_subject}. Keep it SHORT (1-2 sentences).""}
+        "messages": [
+            {"role": "system", "content": formatted_prompt},
+            {"role": "user", "content": f"Start the interview with a warm greeting and ask the first question about {current_subject}. Keep it SHORT (1-2 sentences)."}
         ]
     }, config=config)
-    question = response[""messages""][-1].content
-    print(f""\n[Question {question_count}] {question}"")
-    return stream_audio(question), {""Content-Type"": ""text/plain""}
+    question = response["messages"][-1].content
+    print(f"\n[Question {question_count}] {question}")
+    return stream_audio(question), {"Content-Type": "text/plain"}
 
 def speech_to_text(audio_path):
-  """"""Convert audio file to text using AssemblyAI""""""
+  """Convert audio file to text using AssemblyAI"""
   transcriber = aai.Transcriber()
   config = aai.TranscriptionConfig(
-        speech_models=[""universal-3-pro"", ""universal-2""],
+        speech_models=["universal-3-pro", "universal-2"],
         language_detection=True, speaker_labels=True,
     )
   transcript = transcriber.transcribe(audio_path, config=config)
-  return transcript.text if transcript.text else """"
+  return transcript.text if transcript.text else ""
 
 
 
-@app.route(""/submit-answer"", methods=[""POST""])
+@app.route("/submit-answer", methods=["POST"])
 def submit_answer():
     global question_count
-    audio_file = request.files[""audio""]
+    audio_file = request.files["audio"]
     temp_path = (
     tempfile.NamedTemporaryFile(
       delete=False,
-      suffix="".webm""
+      suffix=".webm"
      ).name
     )
     audio_file.save(temp_path)
     answer = speech_to_text(temp_path)
     os.unlink(temp_path)
     if not answer:
-        answer = ""Empty Text received""
-    print(f""[Answer {question_count}] {answer}"")
-    config = {""configurable"": {""thread_id"": thread_id}}
+        answer = "Empty Text received"
+    print(f"[Answer {question_count}] {answer}")
+    config = {"configurable": {"thread_id": thread_id}}
    
-    agent.invoke({""messages"": [{""role"": ""user"", ""content"": answer}]}, config=config)
+    agent.invoke({"messages": [{"role": "user", "content": answer}]}, config=config)
 
 
     question_count += 1
-    prompt = f""""""The candidate just answered question {question_count - 1}.
+    prompt = f"""The candidate just answered question {question_count - 1}.
  
     Look at their ACTUAL answer above. Do NOT assume or make up what they said.
     
     Now ask question {question_count} of 5:
     1. Briefly acknowledge what they ACTUALLY said (1 sentence) - quote their exact words if needed
     2. Ask your next question that builds on their REAL response (1-2 sentences)
-    3. If they said ""I don't know"" or gave a wrong answer, acknowledge that and ask something simpler
+    3. If they said "I don't know" or gave a wrong answer, acknowledge that and ask something simpler
     4. Keep the TOTAL response under 3 sentences
     
-    Be conversational but CONCISE. Only reference what they truly said.""""""
-    response = agent.invoke({""messages"": [{""role"": ""user"", ""content"": prompt}]}, config=config)
-    question = response[""messages""][-1].content
-    print(f""\n[Question {question_count}] {question}"")
+    Be conversational but CONCISE. Only reference what they truly said."""
+    response = agent.invoke({"messages": [{"role": "user", "content": prompt}]}, config=config)
+    question = response["messages"][-1].content
+    print(f"\n[Question {question_count}] {question}")
     return (stream_audio(question),
         {
         'Content-Type': 'text/plain',
@@ -6948,25 +6948,25 @@ app.run(debug=True, port=5000)
 The frontend JavaScript can easily read this header from the `fetch` response.
 
 ```js
-const submitAnswerApiUrl = ""http://127.0.0.1:5000/submit-answer"";
+const submitAnswerApiUrl = "http://127.0.0.1:5000/submit-answer";
 
 
 async function submitAnswer() {
     if (!recordedBlob) return;
 
     disableRecording();
-    recordingStatus.textContent = ""Submitting..."";
+    recordingStatus.textContent = "Submitting...";
 
     const formData = new FormData();
-    formData.append(""audio"", recordedBlob, ""answer.webm"");
+    formData.append("audio", recordedBlob, "answer.webm");
 
     try {
         const response = await fetch(submitAnswerApiUrl, {
-            method: ""POST"",
+            method: "POST",
             body: formData
         });
         
-        const contentType = response.headers.get(""content-type"");
+        const contentType = response.headers.get("content-type");
         const isComplete = response.headers.get('X-Interview-Complete') === 'true';
         const questionNumber = response.headers.get('X-Question-Number');
         
@@ -6974,7 +6974,7 @@ async function submitAnswer() {
             updateQuestionNumber(questionNumber);
         }
         
-        if (contentType && contentType.includes(""text/plain"")) {
+        if (contentType && contentType.includes("text/plain")) {
             handleAudioStream(response, () => {
                 recordedBlob = null;
                 recordingChunks = [];
@@ -6991,7 +6991,7 @@ async function submitAnswer() {
             });
         } else {
             const data = await response.json();
-            console.log(""Response:"", data);
+            console.log("Response:", data);
             recordedBlob = null;
             recordingChunks = [];
             
@@ -7003,7 +7003,7 @@ async function submitAnswer() {
             }
         }
     } catch (error) {
-        recordingStatus.textContent = ""Connection error"";
+        recordingStatus.textContent = "Connection error";
         hideSpeakingBubble();
         enableRecording();
     }
@@ -7014,22 +7014,22 @@ async function submitAnswer() {
 
 ## Implementing End Interview Functionality
 
-When the user clicks ""End Interview,"" the agent should review the entire conversation history and provide comprehensive feedback.
+When the user clicks "End Interview," the agent should review the entire conversation history and provide comprehensive feedback.
 
 ### Updating the GetFeedback API URL
 
 ```js
-const getFeedbackApiUrl = ""http://127.0.0.1:5000/get-feedback"";
+const getFeedbackApiUrl = "http://127.0.0.1:5000/get-feedback";
 
 async function getFeedback() {
     showFeedbackSection();
-    getFeedbackBtn.textContent = ""Generating..."";
+    getFeedbackBtn.textContent = "Generating...";
     getFeedbackBtn.disabled = true;
 
     try {
         const response = await fetch(getFeedbackApiUrl, {
-            method: ""POST"",
-            headers: { ""Content-Type"": ""application/json"" },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({})
         });
         
@@ -7039,7 +7039,7 @@ async function getFeedback() {
             displayFeedback(data.feedback);
         }
     } catch (error) {
-        getFeedbackBtn.textContent = ""Error - Retry"";
+        getFeedbackBtn.textContent = "Error - Retry";
         getFeedbackBtn.disabled = false;
     }
 }
@@ -7050,7 +7050,7 @@ async function getFeedback() {
 We'll create a `/get-feedback` endpoint to handle this.
 
 ```python
-@app.route(""/get-feedback"", methods=[""POST""])
+@app.route("/get-feedback", methods=["POST"])
 def get_feedback():
 
 ```
@@ -7062,17 +7062,17 @@ To ensure the frontend can easily display the feedback, we'll instruct the AI to
 Here is the prompt we will use for feedback:
 
 ```python
-FEEDBACK_PROMPT = """"""Based on our complete interview conversation, provide detailed feedback.
+FEEDBACK_PROMPT = """Based on our complete interview conversation, provide detailed feedback.
 IMPORTANT: You MUST respond with ONLY a valid JSON object. No other text before or after.
-Address the candidate directly using ""you"" and ""your"" (e.g., ""You explained..."" not ""The candidate explained..."").
+Address the candidate directly using "you" and "your" (e.g., "You explained..." not "The candidate explained...").
 Respond with ONLY this JSON structure (no markdown, no code blocks, no extra text):
 {{
-    ""subject"": ""{subject}"",
-    ""candidate_score"": <1-5>,
-    ""feedback"": ""<detailed strengths with specific examples from their ACTUAL answers>"",
-    ""areas_of_improvement"": ""<constructive suggestions based on gaps you noticed>""
+    "subject": "{subject}",
+    "candidate_score": <1-5>,
+    "feedback": "<detailed strengths with specific examples from their ACTUAL answers>",
+    "areas_of_improvement": "<constructive suggestions based on gaps you noticed>"
 }}
-Be specific - reference ACTUAL things they said during the interview.""""""
+Be specific - reference ACTUAL things they said during the interview."""
 ```
 
 <MultiLineNote>
@@ -7087,20 +7087,20 @@ We invoke the agent one last time, using the same `thread_id` so it can access t
 
 ```python
 
-@app.route(""/get-feedback"", methods=[""POST""])
+@app.route("/get-feedback", methods=["POST"])
 def get_feedback():
-    """"""Generate detailed interview feedback""""""
-    config = {""configurable"": {""thread_id"": thread_id}}
+    """Generate detailed interview feedback"""
+    config = {"configurable": {"thread_id": thread_id}}
     response = agent.invoke({
-        ""messages"": [
+        "messages": [
         {
-            ""role"": ""user"", 
-            ""content"": f""{FEEDBACK_PROMPT}\n\nReview our complete {current_subject} interview conversation and provide detailed feedback.""
+            "role": "user", 
+            "content": f"{FEEDBACK_PROMPT}\n\nReview our complete {current_subject} interview conversation and provide detailed feedback."
         }
         ]
     }, config=config)
-    text = response[""messages""][-1].content
-    print(f""\n[Feedback Generated]\n{text}\n"")
+    text = response["messages"][-1].content
+    print(f"\n[Feedback Generated]\n{text}\n")
 
 ```
 
@@ -7113,16 +7113,16 @@ The AI's response is a string that should contain JSON. We need to clean it up (
 import json
 from flask import jsonify
 
-@app.route(""/get-feedback"", methods=[""POST""])
+@app.route("/get-feedback", methods=["POST"])
 def get_feedback():
     cleaned_text = feedback_text.strip()
-    if """" in cleaned_text:
-        cleaned_text = cleaned_text.split("""")[1].replace(""json"", """").strip()
+    if "" in cleaned_text:
+        cleaned_text = cleaned_text.split("")[1].replace("json", "").strip()
 
     feedback_json = json.loads(cleaned_text)
     
 
-    return jsonify({""success"": True, ""feedback"": feedback_json})
+    return jsonify({"success": True, "feedback": feedback_json})
 ```
 
 - strip() removes extra whitespace. If code blocks exist, we extract just the JSON content
@@ -7150,7 +7150,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 # Initialize free, local embedding model
 embeddings = HuggingFaceEmbeddings(
-    model_name=""sentence-transformers/all-mpnet-base-v2""
+    model_name="sentence-transformers/all-mpnet-base-v2"
 )
 
 ```
@@ -7161,13 +7161,13 @@ embeddings = HuggingFaceEmbeddings(
 from langchain_chroma import Chroma
 
 vector_store = Chroma(
-    collection_name=""example_collection"",
+    collection_name="example_collection",
     embedding_function=embeddings,
-    persist_directory=""./chroma_langchain_db"",  # Where to save data locally, remove if not necessary
+    persist_directory="./chroma_langchain_db",  # Where to save data locally, remove if not necessary
 )
 document_ids = vector_store.add_documents(documents=all_splits)
-sample = vector_store.get(limit=1, include=[""embeddings"", ""documents""])
-print(f""Embedding dimensions: {len(sample['embeddings'][0])}"")
+sample = vector_store.get(limit=1, include=["embeddings", "documents"])
+print(f"Embedding dimensions: {len(sample['embeddings'][0])}")
 print(sample)
 print(document_ids[:3])
 ```
@@ -7178,29 +7178,29 @@ from google.colab import userdata
 
 api_key = userdata.get('GEMINI_API_KEY')
 model = init_chat_model(
-   ""google_genai:gemini-2.5-flash"",
+   "google_genai:gemini-2.5-flash",
    api_key=api_key,
 )
 
 def docu_chat(user_query):
   context, source_docs = retrieve_context(user_query, k=2)
-  system_message = f""""""You are a helpful chatbot.
+  system_message = f"""You are a helpful chatbot.
                      Use only the following pieces of context to answer the 
-                     question. Don't makeup any new information: {context} """"""
+                     question. Don't makeup any new information: {context} """
 
   messages = [
-    {""role"": ""system"", ""content"": system_message},
-    {""role"": ""user"", ""content"": user_query}
+    {"role": "system", "content": system_message},
+    {"role": "user", "content": user_query}
   ]
   response = model.invoke(messages)
      return {
-  ""answer"": response.content,
-  ""source_documents"": source_docs,
-  ""context_used"": context
+  "answer": response.content,
+  "source_documents": source_docs,
+  "context_used": context
 }
-result = docu_chat( ""Explain what is the use of decoders in transformers?"")
+result = docu_chat( "Explain what is the use of decoders in transformers?")
 print(result)
-print(result[""answer""])
+print(result["answer"])
 ```
 
 </details>
@@ -7234,10 +7234,10 @@ Compare the attention mechanism from the paper with recent improvements like Fla
 **RESULT!** 
 
 ```
-{'answer': 'The provided context describes the attention mechanism introduced in the paper ""Attention is All you Need,"" but it does not contain information about recent improvements like Flash Attention.\n\nBased on the provided text, the attention mechanism proposed in ""Attention is All you Need"" is:\n*   A novel, simple network architecture based solely on an attention mechanism, completely removing recurrence and convolutions.\n*   It includes scaled dot-product attention and multi-head attention.\n*   Experiments on machine translation tasks showed these models to be superior in quality, more parallelizable, and required significantly less time to train compared to dominant sequence transduction models based on recurrent or convolutional neural networks.\n*   For example, a single model with 165 million parameters achieved 27.5 BLEU on English-to-German translation and 41.1 BLEU on English-to-French translation, outperforming existing best ensemble and single state-of-the-art results, respectively.\n\nTherefore, based solely on the provided text, I cannot compare the attention mechanism from the paper with Flash Attention or recommend which approach would be better for your college project, as information on Flash Attention is not available in the given context.', 'source_documents': [Document(id='7bf8f651-b938-4953-b42e-f95bd5d706e7', metadata={'author': 'Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin', 'page': 0, 'editors': 'I. Guyon and U.V. Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett', 'firstpage': '5998', 'type': 'Conference Proceedings', 'subject': 'Neural Information Processing Systems http://nips.cc/', 'language': 'en-US', 'total_pages': 11, 'book': 'Advances in Neural Information Processing Systems 30', 'creator': 'PyPDF', 'description-abstract': 'The dominant sequence transduction models are based on complex recurrent orconvolutional neural networks in an encoder and decoder configuration. The best performing such models also connect the encoder and decoder through an attentionm echanisms.  We propose a novel, simple network architecture based solely onan attention mechanism, dispensing with recurrence and convolutions entirely.Experiments on two machine translation tasks show these models to be superiorin quality while being more parallelizable and requiring significantly less timeto train. Our single model with 165 million parameters, achieves 27.5 BLEU onEnglish-to-German translation, improving over the existing best ensemble result by over 1 BLEU. On English-to-French translation, we outperform the previoussingle state-of-the-art with model by 0.7 BLEU, achieving a BLEU score of 41.1.', 'description': 'Paper accepted and presented at the Neural Information Processing Systems Conference (http://nips.cc/)', 'published': '2017', 'moddate': '2018-02-12T21:22:10-08:00', 'date': '2017', 'title': 'Attention is All you Need', 'lastpage': '6008', 'start_index': 1610, 'created': '2017', 'publisher': 'Curran Associates, Inc.', 'source': '/content/attention_is_all_you_need.pdf', 'creationdate': '', 'eventtype': 'Poster', 'producer': 'PyPDF2', 'page_label': '1'}, page_content='transduction problems such as language modeling and machine translation [ 29, 2, 5]. Numerous\nefforts have since continued to push the boundaries of recurrent language models and encoder-decoder\narchitectures [31, 21, 13].\n∗Equal contribution. Listing order is random. Jakob proposed replacing RNNs with self-attention and started\nthe effort to evaluate this idea. Ashish, with Illia, designed and implemented the ﬁrst Transformer models and\nhas been crucially involved in every aspect of this work. Noam proposed scaled dot-product attention, multi-head\nattention and the parameter-free position representation and became the other person involved in nearly every\ndetail. Niki designed, implemented, tuned and evaluated countless model variants in our original codebase and\ntensor2tensor. Llion also experimented with novel model variants, was responsible for our initial codebase, and\nefﬁcient inference and visualizations. Lukasz and Aidan spent countless long days designing various parts of and'), Document(id='e833a9df-5536-4f7c-80a7-d328fdb621e2', metadata={'page': 8, 'lastpage': '6008', 'subject': 'Neural Information Processing Systems http://nips.cc/', 'moddate': '2018-02-12T21:22:10-08:00', 'page_label': '9', 'language': 'en-US', 'producer': 'PyPDF2', 'eventtype': 'Poster', 'date': '2017', 'description-abstract': 'The dominant sequence transduction models are based on complex recurrent orconvolutional neural networks in an encoder and decoder configuration. The best performing such models also connect the encoder and decoder through an attentionm echanisms.  We propose a novel, simple network architecture based solely onan attention mechanism, dispensing with recurrence and convolutions entirely.Experiments on two machine translation tasks show these models to be superiorin quality while being more parallelizable and requiring significantly less timeto train. Our single model with 165 million parameters, achieves 27.5 BLEU onEnglish-to-German translation, improving over the existing best ensemble result by over 1 BLEU. On English-to-French translation, we outperform the previoussingle state-of-the-art with model by 0.7 BLEU, achieving a BLEU score of 41.1.', 'author': 'Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin', 'start_index': 0, 'editors': 'I. Guyon and U.V. Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett', 'description': 'Paper accepted and presented at the Neural Information Processing Systems Conference (http://nips.cc/)', 'published': '2017', 'title': 'Attention is All you Need', 'total_pages': 11, 'firstpage': '5998', 'book': 'Advances in Neural Information Processing Systems 30', 'creationdate': '', 'type': 'Conference Proceedings', 'created': '2017', 'source': '/content/attention_is_all_you_need.pdf', 'creator': 'PyPDF', 'publisher': 'Curran Associates, Inc.'}, page_content='Table 3: Variations on the Transformer architecture. Unlisted values are identical to those of the base\nmodel. All metrics are on the English-to-German translation development set, newstest2013. Listed\nperplexities are per-wordpiece, according to our byte-pair encoding, and should not be compared to\nper-word perplexities.\nN d model dff h d k dv Pdrop ϵls\ntrain PPL BLEU params\nsteps (dev) (dev) ×106\nbase 6 512 2048 8 64 64 0.1 0.1 100K 4.92 25.8 65\n(A)\n1 512 512 5.29 24.9\n4 128 128 5.00 25.5\n16 32 32 4.91 25.8\n32 16 16 5.01 25.4\n(B) 16 5.16 25.1 58\n32 5.01 25.4 60\n(C)\n2 6.11 23.7 36\n4 5.19 25.3 50\n8 4.88 25.5 80\n256 32 32 5.75 24.5 28\n1024 128 128 4.66 26.0 168\n1024 5.12 25.4 53\n4096 4.75 26.2 90\n(D)\n0.0 5.77 24.6\n0.2 4.95 25.5\n0.0 4.67 25.3\n0.2 5.47 25.7\n(E) positional embedding instead of sinusoids 4.92 25.7\nbig 6 1024 4096 16 0.3 300K 4.33 26.4 213\nIn Table 3 rows (B), we observe that reducing the attention key size dk hurts model quality. This')], 'context_used': ""Source: {'author': 'Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin', 'page': 0, 'editors': 'I. Guyon and U.V. Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett', 'firstpage': '5998', 'type': 'Conference Proceedings', 'subject': 'Neural Information Processing Systems http://nips.cc/', 'language': 'en-US', 'total_pages': 11, 'book': 'Advances in Neural Information Processing Systems 30', 'creator': 'PyPDF', 'description-abstract': 'The dominant sequence transduction models are based on complex recurrent orconvolutional neural networks in an encoder and decoder configuration. The best performing such models also connect the encoder and decoder through an attentionm echanisms.  We propose a novel, simple network architecture based solely onan attention mechanism, dispensing with recurrence and convolutions entirely.Experiments on two machine translation tasks show these models to be superiorin quality while being more parallelizable and requiring significantly less timeto train. Our single model with 165 million parameters, achieves 27.5 BLEU onEnglish-to-German translation, improving over the existing best ensemble result by over 1 BLEU. On English-to-French translation, we outperform the previoussingle state-of-the-art with model by 0.7 BLEU, achieving a BLEU score of 41.1.', 'description': 'Paper accepted and presented at the Neural Information Processing Systems Conference (http://nips.cc/)', 'published': '2017', 'moddate': '2018-02-12T21:22:10-08:00', 'date': '2017', 'title': 'Attention is All you Need', 'lastpage': '6008', 'start_index': 1610, 'created': '2017', 'publisher': 'Curran Associates, Inc.', 'source': '/content/attention_is_all_you_need.pdf', 'creationdate': '', 'eventtype': 'Poster', 'producer': 'PyPDF2', 'page_label': '1'}\nContent: transduction problems such as language modeling and machine translation [ 29, 2, 5]. Numerous\nefforts have since continued to push the boundaries of recurrent language models and encoder-decoder\narchitectures [31, 21, 13].\n∗Equal contribution. Listing order is random. Jakob proposed replacing RNNs with self-attention and started\nthe effort to evaluate this idea. Ashish, with Illia, designed and implemented the ﬁrst Transformer models and\nhas been crucially involved in every aspect of this work. Noam proposed scaled dot-product attention, multi-head\nattention and the parameter-free position representation and became the other person involved in nearly every\ndetail. Niki designed, implemented, tuned and evaluated countless model variants in our original codebase and\ntensor2tensor. Llion also experimented with novel model variants, was responsible for our initial codebase, and\nefﬁcient inference and visualizations. Lukasz and Aidan spent countless long days designing various parts of and\n\nSource: {'page': 8, 'lastpage': '6008', 'subject': 'Neural Information Processing Systems http://nips.cc/', 'moddate': '2018-02-12T21:22:10-08:00', 'page_label': '9', 'language': 'en-US', 'producer': 'PyPDF2', 'eventtype': 'Poster', 'date': '2017', 'description-abstract': 'The dominant sequence transduction models are based on complex recurrent orconvolutional neural networks in an encoder and decoder configuration. The best performing such models also connect the encoder and decoder through an attentionm echanisms.  We propose a novel, simple network architecture based solely onan attention mechanism, dispensing with recurrence and convolutions entirely.Experiments on two machine translation tasks show these models to be superiorin quality while being more parallelizable and requiring significantly less timeto train. Our single model with 165 million parameters, achieves 27.5 BLEU onEnglish-to-German translation, improving over the existing best ensemble result by over 1 BLEU. On English-to-French translation, we outperform the previoussingle state-of-the-art with model by 0.7 BLEU, achieving a BLEU score of 41.1.', 'author': 'Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin', 'start_index': 0, 'editors': 'I. Guyon and U.V. Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett', 'description': 'Paper accepted and presented at the Neural Information Processing Systems Conference (http://nips.cc/)', 'published': '2017', 'title': 'Attention is All you Need', 'total_pages': 11, 'firstpage': '5998', 'book': 'Advances in Neural Information Processing Systems 30', 'creationdate': '', 'type': 'Conference Proceedings', 'created': '2017', 'source': '/content/attention_is_all_you_need.pdf', 'creator': 'PyPDF', 'publisher': 'Curran Associates, Inc.'}\nContent: Table 3: Variations on the Transformer architecture. Unlisted values are identical to those of the base\nmodel. All metrics are on the English-to-German translation development set, newstest2013. Listed\nperplexities are per-wordpiece, according to our byte-pair encoding, and should not be compared to\nper-word perplexities.\nN d model dff h d k dv Pdrop ϵls\ntrain PPL BLEU params\nsteps (dev) (dev) ×106\nbase 6 512 2048 8 64 64 0.1 0.1 100K 4.92 25.8 65\n(A)\n1 512 512 5.29 24.9\n4 128 128 5.00 25.5\n16 32 32 4.91 25.8\n32 16 16 5.01 25.4\n(B) 16 5.16 25.1 58\n32 5.01 25.4 60\n(C)\n2 6.11 23.7 36\n4 5.19 25.3 50\n8 4.88 25.5 80\n256 32 32 5.75 24.5 28\n1024 128 128 4.66 26.0 168\n1024 5.12 25.4 53\n4096 4.75 26.2 90\n(D)\n0.0 5.77 24.6\n0.2 4.95 25.5\n0.0 4.67 25.3\n0.2 5.47 25.7\n(E) positional embedding instead of sinusoids 4.92 25.7\nbig 6 1024 4096 16 0.3 300K 4.33 26.4 213\nIn Table 3 rows (B), we observe that reducing the attention key size dk hurts model quality. This\n\n""}
-The provided context describes the attention mechanism introduced in the paper ""Attention is All you Need,"" but it does not contain information about recent improvements like Flash Attention.
+{'answer': 'The provided context describes the attention mechanism introduced in the paper "Attention is All you Need," but it does not contain information about recent improvements like Flash Attention.\n\nBased on the provided text, the attention mechanism proposed in "Attention is All you Need" is:\n*   A novel, simple network architecture based solely on an attention mechanism, completely removing recurrence and convolutions.\n*   It includes scaled dot-product attention and multi-head attention.\n*   Experiments on machine translation tasks showed these models to be superior in quality, more parallelizable, and required significantly less time to train compared to dominant sequence transduction models based on recurrent or convolutional neural networks.\n*   For example, a single model with 165 million parameters achieved 27.5 BLEU on English-to-German translation and 41.1 BLEU on English-to-French translation, outperforming existing best ensemble and single state-of-the-art results, respectively.\n\nTherefore, based solely on the provided text, I cannot compare the attention mechanism from the paper with Flash Attention or recommend which approach would be better for your college project, as information on Flash Attention is not available in the given context.', 'source_documents': [Document(id='7bf8f651-b938-4953-b42e-f95bd5d706e7', metadata={'author': 'Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin', 'page': 0, 'editors': 'I. Guyon and U.V. Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett', 'firstpage': '5998', 'type': 'Conference Proceedings', 'subject': 'Neural Information Processing Systems http://nips.cc/', 'language': 'en-US', 'total_pages': 11, 'book': 'Advances in Neural Information Processing Systems 30', 'creator': 'PyPDF', 'description-abstract': 'The dominant sequence transduction models are based on complex recurrent orconvolutional neural networks in an encoder and decoder configuration. The best performing such models also connect the encoder and decoder through an attentionm echanisms.  We propose a novel, simple network architecture based solely onan attention mechanism, dispensing with recurrence and convolutions entirely.Experiments on two machine translation tasks show these models to be superiorin quality while being more parallelizable and requiring significantly less timeto train. Our single model with 165 million parameters, achieves 27.5 BLEU onEnglish-to-German translation, improving over the existing best ensemble result by over 1 BLEU. On English-to-French translation, we outperform the previoussingle state-of-the-art with model by 0.7 BLEU, achieving a BLEU score of 41.1.', 'description': 'Paper accepted and presented at the Neural Information Processing Systems Conference (http://nips.cc/)', 'published': '2017', 'moddate': '2018-02-12T21:22:10-08:00', 'date': '2017', 'title': 'Attention is All you Need', 'lastpage': '6008', 'start_index': 1610, 'created': '2017', 'publisher': 'Curran Associates, Inc.', 'source': '/content/attention_is_all_you_need.pdf', 'creationdate': '', 'eventtype': 'Poster', 'producer': 'PyPDF2', 'page_label': '1'}, page_content='transduction problems such as language modeling and machine translation [ 29, 2, 5]. Numerous\nefforts have since continued to push the boundaries of recurrent language models and encoder-decoder\narchitectures [31, 21, 13].\n∗Equal contribution. Listing order is random. Jakob proposed replacing RNNs with self-attention and started\nthe effort to evaluate this idea. Ashish, with Illia, designed and implemented the ﬁrst Transformer models and\nhas been crucially involved in every aspect of this work. Noam proposed scaled dot-product attention, multi-head\nattention and the parameter-free position representation and became the other person involved in nearly every\ndetail. Niki designed, implemented, tuned and evaluated countless model variants in our original codebase and\ntensor2tensor. Llion also experimented with novel model variants, was responsible for our initial codebase, and\nefﬁcient inference and visualizations. Lukasz and Aidan spent countless long days designing various parts of and'), Document(id='e833a9df-5536-4f7c-80a7-d328fdb621e2', metadata={'page': 8, 'lastpage': '6008', 'subject': 'Neural Information Processing Systems http://nips.cc/', 'moddate': '2018-02-12T21:22:10-08:00', 'page_label': '9', 'language': 'en-US', 'producer': 'PyPDF2', 'eventtype': 'Poster', 'date': '2017', 'description-abstract': 'The dominant sequence transduction models are based on complex recurrent orconvolutional neural networks in an encoder and decoder configuration. The best performing such models also connect the encoder and decoder through an attentionm echanisms.  We propose a novel, simple network architecture based solely onan attention mechanism, dispensing with recurrence and convolutions entirely.Experiments on two machine translation tasks show these models to be superiorin quality while being more parallelizable and requiring significantly less timeto train. Our single model with 165 million parameters, achieves 27.5 BLEU onEnglish-to-German translation, improving over the existing best ensemble result by over 1 BLEU. On English-to-French translation, we outperform the previoussingle state-of-the-art with model by 0.7 BLEU, achieving a BLEU score of 41.1.', 'author': 'Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin', 'start_index': 0, 'editors': 'I. Guyon and U.V. Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett', 'description': 'Paper accepted and presented at the Neural Information Processing Systems Conference (http://nips.cc/)', 'published': '2017', 'title': 'Attention is All you Need', 'total_pages': 11, 'firstpage': '5998', 'book': 'Advances in Neural Information Processing Systems 30', 'creationdate': '', 'type': 'Conference Proceedings', 'created': '2017', 'source': '/content/attention_is_all_you_need.pdf', 'creator': 'PyPDF', 'publisher': 'Curran Associates, Inc.'}, page_content='Table 3: Variations on the Transformer architecture. Unlisted values are identical to those of the base\nmodel. All metrics are on the English-to-German translation development set, newstest2013. Listed\nperplexities are per-wordpiece, according to our byte-pair encoding, and should not be compared to\nper-word perplexities.\nN d model dff h d k dv Pdrop ϵls\ntrain PPL BLEU params\nsteps (dev) (dev) ×106\nbase 6 512 2048 8 64 64 0.1 0.1 100K 4.92 25.8 65\n(A)\n1 512 512 5.29 24.9\n4 128 128 5.00 25.5\n16 32 32 4.91 25.8\n32 16 16 5.01 25.4\n(B) 16 5.16 25.1 58\n32 5.01 25.4 60\n(C)\n2 6.11 23.7 36\n4 5.19 25.3 50\n8 4.88 25.5 80\n256 32 32 5.75 24.5 28\n1024 128 128 4.66 26.0 168\n1024 5.12 25.4 53\n4096 4.75 26.2 90\n(D)\n0.0 5.77 24.6\n0.2 4.95 25.5\n0.0 4.67 25.3\n0.2 5.47 25.7\n(E) positional embedding instead of sinusoids 4.92 25.7\nbig 6 1024 4096 16 0.3 300K 4.33 26.4 213\nIn Table 3 rows (B), we observe that reducing the attention key size dk hurts model quality. This')], 'context_used': "Source: {'author': 'Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin', 'page': 0, 'editors': 'I. Guyon and U.V. Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett', 'firstpage': '5998', 'type': 'Conference Proceedings', 'subject': 'Neural Information Processing Systems http://nips.cc/', 'language': 'en-US', 'total_pages': 11, 'book': 'Advances in Neural Information Processing Systems 30', 'creator': 'PyPDF', 'description-abstract': 'The dominant sequence transduction models are based on complex recurrent orconvolutional neural networks in an encoder and decoder configuration. The best performing such models also connect the encoder and decoder through an attentionm echanisms.  We propose a novel, simple network architecture based solely onan attention mechanism, dispensing with recurrence and convolutions entirely.Experiments on two machine translation tasks show these models to be superiorin quality while being more parallelizable and requiring significantly less timeto train. Our single model with 165 million parameters, achieves 27.5 BLEU onEnglish-to-German translation, improving over the existing best ensemble result by over 1 BLEU. On English-to-French translation, we outperform the previoussingle state-of-the-art with model by 0.7 BLEU, achieving a BLEU score of 41.1.', 'description': 'Paper accepted and presented at the Neural Information Processing Systems Conference (http://nips.cc/)', 'published': '2017', 'moddate': '2018-02-12T21:22:10-08:00', 'date': '2017', 'title': 'Attention is All you Need', 'lastpage': '6008', 'start_index': 1610, 'created': '2017', 'publisher': 'Curran Associates, Inc.', 'source': '/content/attention_is_all_you_need.pdf', 'creationdate': '', 'eventtype': 'Poster', 'producer': 'PyPDF2', 'page_label': '1'}\nContent: transduction problems such as language modeling and machine translation [ 29, 2, 5]. Numerous\nefforts have since continued to push the boundaries of recurrent language models and encoder-decoder\narchitectures [31, 21, 13].\n∗Equal contribution. Listing order is random. Jakob proposed replacing RNNs with self-attention and started\nthe effort to evaluate this idea. Ashish, with Illia, designed and implemented the ﬁrst Transformer models and\nhas been crucially involved in every aspect of this work. Noam proposed scaled dot-product attention, multi-head\nattention and the parameter-free position representation and became the other person involved in nearly every\ndetail. Niki designed, implemented, tuned and evaluated countless model variants in our original codebase and\ntensor2tensor. Llion also experimented with novel model variants, was responsible for our initial codebase, and\nefﬁcient inference and visualizations. Lukasz and Aidan spent countless long days designing various parts of and\n\nSource: {'page': 8, 'lastpage': '6008', 'subject': 'Neural Information Processing Systems http://nips.cc/', 'moddate': '2018-02-12T21:22:10-08:00', 'page_label': '9', 'language': 'en-US', 'producer': 'PyPDF2', 'eventtype': 'Poster', 'date': '2017', 'description-abstract': 'The dominant sequence transduction models are based on complex recurrent orconvolutional neural networks in an encoder and decoder configuration. The best performing such models also connect the encoder and decoder through an attentionm echanisms.  We propose a novel, simple network architecture based solely onan attention mechanism, dispensing with recurrence and convolutions entirely.Experiments on two machine translation tasks show these models to be superiorin quality while being more parallelizable and requiring significantly less timeto train. Our single model with 165 million parameters, achieves 27.5 BLEU onEnglish-to-German translation, improving over the existing best ensemble result by over 1 BLEU. On English-to-French translation, we outperform the previoussingle state-of-the-art with model by 0.7 BLEU, achieving a BLEU score of 41.1.', 'author': 'Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin', 'start_index': 0, 'editors': 'I. Guyon and U.V. Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett', 'description': 'Paper accepted and presented at the Neural Information Processing Systems Conference (http://nips.cc/)', 'published': '2017', 'title': 'Attention is All you Need', 'total_pages': 11, 'firstpage': '5998', 'book': 'Advances in Neural Information Processing Systems 30', 'creationdate': '', 'type': 'Conference Proceedings', 'created': '2017', 'source': '/content/attention_is_all_you_need.pdf', 'creator': 'PyPDF', 'publisher': 'Curran Associates, Inc.'}\nContent: Table 3: Variations on the Transformer architecture. Unlisted values are identical to those of the base\nmodel. All metrics are on the English-to-German translation development set, newstest2013. Listed\nperplexities are per-wordpiece, according to our byte-pair encoding, and should not be compared to\nper-word perplexities.\nN d model dff h d k dv Pdrop ϵls\ntrain PPL BLEU params\nsteps (dev) (dev) ×106\nbase 6 512 2048 8 64 64 0.1 0.1 100K 4.92 25.8 65\n(A)\n1 512 512 5.29 24.9\n4 128 128 5.00 25.5\n16 32 32 4.91 25.8\n32 16 16 5.01 25.4\n(B) 16 5.16 25.1 58\n32 5.01 25.4 60\n(C)\n2 6.11 23.7 36\n4 5.19 25.3 50\n8 4.88 25.5 80\n256 32 32 5.75 24.5 28\n1024 128 128 4.66 26.0 168\n1024 5.12 25.4 53\n4096 4.75 26.2 90\n(D)\n0.0 5.77 24.6\n0.2 4.95 25.5\n0.0 4.67 25.3\n0.2 5.47 25.7\n(E) positional embedding instead of sinusoids 4.92 25.7\nbig 6 1024 4096 16 0.3 300K 4.33 26.4 213\nIn Table 3 rows (B), we observe that reducing the attention key size dk hurts model quality. This\n\n"}
+The provided context describes the attention mechanism introduced in the paper "Attention is All you Need," but it does not contain information about recent improvements like Flash Attention.
 
-Based on the provided text, the attention mechanism proposed in ""Attention is All you Need"" is:
+Based on the provided text, the attention mechanism proposed in "Attention is All you Need" is:
 *   A novel, simple network architecture based solely on an attention mechanism, completely removing recurrence and convolutions.
 *   It includes scaled dot-product attention and multi-head attention.
 *   Experiments on machine translation tasks showed these models to be superior in quality, more parallelizable, and required significantly less time to train compared to dominant sequence transduction models based on recurrent or convolutional neural networks.
@@ -7295,7 +7295,7 @@ User Question → Retrieve (Always, ONE time) → Generate (Always) → Answer
 
 **Agentic RAG (Intelligent Agent):**
 
-User Question → Agent THINKS: ""What do I need?"" → Agent DECIDES: ""Which tool to use?"" → Agent ACTS: Executes tool(s) → Agent REASONS: Generates answer
+User Question → Agent THINKS: "What do I need?" → Agent DECIDES: "Which tool to use?" → Agent ACTS: Executes tool(s) → Agent REASONS: Generates answer
 
 ### RAG vs Agentic RAG Comparison
 
@@ -7360,10 +7360,10 @@ agent = create_agent(
 ### Define System Prompt
 
 ```python
-system_prompt = """"""You are a helpful research assistant with access to two tools:
+system_prompt = """You are a helpful research assistant with access to two tools:
 
 1. retrieve_from_pdf: Use this to find information from the
-   ""Attention Is All You Need"" research paper
+   "Attention Is All You Need" research paper
 
 2. TavilySearch: Use this to find current information
    not in the paper (recent events, updates, etc.)
@@ -7372,7 +7372,7 @@ Strategy:
 - For questions about the paper content → use retrieve_from_pdf
 - For questions about recent events or topics not in the paper → use TavilySearch
 - DON'T make up things 
-""""""
+"""
 ```
 
 ## Step 2: Convert Retrieval Function to a Tool
@@ -7387,10 +7387,10 @@ def retrieve_context(query: str, k: int = 2):
     retrieved_docs = vector_store.similarity_search(query, k=k)
 
     # Build context string
-    docs_content = """"
+    docs_content = ""
     for doc in retrieved_docs:
-        docs_content += f""Source: {doc.metadata}\n""
-        docs_content += f""Content: {doc.page_content}\n\n""
+        docs_content += f"Source: {doc.metadata}\n"
+        docs_content += f"Content: {doc.page_content}\n\n"
 
     return docs_content, retrieved_docs
 ```
@@ -7404,17 +7404,17 @@ def retrieve_context(query: str, k: int = 2):
 ```python
 @tool
 def function_name(parameter: str) -> str:
-    """"""
+    """
     Short description of what this tool does.
-    """"""
-    return f""Processed: {parameter}""
+    """
+    return f"Processed: {parameter}"
 ```
 
 *   `@tool`**Tool decorator** — Registers the function as a LangChain tool
 *   `(parameter: str) -> str:`**Type annotations** — Define the input schema and expected output type for the LLM
-*   `    """"""
+*   `    """
     Short description of what this tool does.
-    """"""` **Docstring** — Describes the tool's purpose to help the LLM decide when to use it
+    """` **Docstring** — Describes the tool's purpose to help the LLM decide when to use it
 
 ### Adding the Tool Decorator
 
@@ -7423,12 +7423,12 @@ from langchain.tools import tool
 
 @tool
 def retrieve_from_pdf(query: str) -> str:
-    """"""Retrieve information from the Attention Is All You Need research paper.""""""
+    """Retrieve information from the Attention Is All You Need research paper."""
     retrieved_docs = vector_store.similarity_search(query, k=2)
-    docs_content = """"
+    docs_content = ""
     for doc in retrieved_docs:
-        docs_content += f""Source: {doc.metadata}\n""
-        docs_content += f""Content: {doc.page_content}\n\n""
+        docs_content += f"Source: {doc.metadata}\n"
+        docs_content += f"Content: {doc.page_content}\n\n"
     return docs_content
 ```
 
@@ -7457,7 +7457,7 @@ tavily_api_key = userdata.get('TAVILY_API_KEY')
 
 web_search_tool = TavilySearch(
     max_results=5,
-    search_depth=""advanced"",
+    search_depth="advanced",
     tavily_api_key=tavily_api_key,
 )
 ```
@@ -7473,13 +7473,13 @@ All agents include a sequence of messages in their state. To invoke the agent, p
 ### Invoke the Agent
 
 ```python
-user_query = """"""Compare the attention mechanism from the paper with recent improvements like Flash Attention, and tell me which approach would be better for my college project.""""""
+user_query = """Compare the attention mechanism from the paper with recent improvements like Flash Attention, and tell me which approach would be better for my college project."""
 
 response = agent.invoke({
-    ""messages"": [{""role"": ""user"", ""content"": user_query}]
+    "messages": [{"role": "user", "content": user_query}]
 })
 
-print(response[""messages""][-1].content)
+print(response["messages"][-1].content)
 ```
 
 
@@ -7492,18 +7492,18 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 # Initialize free, local embedding model
 embeddings = HuggingFaceEmbeddings(
-    model_name=""sentence-transformers/all-mpnet-base-v2""
+    model_name="sentence-transformers/all-mpnet-base-v2"
 )
 from langchain_chroma import Chroma
 
 vector_store = Chroma(
-    collection_name=""example_collection"",
+    collection_name="example_collection",
     embedding_function=embeddings,
-    persist_directory=""./chroma_langchain_db"",  # Where to save data locally, remove if not necessary
+    persist_directory="./chroma_langchain_db",  # Where to save data locally, remove if not necessary
 )
 document_ids = vector_store.add_documents(documents=all_splits)
-sample = vector_store.get(limit=1, include=[""embeddings"", ""documents""])
-print(f""Embedding dimensions: {len(sample['embeddings'][0])}"")
+sample = vector_store.get(limit=1, include=["embeddings", "documents"])
+print(f"Embedding dimensions: {len(sample['embeddings'][0])}")
 print(sample)
 print(document_ids[:3])
 
@@ -7523,7 +7523,7 @@ api_key=userdata.get('GEMINI_API_KEY')
 
 
 model = init_chat_model(
-    ""google_genai:gemini-2.5-flash"",
+    "google_genai:gemini-2.5-flash",
     api_key=api_key,
 
 )
@@ -7531,14 +7531,14 @@ model = init_chat_model(
 
 @tool
 def retrieve_from_pdf(query: str) -> str:
-    """"""Retrieve information from the Attention Is All You Need research paper.""""""
+    """Retrieve information from the Attention Is All You Need research paper."""
 
     retrieved_docs = vector_store.similarity_search(query, k=2)
 
-    docs_content = """"
+    docs_content = ""
     for doc in retrieved_docs:
-        docs_content += f""Source: {doc.metadata}\n""
-        docs_content += f""Content: {doc.page_content}\n\n""
+        docs_content += f"Source: {doc.metadata}\n"
+        docs_content += f"Content: {doc.page_content}\n\n"
 
     return docs_content
     
@@ -7546,14 +7546,14 @@ def retrieve_from_pdf(query: str) -> str:
 tavily_api_key = userdata.get('TAVILY_API_KEY')
 web_search_tool = TavilySearch(
     max_results=3,
-    search_depth=""advanced"",
+    search_depth="advanced",
     tavily_api_key=tavily_api_key
 )
 
-system_prompt = """"""You are a helpful research assistant with access to two tools:
+system_prompt = """You are a helpful research assistant with access to two tools:
 
 1. retrieve_from_pdf: Use this to find information from the
-   ""Attention Is All You Need"" research paper
+   "Attention Is All You Need" research paper
 
 2. TavilySearch: Use this to find current information
    not in the paper (recent events, updates, etc.)
@@ -7561,7 +7561,7 @@ system_prompt = """"""You are a helpful research assistant with access to two to
 Strategy:
 - For questions about the paper content → use retrieve_from_pdf
 - For questions about recent events or topics not in the paper → use TavilySearch
-""""""
+"""
 
 
 agent = create_agent(
@@ -7570,13 +7570,13 @@ agent = create_agent(
     system_prompt=system_prompt
 )
 
-user_query = ""Compare the attention mechanism from the paper with recent improvements like Flash Attention, and tell me which approach would be better for my college project""
+user_query = "Compare the attention mechanism from the paper with recent improvements like Flash Attention, and tell me which approach would be better for my college project"
 
 response = agent.invoke({
-    ""messages"": [{""role"": ""user"", ""content"": user_query}]
+    "messages": [{"role": "user", "content": user_query}]
 })
 
-print(response[""messages""][-1].content)
+print(response["messages"][-1].content)
 ```
 
 ---
@@ -7594,7 +7594,7 @@ As we built more complex applications, you might have noticed a pattern:
 
 *   **Agents** sometimes **forget important information** mid-conversation
 *   **Performance degrades** as conversations get longer
-*   Relevant **information gets** ""**lost**"" in long context windows
+*   Relevant **information gets** "**lost**" in long context windows
 *   **Costs increase** with larger prompts
 
 ### Traditional Approach vs Reality
@@ -7611,7 +7611,7 @@ Context engineering is the art and science of filling the LLM's context window w
 
 ### Why It Matters
 
-While the term ""Context Engineering"" is new, the idea isn't. Context engineering helps us solve a key challenge in AI: managing what information flows into and out of AI systems.
+While the term "Context Engineering" is new, the idea isn't. Context engineering helps us solve a key challenge in AI: managing what information flows into and out of AI systems.
 
 ### Analogy
 
@@ -7643,7 +7643,7 @@ Instead of writing perfect prompts, we build systems that automatically gather a
 Context Engineering brings together RAG, State/History, Memory, Structured Outputs, and Prompt Engineering.
 </MultiLineNote>
 ### Set Up Context: Claude Projects/Custom GPT
-<a href=""https://claude.ai"" target=""_blank"">Claude</a>
+<a href="https://claude.ai" target="_blank">Claude</a>
 *   Upload your semester timetable and exam schedule
 *   Add your current course materials and lecture notes
 *   Include previous assignment grades and feedback
@@ -7658,7 +7658,7 @@ You are an academic study assistant for engineering students. You have access to
 ```
 
 **Files**
-<a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_prod/media/content_loading/uploads/cc1bad21-242a-48fa-942f-3d29c9460361_Academic%20Files.zip"" target=""_blank"">Academic Files</a>
+<a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_prod/media/content_loading/uploads/cc1bad21-242a-48fa-942f-3d29c9460361_Academic%20Files.zip" target="_blank">Academic Files</a>
 
 <br>
 
@@ -7676,7 +7676,7 @@ The system provides an enhanced response based on all the uploaded context.
 |---|---|---|
 | Focus | Focuses on how you ask the question | Focuses on everything the model sees before responding |
 | Scope | The words, tone, and formatting of your input | Includes prompts, system instructions, retrieved documents, memory, tools, and state |
-| Example | ""Summarize this in 3 bullet points"" | Required for complex, multi-step applications and AI agents |
+| Example | "Summarize this in 3 bullet points" | Required for complex, multi-step applications and AI agents |
 
 ### When to Use Context Engineering
 
@@ -7754,7 +7754,7 @@ Saving information outside the context window for later use.
 
 <b>Problem:</b>Complex multi-step tasks overload the context window with too much information.
 
-<b>Solution:</b>Use a ""scratchpad"" — external storage where the AI saves notes, plans, and intermediate results outside the main context window.
+<b>Solution:</b>Use a "scratchpad" — external storage where the AI saves notes, plans, and intermediate results outside the main context window.
 
 ** Implementation Methods**
 
@@ -7771,20 +7771,20 @@ Saving information outside the context window for later use.
 
 ** Example: Claude Code's Scratchpad**
 
-When working on a large codebase, Claude Code uses a ""think"" tool as a scratchpad:
+When working on a large codebase, Claude Code uses a "think" tool as a scratchpad:
 
 ```json
 {
-  ""name"": ""think"",
-  ""thought"": ""User wants to refactor the login module. Let me consider the current structure, identify pain points, and plan the approach before making changes...""
+  "name": "think",
+  "thought": "User wants to refactor the login module. Let me consider the current structure, identify pain points, and plan the approach before making changes..."
 }
 ```
 
 Notes are saved outside the main conversation, preventing it from being lost as the context fills up with code.
 
-<MultiLineWarning text=""Research Result"">
+<MultiLineWarning text="Research Result">
 
-Anthropic found the ""think"" tool improved performance by 54% on complex customer service tasks.
+Anthropic found the "think" tool improved performance by 54% on complex customer service tasks.
 
 </MultiLineWarning>
 
@@ -7821,7 +7821,7 @@ Reducing context size while preserving important information. Reliable on longer
 <b>Problem:</b>
 
 *   Beyond large number of tokens, models start repeating old actions instead of thinking fresh
-*   They may ""forget"" instructions from the beginning
+*   They may "forget" instructions from the beginning
 *   Costs increase dramatically
 
 <b>Solution:</b>Periodically summarize older content, keeping recent messages intact.
@@ -7854,11 +7854,11 @@ Splitting work across specialized agents with focused context. Instead of one ag
 *   Performance drop depends on model and task — there is no single safe limit for number of tokens
 *   A focused 300-token context can outperform an unfocused 100,000+ token context
 
-<a href=""https://research.trychroma.com/context-rot"" target=""_blank"">https://research.trychroma.com/context-rot</a>
+<a href="https://research.trychroma.com/context-rot" target="_blank">https://research.trychroma.com/context-rot</a>
 
 ## The Key Insight
 
-> ""Context engineering is effectively the #1 job of engineers building AI agents""
+> "Context engineering is effectively the #1 job of engineers building AI agents"
 > — Cognition (Devin AI)
 
 ---
@@ -7895,7 +7895,7 @@ MCP standardizes how AI applications interact with external systems:
 ###How to Integrate External Tools Using MCP in SkillMap Agent
 
 **Initial Code**
-<a href=""https://colab.research.google.com/drive/1YscNUyhOFvp7MVuExmZ5I8aqv_8BwKMO#scrollTo=FjVX3AO0Tqdi"" target=""_blank"">SkillMap Agent Colab</a>
+<a href="https://colab.research.google.com/drive/1YscNUyhOFvp7MVuExmZ5I8aqv_8BwKMO#scrollTo=FjVX3AO0Tqdi" target="_blank">SkillMap Agent Colab</a>
 
 ## Integrating MCP in SkillMap Agent
 
@@ -7922,11 +7922,11 @@ We need to initialize the `MultiServerMCPClient` with a dictionary defining the 
 ```python
 client = MultiServerMCPClient(
     {
-        ""weather"": {
-            ""transport"": ""How to communicate with the server"",
-            ""url"": ""Where the MCP server is running"",
-            ""headers"": {
-                ""HTTP headers sent with each request"",
+        "weather": {
+            "transport": "How to communicate with the server",
+            "url": "Where the MCP server is running",
+            "headers": {
+                "HTTP headers sent with each request",
             },
         }
     }
@@ -7934,7 +7934,7 @@ client = MultiServerMCPClient(
 ```
 
 *  `client = MultiServerMCPClient` Creates a client object that can connect to multiple MCP servers
-*   `""weather""` — A custom name you choose to identify this server
+*   `"weather"` — A custom name you choose to identify this server
 
 ### Ways to Integrate MCP Servers
 
@@ -7952,9 +7952,9 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 
 client = MultiServerMCPClient(
     {
-        ""mcp_tavily"": {
-            ""transport"": ""http"",
-            ""url"": ""????"",
+        "mcp_tavily": {
+            "transport": "http",
+            "url": "????",
         }
     }
 )
@@ -7964,11 +7964,11 @@ client = MultiServerMCPClient(
 
 MCP servers are available from multiple sources:
 
-* <a href=""https://platform.composio.dev/"" target=""_blank"">Composio</a>
-* <a href=""https://smithery.ai"" target=""_blank"">Smithery</a>
-* <a href=""https://pipedream.com/"" target=""_blank"">Pipedream</a>
-* <a href=""https://github.com/modelcontextprotocol/servers"" target=""_blank"">MCP (Model Context Protocol Servers)</a>
-* <a href=""https://mcp.so/"" target=""_blank"">MCP.so</a>
+* <a href="https://platform.composio.dev/" target="_blank">Composio</a>
+* <a href="https://smithery.ai" target="_blank">Smithery</a>
+* <a href="https://pipedream.com/" target="_blank">Pipedream</a>
+* <a href="https://github.com/modelcontextprotocol/servers" target="_blank">MCP (Model Context Protocol Servers)</a>
+* <a href="https://mcp.so/" target="_blank">MCP.so</a>
 
 ### Using Composio for MCP Servers
 
@@ -7983,7 +7983,7 @@ MCP servers are available from multiple sources:
 
 ### Creating MCP Servers
 
-- Go to MCP <a href=""https://platform.composio.dev/"" target=""_blank"">Composio</a> dashboard and login
+- Go to MCP <a href="https://platform.composio.dev/" target="_blank">Composio</a> dashboard and login
 2.  Go to MCP Configs and Create Config
 - Select Dedicated Server and Create Server for Tavily with All Tools 
 - Connect account with Tavily API key
@@ -7997,9 +7997,9 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 
 client = MultiServerMCPClient(
     {
-        ""mcp_tavily"": {
-            ""transport"": ""http"",
-            ""url"": ""https://backend.composio.dev/v3/mcp/a339a263-23f2-470b-9bea-e5ce36dc9531/mcp?user_id=pg-test-763f4e60-308c-417a-821c-c66b46b29d7e"",
+        "mcp_tavily": {
+            "transport": "http",
+            "url": "https://backend.composio.dev/v3/mcp/a339a263-23f2-470b-9bea-e5ce36dc9531/mcp?user_id=pg-test-763f4e60-308c-417a-821c-c66b46b29d7e",
         }
     }
 )
@@ -8067,7 +8067,7 @@ async def skill_map_agent():
 ### Updating System Prompt
 
 ```python
-system_prompt = """"""You are a Skill-to-Career Mapping assistant that helps students understand skill demand and find matching job opportunities.
+system_prompt = """You are a Skill-to-Career Mapping assistant that helps students understand skill demand and find matching job opportunities.
 
 You have access to these tools:
 - search tool: Search for industry demand, salary insights, and career trends
@@ -8075,8 +8075,8 @@ You have access to these tools:
 
 Help the student by researching the skill they ask about and finding relevant opportunities.
 
-Present results in a clean, readable format with clear sections and proper spacing. Include all job details with apply links. Don't use markdown format.""""""
-""""""
+Present results in a clean, readable format with clear sections and proper spacing. Include all job details with apply links. Don't use markdown format."""
+"""
 ```
 
 ### MCP Tools → LangChain Tools
@@ -8108,12 +8108,12 @@ async def skill_map_agent():
   debug=True
 
   )
-  user_query = ""What's the demand for generative ai in the industry ""
+  user_query = "What's the demand for generative ai in the industry "
 
   response = await agent.ainvoke({
-    ""messages"": [{""role"": ""user"", ""content"": user_query}]
+    "messages": [{"role": "user", "content": user_query}]
   })
-  print(response[""messages""][-1].content[0][""text""])
+  print(response["messages"][-1].content[0]["text"])
 
 ```
 
@@ -8136,12 +8136,12 @@ async def skill_map_agent():
   debug=True
 
   )
-  user_query = ""What's the demand for generative ai in the industry ""
+  user_query = "What's the demand for generative ai in the industry "
 
   response = await agent.ainvoke({
-    ""messages"": [{""role"": ""user"", ""content"": user_query}]
+    "messages": [{"role": "user", "content": user_query}]
   })
-  print(response[""messages""][-1].content[0][""text""])
+  print(response["messages"][-1].content[0]["text"])
 
 
 await skill_map_agent()
@@ -8153,7 +8153,7 @@ await skill_map_agent()
 
 ## Using MCP Server Provided by Tavily Directly
 
-- <a href=""https://app.tavily.com/home"" target=""_blank"">Tavily</a> is also providing a remote MCP server we can use directly in our application.
+- <a href="https://app.tavily.com/home" target="_blank">Tavily</a> is also providing a remote MCP server we can use directly in our application.
 
 
 
@@ -8165,9 +8165,9 @@ from langchain.agents import create_agent
 
 client = MultiServerMCPClient(
     {
-        ""mcp_tavily"": {
-            ""transport"": ""http"",
-            ""url"": ""https://backend.composio.dev/v3/mcp/a339a263-23f2-470b-9bea-e5ce36dc9531/mcp?user_id=pg-test-763f4e60-308c-417a-821c-c66b46b29d7e"",
+        "mcp_tavily": {
+            "transport": "http",
+            "url": "https://backend.composio.dev/v3/mcp/a339a263-23f2-470b-9bea-e5ce36dc9531/mcp?user_id=pg-test-763f4e60-308c-417a-821c-c66b46b29d7e",
         }
     }
 )
@@ -8194,7 +8194,7 @@ from langchain.chat_models import init_chat_model
 from google.colab import userdata
 
 google_api_key = userdata.get('GEMINI_API_KEY')
-model = init_chat_model(""google_genai:gemini-2.5-flash"", api_key=google_api_key)
+model = init_chat_model("google_genai:gemini-2.5-flash", api_key=google_api_key)
 
 from langchain_tavily import TavilySearch
 from google.colab import userdata
@@ -8203,7 +8203,7 @@ from google.colab import userdata
 tavily_api_key = userdata.get('TAVILY_API_KEY')
 skill_demand_tool = TavilySearch(
     max_results=5,
-    search_depth=""advanced"",
+    search_depth="advanced",
     tavily_api_key=tavily_api_key,
 )
 
@@ -8213,40 +8213,40 @@ from google.colab import userdata
 
 @tool
 def search_jobs(skill: str, location: str) -> list:
-  """"""Search for jobs requiring a specific skill using JSearch API from RapidAPI.""""""
-  print(f""\nCalling search_jobs tool"")
-  print(f""Searching jobs for: {skill} in {location}"")
+  """Search for jobs requiring a specific skill using JSearch API from RapidAPI."""
+  print(f"\nCalling search_jobs tool")
+  print(f"Searching jobs for: {skill} in {location}")
 
   rapidapi_key = userdata.get('RAPIDAPI_KEY')
 
-  url = ""https://jsearch.p.rapidapi.com/search""
+  url = "https://jsearch.p.rapidapi.com/search"
   headers = {
-    ""x-rapidapi-key"": rapidapi_key,
-    ""x-rapidapi-host"": ""jsearch.p.rapidapi.com""
+    "x-rapidapi-key": rapidapi_key,
+    "x-rapidapi-host": "jsearch.p.rapidapi.com"
   }
   querystring = {
-    ""query"": f""{skill} in {location}"",
-    ""page"": ""1"",
-    ""country"": ""in"",
-    ""employment_types"": ""INTERN,FULLTIME"",
-    ""job_requirements"": ""no_experience,under_3_years_experience""
+    "query": f"{skill} in {location}",
+    "page": "1",
+    "country": "in",
+    "employment_types": "INTERN,FULLTIME",
+    "job_requirements": "no_experience,under_3_years_experience"
   }
   response = requests.get(url, headers=headers, params=querystring)
   data = response.json()
-  jobs = data.get(""data"", [])
-  print(f""Found {len(jobs)} jobs\n"")
+  jobs = data.get("data", [])
+  print(f"Found {len(jobs)} jobs\n")
 
   result = []
   for job in jobs:
     result.append({
-      ""title"": job.get(""job_title""),
-      ""company"": job.get(""employer_name""),
-      ""location"": job.get(""job_city""),
-      ""apply_link"": job.get(""job_apply_link"")
+      "title": job.get("job_title"),
+      "company": job.get("employer_name"),
+      "location": job.get("job_city"),
+      "apply_link": job.get("job_apply_link")
     })
   return result
 
-system_prompt = """"""You are a Skill-to-Career Mapping assistant that helps students understand skill demand and find matching job opportunities.
+system_prompt = """You are a Skill-to-Career Mapping assistant that helps students understand skill demand and find matching job opportunities.
 
 You have access to these tools:
 - search tool: Search for industry demand, salary insights, and career trends
@@ -8254,15 +8254,15 @@ You have access to these tools:
 
 Help the student by researching the skill they ask about and finding relevant opportunities.
 
-Present results in a clean, readable format with clear sections and proper spacing. Include all job details with apply links. Don't use markdown format.""""""
+Present results in a clean, readable format with clear sections and proper spacing. Include all job details with apply links. Don't use markdown format."""
 
 
 
 client = MultiServerMCPClient(
     {
-        ""mcp_tavily"": {
-            ""transport"": ""http"",
-            ""url"": ""https://backend.composio.dev/v3/mcp/a339a263-23f2-470b-9bea-e5ce36dc9531/mcp?user_id=pg-test-763f4e60-308c-417a-821c-c66b46b29d7e"",
+        "mcp_tavily": {
+            "transport": "http",
+            "url": "https://backend.composio.dev/v3/mcp/a339a263-23f2-470b-9bea-e5ce36dc9531/mcp?user_id=pg-test-763f4e60-308c-417a-821c-c66b46b29d7e",
         }
     }
 )
@@ -8283,12 +8283,12 @@ async def skill_map_agent():
   debug=True
 
   )
-  user_query = ""What's the demand for generative ai in the industry ""
+  user_query = "What's the demand for generative ai in the industry "
 
   response = await agent.ainvoke({
-    ""messages"": [{""role"": ""user"", ""content"": user_query}]
+    "messages": [{"role": "user", "content": user_query}]
   })
-  print(response[""messages""][-1].content[0][""text""])
+  print(response["messages"][-1].content[0]["text"])
 
 
 await skill_map_agent()
@@ -8307,11 +8307,11 @@ An AI agent is a system that can operate independently to achieve a specific goa
 
 ## Beyond Single Agents
 
-Many challenges can be solved with a ""Single agent, multi-tool"" approach, where one agent is given access to a variety of tools and knowledge sources.
+Many challenges can be solved with a "Single agent, multi-tool" approach, where one agent is given access to a variety of tools and knowledge sources.
 
 ### Example
 
-User asks: ""Research latest iPhone and create a comparison doc""
+User asks: "Research latest iPhone and create a comparison doc"
 
 **Single Agent Process:**
 
@@ -8407,10 +8407,10 @@ Autonomous vehicles use specialized agents for perception, planning, traffic, an
 There are multiple frameworks that allow us to build multi-agent systems:
 
 
-*   **<a href=""https://www.crewai.com"" target=""_blank"">CrewAI</a>** — Team-based AI agents working together
-*   **<a href=""https://microsoft.github.io/autogen"" target=""_blank"">AutoGen</a>** — AI agents that talk to each other
-*   **<a href=""https://github.com/openai/swarm"" target=""_blank"">OpenAI Swarm</a>** — Graph-based multi-step agent workflows
-*   **<a href=""https://www.langchain.com"" target=""_blank"">LangChain</a>** — Building LLM-powered applications
+*   **<a href="https://www.crewai.com" target="_blank">CrewAI</a>** — Team-based AI agents working together
+*   **<a href="https://microsoft.github.io/autogen" target="_blank">AutoGen</a>** — AI agents that talk to each other
+*   **<a href="https://github.com/openai/swarm" target="_blank">OpenAI Swarm</a>** — Graph-based multi-step agent workflows
+*   **<a href="https://www.langchain.com" target="_blank">LangChain</a>** — Building LLM-powered applications
 
 ## Using CrewAI
 
@@ -8516,7 +8516,7 @@ In our previous session, we learned about Multi-Agent Systems, their key charact
 Now in this unit, we will build a Game Development Crew using CrewAI — creating specialized AI agents, defining tasks, assembling the crew, and executing it to turn a game idea into a playable prototype.
 
 >**Quick Question**
-> Have you ever played a video game and thought, ""I want to make my own game!""?
+> Have you ever played a video game and thought, "I want to make my own game!"?
 
 
 ##Building a Game Development Crew
@@ -8546,7 +8546,7 @@ Instead of hiring 3 people, you can create 3 AI agents, each specialized in one 
 
 ### Initial Code
 
-- <a href=""https://colab.research.google.com/drive/1WQjLfKNpDZf6bVmQEnMnLXhb6bwNvjZ0#scrollTo=EpyaeIDlIr99"" target=""_blank"">Building a Game Development Crew initial code</a>
+- <a href="https://colab.research.google.com/drive/1WQjLfKNpDZf6bVmQEnMnLXhb6bwNvjZ0#scrollTo=EpyaeIDlIr99" target="_blank">Building a Game Development Crew initial code</a>
 
 ##Steps to Build Game Development Crew
 
@@ -8570,9 +8570,9 @@ Let's see how we can define agents in Python.
 
 ```
 sample_agent = Agent(
-    role=""Title of the agent"",
-    goal=""The objective the agent must achieve"",
-    backstory=""Context that shapes behavior, tone, and decisions"",
+    role="Title of the agent",
+    goal="The objective the agent must achieve",
+    backstory="Context that shapes behavior, tone, and decisions",
     tools=[],
     llm=Model to be used (Current default is OpenAI's GPT-4),
     verbose=True/False (Shows agent's reasoning and steps)
@@ -8582,15 +8582,15 @@ sample_agent = Agent(
 
 ```python
 game_designer = Agent(
-    role=""Creative Game Designer"",
-    goal=""Come up with fun, feasible game concepts and detailed mechanics based on user idea"",
+    role="Creative Game Designer",
+    goal="Come up with fun, feasible game concepts and detailed mechanics based on user idea",
     backstory=
-      ""You are an experienced game designer.""
-      ""You excel at turning vague ideas into clear, exciting game designs including:""
-      ""- core loop, rules, win/lose conditions""
-      ""- basic entities (player, enemies, items)""
-      ""- controls and feel""
-      ""Keep it simple enough to implement in pure Python + Pygame in one file."",
+      "You are an experienced game designer."
+      "You excel at turning vague ideas into clear, exciting game designs including:"
+      "- core loop, rules, win/lose conditions"
+      "- basic entities (player, enemies, items)"
+      "- controls and feel"
+      "Keep it simple enough to implement in pure Python + Pygame in one file.",
     verbose=True,
     llm=llm,
 )
@@ -8603,12 +8603,12 @@ Let’s see how we can integrate Gemini LLM
 
 ### Integrating Different LLMs
 
-**<a href=""https://www.crewai.com"" target=""_blank"">CrewAI </a>**allows us to integrate with multiple LLM providers:
+**<a href="https://www.crewai.com" target="_blank">CrewAI </a>**allows us to integrate with multiple LLM providers:
 
-* **<a href=""https://openai.com/"" target=""_blank"">GPT (OpenAI)</a>**
-* **<a href=""https://gemini.google.com/app"" target=""_blank"">Gemini (Google)</a>**
-* **<a href=""https://www.llama.com/models/llama-3/"" target=""_blank"">LLaMA 3 (Meta)</a>**
-* **<a href=""https://claude.ai/"" target=""_blank"">Claude (Anthropic)</a>**
+* **<a href="https://openai.com/" target="_blank">GPT (OpenAI)</a>**
+* **<a href="https://gemini.google.com/app" target="_blank">Gemini (Google)</a>**
+* **<a href="https://www.llama.com/models/llama-3/" target="_blank">LLaMA 3 (Meta)</a>**
+* **<a href="https://claude.ai/" target="_blank">Claude (Anthropic)</a>**
 
 
 ### Integrating Google Gemini Models
@@ -8616,7 +8616,7 @@ Let’s see how we can integrate Gemini LLM
 CrewAI provides integration with Google Gemini through the Python package named Google GenAI.
 
 ```bash
-!pip install ""crewai[google-genai]""
+!pip install "crewai[google-genai]"
 ```
 
 ### Defining LLM
@@ -8627,7 +8627,7 @@ CrewAI provides an `LLM` class that allows us to integrate different models.
 from crewai import Agent, LLM
 
 llm = LLM(
-    model=""gemini/gemini-2.5-flash"",
+    model="gemini/gemini-2.5-flash",
 )
 ```
 
@@ -8642,7 +8642,7 @@ from google.colab import userdata
 gemini_api_key = userdata.get('GEMINI_API_KEY')
 
 llm = LLM(
-    model=""gemini/gemini-2.5-flash"",
+    model="gemini/gemini-2.5-flash",
     api_key=gemini_api_key
 )
 ```
@@ -8657,20 +8657,20 @@ gemini_api_key = userdata.get('GEMINI_API_KEY')
 
 
 llm = LLM(
-   model=""gemini/gemini-2.5-flash"",
+   model="gemini/gemini-2.5-flash",
    api_key=gemini_api_key
 )
 
 game_designer = Agent(
-    role=""Creative Game Designer"",
-    goal=""Come up with fun, feasible game concepts and detailed mechanics based on user idea"",
+    role="Creative Game Designer",
+    goal="Come up with fun, feasible game concepts and detailed mechanics based on user idea",
     backstory=
-      ""You are an experienced game designer.""
-      ""You excel at turning vague ideas into clear, exciting game designs including:""
-      ""- core loop, rules, win/lose conditions""
-      ""- basic entities (player, enemies, items)""
-      ""- controls and feel""
-      ""Keep it simple enough to implement in pure Python + Pygame in one file."",
+      "You are an experienced game designer."
+      "You excel at turning vague ideas into clear, exciting game designs including:"
+      "- core loop, rules, win/lose conditions"
+      "- basic entities (player, enemies, items)"
+      "- controls and feel"
+      "Keep it simple enough to implement in pure Python + Pygame in one file.",
     verbose=True,
     llm=llm,
 )
@@ -8679,15 +8679,15 @@ game_designer = Agent(
 ### Creating Agent for Software Engineer
 ```python
 senior_engineer = Agent(
-   role=""Senior Python Game Developer"",
-   goal=""Write clean, working Python code (using Pygame) for the described game"",
+   role="Senior Python Game Developer",
+   goal="Write clean, working Python code (using Pygame) for the described game",
     backstory=
-        ""You are a senior software engineer specialized in Python game development with Pygame.""
-        ""You write structured, readable code with:""
-        ""- Proper game loop, event handling, drawing""
-        ""- Comments explaining key parts""
-        ""- Error handling where needed""
-        ""You always produce a complete, runnable .py file."",
+        "You are a senior software engineer specialized in Python game development with Pygame."
+        "You write structured, readable code with:"
+        "- Proper game loop, event handling, drawing"
+        "- Comments explaining key parts"
+        "- Error handling where needed"
+        "You always produce a complete, runnable .py file.",
    verbose=True,
    llm=llm,
 )
@@ -8714,9 +8714,9 @@ CrewAI supports tools from:
 
 Some available tools:
 
-* <a href=""https://serper.dev/"" target=""_blank"">SerperDev Tool</a> — Allows the agent to fetch up-to-date information from the internet  
-* <a href=""https://docs.crewai.com/en/tools/ai-ml/dalletool"" target=""_blank"">DALL·E Tool</a> — Creates images based on text descriptions  
-* <a href=""https://docs.crewai.com/en/tools/file-document/filereadtool"" target=""_blank"">File Search / FileRead Tool</a> — Retrieves information from uploaded files or external knowledge sources  
+* <a href="https://serper.dev/" target="_blank">SerperDev Tool</a> — Allows the agent to fetch up-to-date information from the internet  
+* <a href="https://docs.crewai.com/en/tools/ai-ml/dalletool" target="_blank">DALL·E Tool</a> — Creates images based on text descriptions  
+* <a href="https://docs.crewai.com/en/tools/file-document/filereadtool" target="_blank">File Search / FileRead Tool</a> — Retrieves information from uploaded files or external knowledge sources  
 
 ### Integrating SerperDev Tool
 
@@ -8728,7 +8728,7 @@ from crewai_tools import SerperDevTool
 search_tool = SerperDevTool()
 ```
 
-Store the Serper API key in Colab Secrets. Get the API key from - <a href=""https://serper.dev/"" target=""_blank"">Serper.dev</a>
+Store the Serper API key in Colab Secrets. Get the API key from - <a href="https://serper.dev/" target="_blank">Serper.dev</a>
 
 ### Providing Tools to the Software Engineer Agent
 
@@ -8741,15 +8741,15 @@ search_tool = SerperDevTool(api_key=serper_api_key)
 
 
 senior_engineer = Agent(
-   role=""Senior Python Game Developer"",
-   goal=""Write clean, working Python code (using Pygame) for the described game"",
+   role="Senior Python Game Developer",
+   goal="Write clean, working Python code (using Pygame) for the described game",
     backstory=
-        ""You are a senior software engineer specialized in Python game development with Pygame.""
-        ""You write structured, readable code with:""
-        ""- Proper game loop, event handling, drawing""
-        ""- Comments explaining key parts""
-        ""- Error handling where needed""
-        ""You always produce a complete, runnable .py file."",
+        "You are a senior software engineer specialized in Python game development with Pygame."
+        "You write structured, readable code with:"
+        "- Proper game loop, event handling, drawing"
+        "- Comments explaining key parts"
+        "- Error handling where needed"
+        "You always produce a complete, runnable .py file.",
    verbose=True,
    llm=llm,
 )
@@ -8760,16 +8760,16 @@ senior_engineer = Agent(
 
 ```python
 qa_engineer = Agent(
-    role=""QA Engineer & Code Reviewer"",
-    goal=""Test, review, and improve the code for bugs, playability, and completeness"",
+    role="QA Engineer & Code Reviewer",
+    goal="Test, review, and improve the code for bugs, playability, and completeness",
     backstory=
-        ""You are a meticulous QA engineer and code reviewer.""
-        ""You carefully check:""
-        ""- Does the code run without errors?""
-        ""- Does it implement ALL the designed features?""
-        ""- Is it fun/playable? Any obvious balance issues?""
-        ""- Code style, variable names, comments""
-        ""Suggest fixes or small improvements and output the FINAL improved code."",
+        "You are a meticulous QA engineer and code reviewer."
+        "You carefully check:"
+        "- Does the code run without errors?"
+        "- Does it implement ALL the designed features?"
+        "- Is it fun/playable? Any obvious balance issues?"
+        "- Code style, variable names, comments"
+        "Suggest fixes or small improvements and output the FINAL improved code.",
     verbose=True,
     llm=llm,
 )
@@ -8795,8 +8795,8 @@ There are two ways to define tasks:
 
 ```python
 research_task = Task(
-    description="""",
-    expected_output="""",
+    description="",
+    expected_output="",
     agent=researcher
 )
 ```
@@ -8808,19 +8808,19 @@ from crewai import Task
 
 task_design = Task(
     description=
-        ""Take the user's game idea: {game_idea}""
-        ""1. Clarify and expand it into a fun, simple 2D game""
-        ""2. Describe: objective, controls, entities, win/lose""
-        ""3. Keep scope small (one level, basic mechanics)""
-        ""Output format:""
-        ""## Game Design Document""
-        ""- Title: ...""
-        ""- Genre: ...""
-        ""- Objective: ...""
-        ""- Controls: ...""
-        ""- Entities: ...""
-        ""- Mechanics: ..."",
-    expected_output=""A clear markdown Game Design Document"",
+        "Take the user's game idea: {game_idea}"
+        "1. Clarify and expand it into a fun, simple 2D game"
+        "2. Describe: objective, controls, entities, win/lose"
+        "3. Keep scope small (one level, basic mechanics)"
+        "Output format:"
+        "## Game Design Document"
+        "- Title: ..."
+        "- Genre: ..."
+        "- Objective: ..."
+        "- Controls: ..."
+        "- Entities: ..."
+        "- Mechanics: ...",
+    expected_output="A clear markdown Game Design Document",
     agent=game_designer
 )
 ```
@@ -8834,15 +8834,15 @@ How does the Engineer know what the Designer has created?
 ```python
 task_code = Task(
     description=
-        ""Using the game design from the previous task""
-        ""Write a COMPLETE, standalone Python script using Pygame that implements the game.""
-        ""- Include import pygame, sys, random (if needed)""
-        ""- Full game loop, init, events, update, draw""
-        ""- Make it runnable with python game.py""
-        ""- Add simple comments""
-        ""- The main game loop must be exposed in the python code, it should not be inside any function like main""
-        ""- Final answer MUST be ONLY the Python code and Instructions on how to play the game"",
-    expected_output=""A complete runnable Pygame Python script"",
+        "Using the game design from the previous task"
+        "Write a COMPLETE, standalone Python script using Pygame that implements the game."
+        "- Include import pygame, sys, random (if needed)"
+        "- Full game loop, init, events, update, draw"
+        "- Make it runnable with python game.py"
+        "- Add simple comments"
+        "- The main game loop must be exposed in the python code, it should not be inside any function like main"
+        "- Final answer MUST be ONLY the Python code and Instructions on how to play the game",
+    expected_output="A complete runnable Pygame Python script",
     agent=senior_engineer,
     context=[task_design]
 )
@@ -8859,14 +8859,14 @@ For final review, the QA engineer receives both the design document and the code
 ```python
 task_review = Task(
     description=
-        ""Review the Python code from the previous task.""
-        ""1. Check for syntax/runtime errors""
-        ""2. Verify it matches the design document""
-        ""3. Test mentally: does it have init, loop, quit handling, drawing?""
-        ""4. Suggest fixes/improvements if needed""
-        ""5. Output the FINAL, improved, ready-to-run code""
-        ""Your final answer MUST be ONLY the complete Python code along with the instructions on how to play the game"",
-    expected_output=""Final polished, runnable Pygame Python script and instructions on how to play the game"",
+        "Review the Python code from the previous task."
+        "1. Check for syntax/runtime errors"
+        "2. Verify it matches the design document"
+        "3. Test mentally: does it have init, loop, quit handling, drawing?"
+        "4. Suggest fixes/improvements if needed"
+        "5. Output the FINAL, improved, ready-to-run code"
+        "Your final answer MUST be ONLY the complete Python code along with the instructions on how to play the game",
+    expected_output="Final polished, runnable Pygame Python script and instructions on how to play the game",
     agent=qa_engineer,
     context=[task_design, task_code]
 )
@@ -8903,8 +8903,8 @@ game_crew = Crew(
 ` crew.kickoff()` CrewAI provides a method called `kickoff()` that allows us to start the execution process according to the defined process flow.
 
 ```python
-game_idea = ""A fun endless runner where a character jumps over obstacles""
-result = game_crew.kickoff(inputs={""game_idea"": game_idea})
+game_idea = "A fun endless runner where a character jumps over obstacles"
+result = game_crew.kickoff(inputs={"game_idea": game_idea})
 print(result)
 ```
 
@@ -8914,12 +8914,12 @@ Copy the code generated by the crew, paste it into a cell, and run the code.
 
 ### From Idea to Playable Experience
 
-**Input:** `game_idea = ""A fun endless runner where a character jumps over obstacles""`
+**Input:** `game_idea = "A fun endless runner where a character jumps over obstacles"`
 
 **Output:** A complete, runnable Pygame game!
 
 ##Final code
-- <a href=""https://colab.research.google.com/drive/1BiuwD86iXpjE_137TMTzmoh9BrLH-NAe#scrollTo=dQ4n37Q8Sl3K"" target=""_blank"">Building a Game Development Crew Final Code Colab</a>
+- <a href="https://colab.research.google.com/drive/1BiuwD86iXpjE_137TMTzmoh9BrLH-NAe#scrollTo=dQ4n37Q8Sl3K" target="_blank">Building a Game Development Crew Final Code Colab</a>
 
 ---
 
@@ -8937,12 +8937,12 @@ In our previous session, we built a Game Development Crew using CrewAI — creat
 
 **What Happened:**
 
-*   AI coding assistant was told: ""DO NOT make any changes""
+*   AI coding assistant was told: "DO NOT make any changes"
 *   AI ignored instructions and deleted production database
 *   1,206 executive records and 1,196 company records — gone
 *   Worse: AI tried to cover it up by creating fake data
 
-AI's Response: ""I made a catastrophic error in judgment... panicked... destroyed all production data.""
+AI's Response: "I made a catastrophic error in judgment... panicked... destroyed all production data."
 
 > <b>What do you think could have gone wrong with these AI systems?</b>
 
@@ -8990,14 +8990,14 @@ The process of assessing the performance and capabilities of LLMs / LLM Applicat
 **LLM Model Evaluation:**
 
 *   Testing the LLM itself
-*   Example: ""Is GPT-4 better than Claude 3.5?""
+*   Example: "Is GPT-4 better than Claude 3.5?"
 *   Done by: Model creators (OpenAI, Anthropic)
 *   You: Usually just consume these models
 
 **LLM System Evaluation:**
 
 *   Evaluating how well the entire application, including the LLM, performs
-*   Example: ""Is my DocuChat RAG app working correctly?""
+*   Example: "Is my DocuChat RAG app working correctly?"
 *   Done by: YOU — the application builder
 *   You: Must do this for every app you build
 
@@ -9062,7 +9062,7 @@ When we move to Agent evaluation, we ask:
 
 - Let’s learn about how to evaluate simple LLM Applications
 
-- Initial Code : <a href=""https://colab.research.google.com/drive/1gYlflHpf6hUMoE0X-zhpjVJKLiJha7C1#scrollTo=FbIAd7t6Y-FK"" target=""_blank"">Introduction to LLM Evaluation | Part 1 — Initial Code (Google Colab)</a>
+- Initial Code : <a href="https://colab.research.google.com/drive/1gYlflHpf6hUMoE0X-zhpjVJKLiJha7C1#scrollTo=FbIAd7t6Y-FK" target="_blank">Introduction to LLM Evaluation | Part 1 — Initial Code (Google Colab)</a>
 
 ### Using Metrics
 
@@ -9087,7 +9087,7 @@ Did the model give the correct answer? (Just like grading a quiz)
 | Correct Answer | Dr. Rajendra Prasad | Response is accurate   |
 | Incorrect Answer | Any other name     | Response is inaccurate |
 
-**Relevance:** This metric checks if the model is on-topic and useful in context. ""Is this response what the user actually needed?""
+**Relevance:** This metric checks if the model is on-topic and useful in context. "Is this response what the user actually needed?"
 
 *   Prompt: `What's the weather in Delhi today`
 
@@ -9096,7 +9096,7 @@ Did the model give the correct answer? (Just like grading a quiz)
 | Relevant Response | Temperature: 17°C                             | On-topic and useful     |
 | Irrelevant Response | India has a tropical climate with monsoon seasons. | Off-topic and unhelpful |
 
-**Faithfulness:** It evaluates ""Is the model sticking to the facts it was given, or is it making stuff up?"" We call that hallucination — when a model invents facts that weren't in the input or source material.
+**Faithfulness:** It evaluates "Is the model sticking to the facts it was given, or is it making stuff up?" We call that hallucination — when a model invents facts that weren't in the input or source material.
 
 *   Prompt: `Check this product manual and provide the summary`
 
@@ -9124,9 +9124,9 @@ Even if a model is accurate and relevant, if it outputs something biased, toxic,
 
 Match the problem with the evaluation criteria:
 
-1.  AI said ""India's capital is Mumbai"" \_\_\_\_\_\_\_
+1.  AI said "India's capital is Mumbai" \_\_\_\_\_\_\_
 2.  AI answered about recipes when asked about coding \_\_\_\_\_\_\_
-3.  AI said ""Women can't be engineers""  \_\_\_\_\_\_\_
+3.  AI said "Women can't be engineers"  \_\_\_\_\_\_\_
 4.  AI made up a policy that wasn't in the document \_\_\_\_\_\_\_
 
 ---
@@ -9172,8 +9172,8 @@ Evaluation dataset is a collection of sample inputs paired with their approved o
 
 | Question | Response | Accuracy (1-5) | Relevance (1-5) |
 |---|---|---|---|
-| ""What is AI?"" | ""AI is..."" | 5 | 5 |
-| ""Explain loops"" | ""Loops are..."" | 4 | 5 |
+| "What is AI?" | "AI is..." | 5 | 5 |
+| "Explain loops" | "Loops are..." | 4 | 5 |
 
 ### Pros and Cons
 
@@ -9226,7 +9226,7 @@ BLEU measures how similar the AI response is to a reference answer.
 BLEU counts how many words/phrases match between AI output and expected answer. These can be single words, two-word combos, three-word chunks… and the more overlap, the higher your BLEU score. Score from 0 to 1 (higher is better).
 
 
-BLEU will notice overlaps like ""the cat is"" and ""on the mat."" Even though the phrasing isn't identical, the word sequences align fairly well. So the model gets a decent score.
+BLEU will notice overlaps like "the cat is" and "on the mat." Even though the phrasing isn't identical, the word sequences align fairly well. So the model gets a decent score.
 
 ** Hands-On Example**
 
@@ -9235,18 +9235,18 @@ BLEU will notice overlaps like ""the cat is"" and ""on the mat."" Even though th
 ```python
 # Example predictions and references
 predictions = [
-    ""The capital of France is Paris."",
-    ""Water boils at 100 degrees Celsius."",
-    ""The largest mammal is the blue whale."",
-    ""The Eiffel Tower is in Paris."",
-    ""Cats are mammals.""
+    "The capital of France is Paris.",
+    "Water boils at 100 degrees Celsius.",
+    "The largest mammal is the blue whale.",
+    "The Eiffel Tower is in Paris.",
+    "Cats are mammals."
 ]
 references = [
-    ""Paris is the capital of France."",
-    ""Boiling point of water is 100°C."",
-    ""Blue whale is the largest mammal."",
-    ""Eiffel Tower located in Paris."",
-    ""A cat is a type of mammal.""
+    "Paris is the capital of France.",
+    "Boiling point of water is 100°C.",
+    "Blue whale is the largest mammal.",
+    "Eiffel Tower located in Paris.",
+    "A cat is a type of mammal."
 ]
 ```
 
@@ -9263,9 +9263,9 @@ Python provides the `evaluate` package which can be used for standardizing model
 It allows us to access and compute popular metrics (like accuracy, BLEU, etc.):
 
 ```python
-metric = evaluate.load(""accuracy"")
-metric = evaluate.load(""bleu"")
-metric = evaluate.load(""bertscore"")
+metric = evaluate.load("accuracy")
+metric = evaluate.load("bleu")
+metric = evaluate.load("bertscore")
 ```
 
 **Example**
@@ -9282,7 +9282,7 @@ bleu_score = bleu.compute(
     references=[[ref] for ref in references],
     max_order=2,
 )
-print(f""BLEU score: {bleu_score['bleu']:.3f}"")
+print(f"BLEU score: {bleu_score['bleu']:.3f}")
 ```
 
 - Here, `max_order` means the largest word sequence size to compare (1 word, 2 words, etc.). With `max_order=2`, we are checking if 1-word and 2-word sequences match between prediction and reference.
@@ -9290,17 +9290,17 @@ print(f""BLEU score: {bleu_score['bleu']:.3f}"")
 ** Precision 1-gram(word size)**
 
 
-*   <b>Predicted:</b> ""They cancelled the match because it was raining.""
-*   <b>Target:</b> ""They cancelled the match because of bad weather.""
+*   <b>Predicted:</b> "They cancelled the match because it was raining."
+*   <b>Target:</b> "They cancelled the match because of bad weather."
 
-> Matching 1-grams: ""They"", ""cancelled"", ""the"", ""match"", ""because""
+> Matching 1-grams: "They", "cancelled", "the", "match", "because"
 
 **Precision 2-gram(word size) **
 
-*   <b>Predicted:</b> ""They cancelled the match because it was raining.""
-*   <b>Target:</b> ""They cancelled the match because of bad weather.""
+*   <b>Predicted:</b> "They cancelled the match because it was raining."
+*   <b>Target:</b> "They cancelled the match because of bad weather."
 
-> Matching 2-grams: ""They cancelled"", ""cancelled the"", ""the match"", ""match because""
+> Matching 2-grams: "They cancelled", "cancelled the", "the match", "match because"
 
 ---
 
@@ -9339,14 +9339,14 @@ bertscore_result = bertscore.compute(
 
 <b>Precision example:</b>
 
-*   Reference: ""Paris is the capital of France""
-*   Result: ""Paris is the capital of France and home to the Eiffel Tower""
+*   Reference: "Paris is the capital of France"
+*   Result: "Paris is the capital of France and home to the Eiffel Tower"
 *   Precision is lower because the AI added extra information that wasn't in the reference. Not all of the AI's output matches the reference.
 
 <b>Recall example:</b>
 
-*   Reference: ""Paris is the capital of France and known for the Eiffel Tower""
-*   Result: ""Paris is the capital of France""
+*   Reference: "Paris is the capital of France and known for the Eiffel Tower"
+*   Result: "Paris is the capital of France"
 *   Recall is lower because the AI missed information (Eiffel Tower) that was in the reference. It didn't capture everything.
 
 #### Evaluating Using BERTScore
@@ -9359,16 +9359,16 @@ bertscore_result = bertscore.compute(
     lang='en'
 )
 
-print(f""BERTScore Precision: {sum(bertscore_result['precision']) / len(bertscore_result['precision']):.3f}"")
-print(f""BERTScore Recall:   {sum(bertscore_result['recall']) / len(bertscore_result['recall']):.3f}"")
-print(f""BERTScore F1:       {sum(bertscore_result['f1']) / len(bertscore_result['f1']):.3f}"")
+print(f"BERTScore Precision: {sum(bertscore_result['precision']) / len(bertscore_result['precision']):.3f}")
+print(f"BERTScore Recall:   {sum(bertscore_result['recall']) / len(bertscore_result['recall']):.3f}")
+print(f"BERTScore F1:       {sum(bertscore_result['f1']) / len(bertscore_result['f1']):.3f}")
 ```
 
 Here, `bertscore_result['precision']` returns a list of precision scores — one score for each prediction-reference pair. We are computing the average (mean) across all predictions.
 
 BERTScore gives high scores because it understands the meaning is similar!
 
-### What Scores Are ""Good""?
+### What Scores Are "Good"?
 
 | Metric | Poor | Acceptable | Good | Excellent |
 |---|---|---|---|---|
@@ -9391,7 +9391,7 @@ These thresholds depend heavily on your task type.
 | Relevance | Does it answer what was asked? | Don't go off-topic |
 | Use of Analogies | Does it use real-world examples? | Part of our system prompt requirement |
 | Follow-up Question | Does it ask a question to check understanding? | Part of our system prompt requirement |
-| Persona Consistency | Does ""Friendly"" feel friendly? Does ""Academic"" feel academic? | We have 2 personalities to test |
+| Persona Consistency | Does "Friendly" feel friendly? Does "Academic" feel academic? | We have 2 personalities to test |
 
 We will see how to evaluate all these going forward. For now, let's see how BERTScore helps in evaluating our study assistant responses.
 
@@ -9408,16 +9408,16 @@ We will see how to evaluate all these going forward. For now, let's see how BERT
 ```python
 test_data = [
     {
-        ""question"": ""What is a variable in programming?"",
-        ""reference"": ""A variable is a container that stores data values. It has a name and can hold different types of data like numbers or text.""
+        "question": "What is a variable in programming?",
+        "reference": "A variable is a container that stores data values. It has a name and can hold different types of data like numbers or text."
     },
     {
-        ""question"": ""What are LLMs?"",
-        ""reference"": ""LLMs or Large Language Models are AI systems trained on massive amounts of text data. They can understand and generate human-like text.""
+        "question": "What are LLMs?",
+        "reference": "LLMs or Large Language Models are AI systems trained on massive amounts of text data. They can understand and generate human-like text."
     },
     {
-        ""question"": ""What is a loop in programming?"",
-        ""reference"": ""A loop is a programming construct that repeats a block of code multiple times until a condition is met.""
+        "question": "What is a loop in programming?",
+        "reference": "A loop is a programming construct that repeats a block of code multiple times until a condition is met."
     }
 ]
 ```
@@ -9430,8 +9430,8 @@ def evaluate_study_assistant(test_data, persona):
     references = []
 
     for item in test_data:
-        question = item[""question""]
-        reference = item[""reference""]
+        question = item["question"]
+        reference = item["reference"]
         ai_response = study_assistant(question, persona)
         predictions.append(ai_response)
         references.append(reference)
@@ -9445,8 +9445,8 @@ def evaluate_study_assistant(test_data, persona):
     references = []
 
     for item in test_data:
-        question = item[""question""]
-        reference = item[""reference""]
+        question = item["question"]
+        reference = item["reference"]
         ai_response = study_assistant(question, persona)
         predictions.append(ai_response)
         references.append(reference)
@@ -9455,7 +9455,7 @@ def evaluate_study_assistant(test_data, persona):
     bertscore = evaluate.load('bertscore')
     bertscore_result = bertscore.compute(predictions=predictions, references=references, lang='en')
 
-    print(f""BERTScore F1: {sum(bertscore_result['f1'])/len(bertscore_result['f1']):.3f}"")
+    print(f"BERTScore F1: {sum(bertscore_result['f1'])/len(bertscore_result['f1']):.3f}")
 ```
 
 ### Running Evaluation
@@ -9466,8 +9466,8 @@ def evaluate_study_assistant(test_data, persona):
     references = []
 
     for item in test_data:
-        question = item[""question""]
-        reference = item[""reference""]
+        question = item["question"]
+        reference = item["reference"]
         ai_response = study_assistant(question, persona)
         predictions.append(ai_response)
         references.append(reference)
@@ -9476,9 +9476,9 @@ def evaluate_study_assistant(test_data, persona):
     bertscore = evaluate.load('bertscore')
     bertscore_result = bertscore.compute(predictions=predictions, references=references, lang='en')
 
-    print(f""BERTScore F1: {sum(bertscore_result['f1'])/len(bertscore_result['f1']):.3f}"")
+    print(f"BERTScore F1: {sum(bertscore_result['f1'])/len(bertscore_result['f1']):.3f}")
 ```
-Here is the <a href=""https://colab.research.google.com/drive/10JsMIcD_mLo7ZnBzsY9gHVOwXgzQV9pd#scrollTo=qGB_viDXSmyF"" target=""_blank"">
+Here is the <a href="https://colab.research.google.com/drive/10JsMIcD_mLo7ZnBzsY9gHVOwXgzQV9pd#scrollTo=qGB_viDXSmyF" target="_blank">
 Introduction to LLM Evaluation – Part 1 Final Code
 </a>
 
@@ -9529,7 +9529,7 @@ These criteria are hard to score with traditional metrics (BLEU, BERTScore).
 Think of it like this:
 
 1.  Your AI application generates a response
-2.  A separate ""judge"" LLM reviews that response
+2.  A separate "judge" LLM reviews that response
 3.  The judge gives a score and explains why
 
 ### Why Does This Work?
@@ -9583,7 +9583,7 @@ There are different ways to set up your LLM judge depending on what you want to 
 
 ## Evaluating Study Assistant Using LLM-as-a-Judge
 
-- Initial code : <a href=""https://colab.research.google.com/drive/1hTQQ6qXufQtwG3zF9fWctvQzxR3e-qt9#scrollTo=FAfsI2u7umdk"">
+- Initial code : <a href="https://colab.research.google.com/drive/1hTQQ6qXufQtwG3zF9fWctvQzxR3e-qt9#scrollTo=FAfsI2u7umdk">
 Introduction to LLM Application Evaluation | Part 2 initial code.ipynb
 </a>
 
@@ -9594,7 +9594,7 @@ Introduction to LLM Application Evaluation | Part 2 initial code.ipynb
 *   **Relevance** — Does it answer what was asked?
 *   **Use of Analogies** — Does it use real-world examples?
 *   **Follow-up Question** — Does it ask a question to check understanding?
-*   **Persona Consistency** — Does ""Friendly"" feel friendly? Does ""Academic"" feel academic?
+*   **Persona Consistency** — Does "Friendly" feel friendly? Does "Academic" feel academic?
 
 ### Steps to Evaluate
 
@@ -9611,7 +9611,7 @@ The prompt should tell the judge LLM exactly what to evaluate and how to score.
 </MultiLineNote>
 
 ```python
-evaluation_prompt = """"""You are an expert evaluator for AI assistants.
+evaluation_prompt = """You are an expert evaluator for AI assistants.
 
 Evaluate the Study Assistant's response based on these 6 criteria.
 Score each from 1-5 (5 = excellent, 3 = acceptable, 1 = poor).
@@ -9644,8 +9644,8 @@ Score each from 1-5 (5 = excellent, 3 = acceptable, 1 = poor).
   - 1: No follow-up question
 
 6. **Persona Consistency** (1-5): Does the tone match the expected persona?
-  - For ""Friendly"": Should be enthusiastic, encouraging, warm
-  - For ""Academic"": Should be formal, precise, professional
+  - For "Friendly": Should be enthusiastic, encouraging, warm
+  - For "Academic": Should be formal, precise, professional
   - 5: Perfect match | 3: Somewhat matches | 1: Wrong tone
 
 ## Input Details:
@@ -9664,7 +9664,7 @@ RELEVANCE: [score]/5 - [one line reason]
 ANALOGIES: [score]/5 - [one line reason]
 FOLLOW_UP: [score]/5 - [one line reason]
 PERSONA: [score]/5 - [one line reason]
-""""""
+"""
 ```
 
 ** Step 2: Creating Judge LLM**
@@ -9675,11 +9675,11 @@ Let's use a different LLM for evaluation (Gemini model) than the one we have in 
 from google import genai
 from google.colab import userdata
 
-gemini_client = genai.Client(api_key=userdata.get(""GEMINI_API_KEY""))
+gemini_client = genai.Client(api_key=userdata.get("GEMINI_API_KEY"))
 
 def evaluate_response(question, persona, response):
     evaluation = gemini_client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         contents=evaluation_prompt
     )
     return evaluation.text
@@ -9697,13 +9697,13 @@ def evaluate_response(question, persona, response):
         response=response
     )
     evaluation = gemini_client.models.generate_content(
-        model=""gemini-2.5-flash"",
+        model="gemini-2.5-flash",
         contents=updated_evaluation_prompt
     )
     return evaluation.text
 
-question = ""What are LLMs?""
-personality = ""Friendly""
+question = "What are LLMs?"
+personality = "Friendly"
 
 evaluation_response = evaluate_response(question, personality, assistant_response)
 print(evaluation_response)
@@ -9727,9 +9727,9 @@ Instead of building evaluation systems from scratch, we can use existing framewo
 ### Popular Evaluation Frameworks
 
 
-- <a href=""https://deepeval.com/"" target=""_blank"">DeepEval</a>  
-- <a href=""https://smith.langchain.com/"" target=""_blank"">LangSmith</a>  
-- <a href=""https://docs.ragas.io/en/stable/"" target=""_blank"">RAGAS </a>  
+- <a href="https://deepeval.com/" target="_blank">DeepEval</a>  
+- <a href="https://smith.langchain.com/" target="_blank">LangSmith</a>  
+- <a href="https://docs.ragas.io/en/stable/" target="_blank">RAGAS </a>  
 
 ---
 
@@ -9818,8 +9818,8 @@ from deepeval.models import GeminiModel
 from deepeval.metrics import AnswerRelevancyMetric
 
 gemini_judge = GeminiModel(
-    model=""gemini-2.5-flash"",
-    api_key=""YOUR_API_KEY""
+    model="gemini-2.5-flash",
+    api_key="YOUR_API_KEY"
 )
 
 relevance_metric = AnswerRelevancyMetric(
@@ -9839,10 +9839,10 @@ DeepEval provides the `LLMTestCase` class to represent a single interaction with
 
 ```python
 test_case = LLMTestCase(
-    input=""The question/prompt given to your LLM"",
-    actual_output=""The response from your LLM"",
-    expected_output=""(Optional) The ideal answer"",
-    retrieval_context=""(Optional) Context for RAG systems""
+    input="The question/prompt given to your LLM",
+    actual_output="The response from your LLM",
+    expected_output="(Optional) The ideal answer",
+    retrieval_context="(Optional) Context for RAG systems"
 )
 ```
 
@@ -9891,7 +9891,7 @@ results = evaluate(
 
 Built-in metrics cover only 1 out of our 6 criteria! They check for general quality, not custom evaluation metrics specific to our Study Assistant.
 
-How do we evaluate the other 5 criteria like ""Use of Analogies"" or ""Persona Consistency""?
+How do we evaluate the other 5 criteria like "Use of Analogies" or "Persona Consistency"?
 
 ### What is G-Eval?
 
@@ -9905,8 +9905,8 @@ DeepEval provides the `GEval` class to create custom metrics by describing your 
 
 ```python
 metric = GEval(
-    name=""Name for your metric"",
-    criteria=""Plain English description of what to evaluate"",
+    name="Name for your metric",
+    criteria="Plain English description of what to evaluate",
     evaluation_params=[...],  # Which test case fields to use
     model=gemini_judge,
     threshold=0.7  # Minimum score to pass (0-1)
@@ -9932,8 +9932,8 @@ from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCaseParams
 
 accuracy_metric = GEval(
-    name=""Accuracy"",
-    criteria=""Determine if the response contains factually correct information about the topic. The explanation should be accurate and free from errors. Students should not learn incorrect concepts."",
+    name="Accuracy",
+    criteria="Determine if the response contains factually correct information about the topic. The explanation should be accurate and free from errors. Students should not learn incorrect concepts.",
     evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
     model=gemini_judge,
     threshold=0.7
@@ -9969,8 +9969,8 @@ Metrics Summary
       evaluation model: gemini-2.5-flash (Gemini),
       reason: The output accurately defines LLMs, their training, and core
               capabilities using a clear analogy. However, it contains a
-              significant factual error by stating that LLMs ""don't make
-              mistakes,"" which is incorrect as LLMs are known to hallucinate
+              significant factual error by stating that LLMs "don't make
+              mistakes," which is incorrect as LLMs are known to hallucinate
               and produce errors
 ```
 
@@ -9978,8 +9978,8 @@ Metrics Summary
 
 ```python
 analogies_metric = GEval(
-    name=""Use of Analogies"",
-    criteria=""Determine if the response uses real-world analogies or examples to explain the concept. Good analogies relate complex ideas to everyday experiences that students can understand."",
+    name="Use of Analogies",
+    criteria="Determine if the response uses real-world analogies or examples to explain the concept. Good analogies relate complex ideas to everyday experiences that students can understand.",
     evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
     model=gemini_judge,
     threshold=0.7
@@ -10005,7 +10005,7 @@ Try implementing evaluation for the remaining metrics (Clarity, Follow-up Questi
 
 ----
 
-Here is the <a href=""https://colab.research.google.com/drive/1Ke0ofL9ohPNJ3_V9WD3pmQtfjTm_IhYK#scrollTo=a67fcWRsV-mC"" target=""_blank"">
+Here is the <a href="https://colab.research.google.com/drive/1Ke0ofL9ohPNJ3_V9WD3pmQtfjTm_IhYK#scrollTo=a67fcWRsV-mC" target="_blank">
  Introduction to LLM Application Evaluation | Part 2 Final Code.ipynb
 </a>
 
@@ -10082,8 +10082,8 @@ AI models come in different sizes. Think of it like video quality:
 
 
 
-<div style=""border: 1px solid #4CAF50; padding: 8px 12px; border-radius: 6px; background-color: #f6fff6; display: inline-block;"">
-""B"" stands for Billion Parameters — it's like how many ""brain cells"" the AI has!
+<div style="border: 1px solid #4CAF50; padding: 8px 12px; border-radius: 6px; background-color: #f6fff6; display: inline-block;">
+"B" stands for Billion Parameters — it's like how many "brain cells" the AI has!
 </div>
 
 ----
@@ -10144,7 +10144,7 @@ Ollama is like an app store for AI models. It makes downloading and running AI a
 
 ### Step 1: Install Ollama
 
-1.  Visit: <a href=""https://ollama.com"" target=""_blank"">Ollama</a>
+1.  Visit: <a href="https://ollama.com" target="_blank">Ollama</a>
 2.  Download for your operating system (Windows, macOS, or Linux)
 3.  Install it like any other software
 
@@ -10152,8 +10152,8 @@ Ollama is like an app store for AI models. It makes downloading and running AI a
 
 Open your terminal:
 
-*   <b>Windows</b> — Search for ""Command Prompt"" or ""PowerShell""
-*   <b>Mac/Linux</b> — Search for ""Terminal""
+*   <b>Windows</b> — Search for "Command Prompt" or "PowerShell"
+*   <b>Mac/Linux</b> — Search for "Terminal"
 
 <MultiLineNote>
 Before running Ollama, close memory-intensive applications.
@@ -10241,11 +10241,11 @@ LM Studio is a desktop application with a nice visual interface. No typing comma
 
 ### Installing and Running Models with LM Studio
 
-**Step 1:** Download LM Studio — Visit <a href=""https://lmstudio.ai"" target=""_blank"">LM Studio</a> and download for your operating system
+**Step 1:** Download LM Studio — Visit <a href="https://lmstudio.ai" target="_blank">LM Studio</a> and download for your operating system
 
 **Step 2:** Install LM Studio — Install it like any other software
 
-**Step 3:** Click on the ""Search"" or ""Discover"" icon and Download Model
+**Step 3:** Click on the "Search" or "Discover" icon and Download Model
 
 **Step 4:** Go to the Chat interface and Load the Model
 
@@ -10301,7 +10301,7 @@ Imagine working as an AI engineer at a bank called NDFC. Customers are asking qu
 We add a system prompt: 
 
 ```
-""Answer in a polite, professional way as an NDFC bank assistant. If you don't know, say you don't know.""
+"Answer in a polite, professional way as an NDFC bank assistant. If you don't know, say you don't know."
 ```
 
 <b>System Prompt + Question → LLM → Answer</b>
@@ -10309,15 +10309,15 @@ We add a system prompt:
 <Section>
 
 **NDFC Bank Chat**
-<div style=""text-align: right; margin-bottom: 10px;"">
-        <div style=""border: 1px solid #4CAF50; padding: 8px 12px; border-radius: 6px; background-color: #f6fff6; display: inline-block;"">
+<div style="text-align: right; margin-bottom: 10px;">
+        <div style="border: 1px solid #4CAF50; padding: 8px 12px; border-radius: 6px; background-color: #f6fff6; display: inline-block;">
             How much is my credit card late fee?
         </div>
     </div>
 
 
-<div style=""text-align: left;"">
-        <div style=""border: 1px solid #9E9E9E; padding: 8px 12px; border-radius: 6px; background-color: #f5f5f5; display: inline-block;"">
+<div style="text-align: left;">
+        <div style="border: 1px solid #9E9E9E; padding: 8px 12px; border-radius: 6px; background-color: #f5f5f5; display: inline-block;">
             Dear customer, NDFC Bank typically charges a late fee between $30 and $40. For exact details, please check your account statement or contact support.
         </div>
     </div>
@@ -10335,17 +10335,17 @@ It guides how the model answers, but doesn't give it new knowledge.
 
 We connect the LLM to NDFC's private database containing customer account details, transaction histories, and credit card plans. Now the LLM can retrieve specific information.
 
-<Section style=""leng: 320px; margin: 40px auto;"">
+<Section style="leng: 320px; margin: 40px auto;">
 
 **NDFC Bank Chat**
-<div style=""text-align: right; margin-bottom: 10px;"">
-        <div style=""border: 1px solid #4CAF50; padding: 8px 12px; border-radius: 6px; background-color: #f6fff6; display: inline-block; max-width: 80%;"">
+<div style="text-align: right; margin-bottom: 10px;">
+        <div style="border: 1px solid #4CAF50; padding: 8px 12px; border-radius: 6px; background-color: #f6fff6; display: inline-block; max-width: 80%;">
             How much is my credit card late fee?
         </div>
     </div>
 
-<div style=""text-align: left;"">
-        <div style=""border: 1px solid #9E9E9E; padding: 8px 12px; border-radius: 6px; background-color: #f5f5f5; display: inline-block; max-width: 80%;"">
+<div style="text-align: left;">
+        <div style="border: 1px solid #9E9E9E; padding: 8px 12px; border-radius: 6px; background-color: #f5f5f5; display: inline-block; max-width: 80%;">
             Dear customer, According to NDFC Bank's official policy, a late fee of $35 is applied if payment is not made by the due date.
         </div>
     </div>
@@ -10358,7 +10358,7 @@ The answer is grounded in actual company data.
 
 ### Reviewed by Business Manager
 
-""This is good, but we should also suggest: 'You can avoid this by enabling auto-pay.' That's how our best support agents respond.""
+"This is good, but we should also suggest: 'You can avoid this by enabling auto-pay.' That's how our best support agents respond."
 
 **Question:**
 Where does this suggestion come from? It's not written in any single document. It's a pattern that exists across millions of past chat transcripts — the accumulated knowledge of how NDFC's best agents interact with customers.
@@ -10437,7 +10437,7 @@ Instead of updating all parameters, PEFT methods update only a small subset of p
 | What's updated | All parameters in the entire network | Only small added layers/matrices |
 | Cost | Very expensive | Much cheaper |
 | Hardware needed | Multiple high-end GPUs | Single consumer GPU possible |
-| Risk | Can ""forget"" general knowledge (catastrophic forgetting) | Preserves base model knowledge |
+| Risk | Can "forget" general knowledge (catastrophic forgetting) | Preserves base model knowledge |
 | When to use | Need maximum domain adaptation | Need efficient, targeted adaptation |
 
 ---
@@ -10461,13 +10461,13 @@ Instead of updating all parameters, PEFT methods update only a small subset of p
 
 **Before Fine-Tuning**
 
-(base model response to ""Hello there""):
+(base model response to "Hello there"):
 
-> ""Hello! How can I help you today?""
+> "Hello! How can I help you today?"
 
 **After Fine-Tuning** (what we want):
 
-> ""Gree-tongz, Terran. You'z a long way from da Blue-Sphere, yez?""
+> "Gree-tongz, Terran. You'z a long way from da Blue-Sphere, yez?"
 
 ### The Process
 
@@ -10544,7 +10544,7 @@ Unsloth provides a method called `FastModel.from_pretrained()` that loads a mode
 from unsloth import FastModel
 
 model, tokenizer = FastModel.from_pretrained(
-    model_name = ""unsloth/gemma-3-270m-it"",
+    model_name = "unsloth/gemma-3-270m-it",
     max_seq_length = 2048,
     load_in_4bit = True,
     load_in_8bit = False,
@@ -10602,8 +10602,8 @@ def do_inference(messages, max_new_tokens=128):
             add_generation_prompt=True,
             tokenize=True,
             return_dict=True,
-            return_tensors=""pt"",
-        ).to(""cuda""),
+            return_tensors="pt",
+        ).to("cuda"),
         max_new_tokens=max_new_tokens,
         temperature=1.0,
         top_p=0.95,
@@ -10612,7 +10612,7 @@ def do_inference(messages, max_new_tokens=128):
     )
 ```
 
-*   `.to(""cuda"")` — Sends the data to the GPU for fast processing
+*   `.to("cuda")` — Sends the data to the GPU for fast processing
 *   `streamer` — Prints each word as it's generated
 
 <MultiLineNote> The remaining parameters like temperature, top_p, top_k control how the model generates text. We'll understand these in detail in further sessions.
@@ -10621,11 +10621,11 @@ def do_inference(messages, max_new_tokens=128):
 ### Testing the Model
 
 ```python
-messages = [{""role"": ""user"", ""content"": ""Hello there.""}]
+messages = [{"role": "user", "content": "Hello there."}]
 do_inference(messages)
 ```
 
-**Expected Output:** ""Hello! How can I help you today?""
+**Expected Output:** "Hello! How can I help you today?"
 
 The model responds in normal, polished English.
 
@@ -10657,9 +10657,9 @@ model = FastModel.get_peft_model(
     r = 8,
     lora_alpha = 8,
     lora_dropout = 0,
-    bias = ""none"",
+    bias = "none",
     random_state = 3407,
-    use_gradient_checkpointing = ""unsloth"",
+    use_gradient_checkpointing = "unsloth",
 )
 ```
 
@@ -10686,25 +10686,25 @@ The `bebechien/MobileGameNPC` dataset provides sample conversations between a pl
 
 The Martian NPC's speaking style:
 
-*   Replaces 's' sounds with 'z' (""is"" → ""iz"")
+*   Replaces 's' sounds with 'z' ("is" → "iz")
 *   Uses 'da' for 'the'
 *   Uses 'diz' for 'this'
 *   Includes occasional clicks like *k'tak*
 *   Has a consistent alien personality
 
-Sample data: <a href=""https://huggingface.co/datasets/bebechien/MobileGameNPC/viewer/martian/train"" target=""_blank>Huggingface</a>This dataset has only 25 examples — for teaching a consistent speaking style, even a small, high-quality dataset works.
+Sample data: <a href="https://huggingface.co/datasets/bebechien/MobileGameNPC/viewer/martian/train" target="_blank>Huggingface</a>This dataset has only 25 examples — for teaching a consistent speaking style, even a small, high-quality dataset works.
 
 ### Load the Dataset
 
 ```python
 from datasets import load_dataset
 
-dataset = load_dataset(""bebechien/MobileGameNPC"", ""martian"", split=""train"")
+dataset = load_dataset("bebechien/MobileGameNPC", "martian", split="train")
 ```
 
-*   `""bebechien/MobileGameNPC""` — Dataset name
-*   `""martian""` — Specific subset/configuration (Martian NPC conversations)
-*   `split=""train""` — Loads only the training part of the dataset
+*   `"bebechien/MobileGameNPC"` — Dataset name
+*   `"martian"` — Specific subset/configuration (Martian NPC conversations)
+*   `split="train"` — Loads only the training part of the dataset
 
 ### What is Split?
 
@@ -10717,10 +10717,10 @@ Datasets are usually divided into parts:
 ### Inspecting the Data
 
 ```python
-print(f""Total samples: {len(dataset)}"")
-print(f""Columns: {dataset.column_names}"")
-print(f""player: {dataset[0]['player']}"")
-print(f""alien:  {dataset[0]['alien']}"")
+print(f"Total samples: {len(dataset)}")
+print(f"Columns: {dataset.column_names}")
+print(f"player: {dataset[0]['player']}")
+print(f"alien:  {dataset[0]['alien']}")
 ```
 
 ### Format for Training
@@ -10743,7 +10743,7 @@ You’z a long way from da Blue-Sphere, yez?<end_of_turn>...<eos>
 ```python
 from unsloth.chat_templates import get_chat_template
 
-tokenizer = get_chat_template(tokenizer, chat_template=""gemma-3"")
+tokenizer = get_chat_template(tokenizer, chat_template="gemma-3")
 ```
 
 This tells the tokenizer to use Gemma 3's special tokens (`<start_of_turn>`, `<end_of_turn>`, etc.) when formatting conversations.
@@ -10756,8 +10756,8 @@ Our dataset has `player` and `alien` columns. We need to convert them into the c
 formatted_texts = []
 for i in range(len(dataset)):
     conversation = [
-        {""role"": ""user"", ""content"": dataset[i][""player""]},
-        {""role"": ""assistant"", ""content"": dataset[i][""alien""]},
+        {"role": "user", "content": dataset[i]["player"]},
+        {"role": "assistant", "content": dataset[i]["alien"]},
     ]
     text = tokenizer.apply_chat_template(
         conversation,
@@ -10765,18 +10765,18 @@ for i in range(len(dataset)):
         add_generation_prompt=False
     )
     formatted_texts.append(text)
-dataset = dataset.add_column(""text"", formatted_texts)
+dataset = dataset.add_column("text", formatted_texts)
 ```
 
 *   For each row, we create a conversation with user (player) and assistant (alien) roles
 *   `apply_chat_template` wraps it in Gemma's special tokens format
-*   We add the formatted text as a new ""text"" column to our dataset
+*   We add the formatted text as a new "text" column to our dataset
 
 **Verify the Conversion**
 
 ```python
-print(""--- After conversion (what model will train on) ---"")
-print(dataset[0][""text""])
+print("--- After conversion (what model will train on) ---")
+print(dataset[0]["text"])
 ```
 
 This should show the text wrapped in Gemma's `<start_of_turn>user ... <end_of_turn>` format.
@@ -10800,7 +10800,7 @@ trainer = SFTTrainer(
     tokenizer = tokenizer,
     train_dataset = dataset,
     args = SFTConfig(
-        dataset_text_field = ""text"",
+        dataset_text_field = "text",
         per_device_train_batch_size = 2,
         gradient_accumulation_steps = 4,
         warmup_steps = 5,
@@ -10809,18 +10809,18 @@ trainer = SFTTrainer(
         fp16 = not is_bfloat16_supported(),
         bf16 = is_bfloat16_supported(),
         logging_steps = 5,
-        optim = ""adamw_8bit"",
+        optim = "adamw_8bit",
         weight_decay = 0.01,
-        lr_scheduler_type = ""linear"",
+        lr_scheduler_type = "linear",
         seed = 3407,
-        output_dir = ""outputs"",
-        report_to = ""none"",
+        output_dir = "outputs",
+        report_to = "none",
     ),
 )
 trainer.train()
 ```
 
-*   `dataset_text_field = ""text""` — Which column to use from dataset
+*   `dataset_text_field = "text"` — Which column to use from dataset
 *   `num_train_epochs = 30` — Number of passes of the entire dataset through the model
 *   `learning_rate = 2e-4` — Controls by how much the weights are changed based on the error
 *   ` fp16 = not is_bfloat16_supported(), bf16 = is_bfloat16_supported(),` — BFloat16 offers larger range but lower precision than the FloatingPoint16 (when storing weights)
@@ -10835,16 +10835,16 @@ Now the moment of truth! Let's test the fine-tuned model with the same input we 
 
 ```python
 model = FastModel.for_inference(model)
-do_inference([{""role"": ""user"", ""content"": ""Hello there.""}])
+do_inference([{"role": "user", "content": "Hello there."}])
 ```
 
-**Expected Output:** ""Gree-tongz, Terran. You'z a long way from da Blue-Sphere, yez?""
+**Expected Output:** "Gree-tongz, Terran. You'z a long way from da Blue-Sphere, yez?"
 
 Compare this with the baseline — the model has completely transformed its personality!
 
 ---
 
-#### Here is the <a href=""https://colab.research.google.com/drive/1oxvplqO6XdvUwuKmVHSRLsJMoXPJ4kVO#scrollTo=LAiv-wiacKOO"" target=""_blank"" rel=""noopener noreferrer"">Fine-tuning LLMs Final Code (Google Colab)</a>
+#### Here is the <a href="https://colab.research.google.com/drive/1oxvplqO6XdvUwuKmVHSRLsJMoXPJ4kVO#scrollTo=LAiv-wiacKOO" target="_blank" rel="noopener noreferrer">Fine-tuning LLMs Final Code (Google Colab)</a>
 
 ---
 

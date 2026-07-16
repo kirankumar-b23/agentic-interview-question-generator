@@ -104,10 +104,11 @@ class QuestionBankRetriever:
 # ── Singleton ───────────────────────────────────────────────────────────────
 
 _retriever: QuestionBankRetriever | None = None
+_genai_retriever: QuestionBankRetriever | None = None
 
 
 def get_retriever() -> QuestionBankRetriever:
-    """Get or create the question bank retriever (loads from DataStore)."""
+    """Get or create the default question bank retriever (Python/SWE interview data)."""
     global _retriever
     if _retriever is None:
         from src.data_loader import get_data_store
@@ -116,3 +117,30 @@ def get_retriever() -> QuestionBankRetriever:
         _retriever = QuestionBankRetriever(all_questions)
         print(f"Question bank ready: {len(all_questions)} questions indexed for TF-IDF search")
     return _retriever
+
+
+def get_genai_retriever() -> QuestionBankRetriever:
+    """Curated GenAI question bank (built by scripts/build_genai_bank.py). Empty until built."""
+    global _genai_retriever
+    if _genai_retriever is None:
+        import json
+        from src.config import GENAI_BANK_JSON
+        questions: list[dict] = []
+        if GENAI_BANK_JSON.exists():
+            try:
+                questions = json.loads(GENAI_BANK_JSON.read_text(encoding="utf-8"))
+            except Exception:
+                questions = []
+        _genai_retriever = QuestionBankRetriever(questions)
+        print(f"GenAI bank ready: {len(questions)} questions indexed for TF-IDF search")
+    return _genai_retriever
+
+
+def get_retriever_for(category: str | None) -> QuestionBankRetriever:
+    """Route bank retrieval by domain: GEN_AI sessions use the curated GenAI bank (if built),
+    everything else uses the default Python/SWE bank."""
+    if (category or "").upper() == "GEN_AI":
+        r = get_genai_retriever()
+        if r._corpus:                    # only if the GenAI bank has been built
+            return r
+    return get_retriever()

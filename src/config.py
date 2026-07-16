@@ -10,6 +10,9 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 # Prepared data files (from scripts/prepare_data.py)
 INTERVIEW_QUESTIONS_JSON = DATA_DIR / "interview_questions.json"
+# Curated GenAI question bank (built by scripts/build_genai_bank.py) — used for GEN_AI sessions
+# because interview_questions.json is a Python/SWE set with almost no GenAI content.
+GENAI_BANK_JSON = DATA_DIR / "genai_question_bank.json"
 KNOWLEDGE_GRAPH_JSON = DATA_DIR / "knowledge_graph.json"
 
 # Curriculum context (KP supplements — runtime, loaded by data_loader)
@@ -52,7 +55,42 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 # Question constraints
 MIN_QUESTIONS = 5
 MAX_QUESTIONS = 15
+# Candidates are gathered into a WIDE pool (decoupled from max_questions), scored for
+# relevance across the whole pool, ranked, then trimmed to max_questions LAST. This
+# prevents an early cap-to-max from starving relevance selection.
+#
+# Per-source caps so NO single source monopolises the pool (a single shared cap let the
+# bank fill everything and starve the web). Each source fills up to its own cap; the whole
+# pool (bank + web + github) is then relevance-scored and filtered down to the best.
+BANK_POOL_CAP = 40        # curated interview data
+WEB_POOL_CAP = 60         # fresh company-attributed questions (Tavily)
+GITHUB_POOL_CAP = 30      # curated GitHub repos
+CANDIDATE_POOL_TARGET = BANK_POOL_CAP + WEB_POOL_CAP + GITHUB_POOL_CAP  # ~130 total ceiling
+RELEVANCE_BATCH_SIZE = 40  # candidates scored per LLM call in validate_relevance
+# Keep candidates scoring at/above this relevance; below → dropped (min-floor still applies).
+# 0.5 (not 0.6) because the scorer rates good foundational questions ~0.55–0.75; a stricter
+# bar under-fills sets and starves coverage/per-session representation.
+RELEVANCE_THRESHOLD = float(os.getenv("RELEVANCE_THRESHOLD", "0.5"))
+# Final selection: greedy MMR with coverage + difficulty bonuses.
+#   score = λ·relevance − (1−λ)·redundancy + COVERAGE_BONUS·(covers a new outcome)
+#                                           + DIFFICULTY_BONUS·(fills an under-filled difficulty bucket)
+MMR_LAMBDA = 0.7
+SELECT_COVERAGE_BONUS = 0.15      # nudge toward covering every learning outcome
+SELECT_DIFFICULTY_BONUS = 0.10    # nudge toward the Easy/Medium/Hard target mix
+SELECT_SESSION_BONUS = 0.12       # nudge so each session (multi-session topic) is represented
+SELECT_ATTRIBUTION_BONUS = 0.12   # nudge so the set mixes real-company + source-labeled questions
+
+# Semantic embeddings (free, local sentence-transformers) for redundancy/coverage/attribution.
+# Falls back to TF-IDF automatically if the model/library is unavailable.
+EMBEDDINGS_ENABLED = os.getenv("EMBEDDINGS_ENABLED", "1") == "1"
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+EMBED_COVERAGE_THRESHOLD = float(os.getenv("EMBED_COVERAGE_THRESHOLD", "0.30"))  # cosine ≥ ⇒ outcome covered
 DEFAULT_DIFFICULTY_DISTRIBUTION = {"easy": 0.3, "medium": 0.5, "hard": 0.2}
+
+
+def pool_target(max_questions: int) -> int:
+    """Total candidate-pool ceiling before relevance ranking — never below max_questions."""
+    return max(CANDIDATE_POOL_TARGET, max_questions or 0)
 DEDUP_THRESHOLD = 0.85
 QUALITY_PASS_THRESHOLD = 0.75
 MAX_EVAL_RETRIES = 2
@@ -61,6 +99,8 @@ MAX_TOOL_CALLS = int(os.getenv("MAX_TOOL_CALLS", "20"))
 # Live question harvesting (tools 12 & 13 — search_github_questions / search_web_questions)
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")   # optional; raises GitHub API rate limit from 60→5000/hr
+# GitHub repos are general ML/Data-Science (Python/stats noise, no company attribution) — disabled.
+GITHUB_ENABLED = os.getenv("GITHUB_ENABLED", "0") == "1"
 TAVILY_MAX_RESULTS = int(os.getenv("TAVILY_MAX_RESULTS", "10"))
 TAVILY_MAX_OUTCOMES = int(os.getenv("TAVILY_MAX_OUTCOMES", "14"))
 TAVILY_MAX_RECORDS = int(os.getenv("TAVILY_MAX_RECORDS", "800"))
@@ -128,4 +168,6 @@ INTERVIEW_SOURCE_ALLOWLIST = {
     # GenAI/ML Q&A + forums, SWE interview-experience, extra attribution
     "ai.stackexchange.com", "huggingface.co", "kaggle.com", "machinelearningmastery.com",
     "techinterviewhandbook.org", "neetcode.io", "taro.co", "bigtechinterviews.com",
+    # High-signal company-tagged GenAI/ML interview source
+    "dataford.io",
 }

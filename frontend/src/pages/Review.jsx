@@ -293,8 +293,9 @@ export default function Review() {
         </details>
       )}
 
-      {/* 2-column compact question sets */}
-      <div className="q-sets-grid">
+      {/* Compact question sets — theory + coding. Coding panel is hidden when empty
+          so theory uses the full width. */}
+      <div className={`q-sets-grid${codingQs.length === 0 ? ' single' : ''}`}>
         <div className="q-set-panel">
           <div className="q-set-head">
             <span className="q-set-title">Theory Questions</span>
@@ -325,15 +326,14 @@ export default function Review() {
           </div>
         </div>
 
+        {codingQs.length > 0 && (
         <div className="q-set-panel">
           <div className="q-set-head">
             <span className="q-set-title">Coding Questions</span>
             <span className="q-set-badge">{codingQs.length}</span>
           </div>
           <div className="q-set-body">
-            {codingQs.length === 0 ? (
-              <p className="muted" style={{ padding: '1rem' }}>No coding questions.</p>
-            ) : (
+            {(
               codingQs.map((q, i) => (
                 <CompactQuestion
                   key={q.id}
@@ -356,6 +356,7 @@ export default function Review() {
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Rejected questions + reasons */}

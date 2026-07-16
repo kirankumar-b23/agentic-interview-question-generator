@@ -38,7 +38,21 @@ class AgentState:
     submitted: bool = False
     dedup_removed: int = 0
     removed: list[dict] = field(default_factory=list)  # rejected questions {content, reason, stage, ...}
+    removed_by_relevance: int = 0
+    # Validated-but-not-selected candidates, kept so the quality-gate revision can BACKFILL
+    # replacements (instead of only shrinking). excluded = ids never to re-add (flagged/rejected).
+    reserve: dict = field(default_factory=dict)      # q_id -> QuestionDetail
+    excluded: set = field(default_factory=set)       # q_ids removed/rejected, never re-added
     tool_log: list[dict] = field(default_factory=list)
+    # Retrieval funnel stats (observability): {source: raw_hit_count} + max pool reached
+    raw_fetched: dict = field(default_factory=dict)
+    pool_size: int = 0
+    # Candidates actually ADDED to the pool per source ("bank"/"web"/"github") — used to
+    # enforce per-source pool caps so no one source monopolises the pool.
+    added_by_source: dict = field(default_factory=dict)
+    # Per-session reading-material text (multi-session topics) — used to attribute each
+    # question to the session it best matches, so final selection represents every session.
+    session_profiles: dict = field(default_factory=dict)   # session_name -> profile text
     # Pipeline-level state (set by UnderstandingAgent, read by RetrievalAgent)
     suggested_queries: list[str] = field(default_factory=list)
     # Quality gate revision instructions (set by pipeline, read by EvaluationAgent)
@@ -57,7 +71,8 @@ class AgentState:
 
     @property
     def remaining_capacity(self) -> int:
-        return self.config.max_questions - self.total_questions
+        from src.config import pool_target
+        return pool_target(self.config.max_questions) - self.total_questions
 
     @property
     def source_counts(self) -> dict[str, int]:
@@ -89,6 +104,10 @@ class AgentState:
                 dedup_removed=self.dedup_removed,
                 source_counts=self.source_counts,
                 questions_from_web=sum(1 for q in self.questions.values() if q.source == "web"),
+                raw_fetched=dict(self.raw_fetched),
+                pool_size=self.pool_size,
+                removed_by_relevance=self.removed_by_relevance,
+                removed_by_dedup=self.dedup_removed,
             ),
         )
 

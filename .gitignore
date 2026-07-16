@@ -16,6 +16,9 @@ env/
 # Large data files
 data/raw/*.xlsx
 data/raw/*.csv
+# Loose spreadsheet dumps dropped in the repo root (keep large source files out of git)
+/*.xlsx
+/*.csv
 
 # Frontend build artifacts
 frontend/node_modules/

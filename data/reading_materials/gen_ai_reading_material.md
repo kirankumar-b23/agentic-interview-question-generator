@@ -220,9 +220,9 @@ We can use/run the Hugging Face models in different ways:
 
 In the previous unit, we learned how Gen AI can help us talk better, be more creative, learn new things, and solve problems in daily life. In this unit, we will explore useful Gen AI capabilities like searching the internet for the latest information, doing deep research from many websites, talking to AI using our voice interaction, getting help by sharing our screen, and choosing the right AI model for tasks like quick answers, writing code, or solving hard problems.
 
-> *""Think of a task or problem you faced recently where you think Gen AI could have been helpful""*
+> *"Think of a task or problem you faced recently where you think Gen AI could have been helpful"*
 
-> *""Let's explore the most practical and powerful capabilities we can start using immediately""*
+> *"Let's explore the most practical and powerful capabilities we can start using immediately"*
 
 # 1. Gen AI Capabilities
 
@@ -531,7 +531,7 @@ What is the next number in the series? 2, 6, 12, 20, 30, ___?
 
 
 ### 1.5.3 Flash Models
-Flash models (sometimes called ""fast"" models) are optimized for speed and efficiency, rather than deep reasoning
+Flash models (sometimes called "fast" models) are optimized for speed and efficiency, rather than deep reasoning
 
 **Capabilities:**
 
@@ -877,7 +877,7 @@ Can you help me create a professional resume for a BTech CSE student? Include se
 - This technique is known as **role prompting**.  
 - The more detail you provide about the role and context, the better the results.  
 - Priming an LLM with a specific role can enhance its performance across various tasks, from writing to coding to summarizing.  
-- It's like how humans can sometimes be helped when told to ""think like a ______"".  
+- It's like how humans can sometimes be helped when told to "think like a ______".  
 - Role prompting can also change the style, tone, and manner of the LLM’s response.
 
 <details>
@@ -891,7 +891,7 @@ Can you help me create a professional resume for a BTech CSE student? Include se
 <summary><strong>Prompt</strong></summary>
 
 ```
-Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 ```
 </details>
 
@@ -904,18 +904,18 @@ Act as an experienced travel consultant who specializes in budget-friendly trips
 <summary><strong>Examples</strong></summary>
 
 
-- **Personal situation**: ""I'm planning a trip to Japan.""
-- **Audience information**: ""This is for high school students.""
-- **Project details**: ""We're launching a new product next month.""
-- **Constraints**: ""We have a limited budget.""
-- **Prior knowledge**: ""I have no experience with coding.""
+- **Personal situation**: "I'm planning a trip to Japan."
+- **Audience information**: "This is for high school students."
+- **Project details**: "We're launching a new product next month."
+- **Constraints**: "We have a limited budget."
+- **Prior knowledge**: "I have no experience with coding."
 </details>
 
 <details>
 <summary><strong>Prompt</strong></summary>
 
 ```
-Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 
 Context: I'm a 22-year-old college student planning my first solo trip. I have a budget of 20,000, 10 days to travel in June, and I'm interested in both outdoor activities and experiencing local culture. I'm somewhat adventurous but also concerned about safety as a solo traveler.
 ```
@@ -925,24 +925,24 @@ Context: I'm a 22-year-old college student planning my first solo trip. I have a
 ## Action/Task
 
 - The specific action or task you want the LLM to perform.  
-- This is the ""verb"" of your prompt – the specific action you want the LLM to take.
+- This is the "verb" of your prompt – the specific action you want the LLM to take.
 
 <details>
 <summary><strong>Examples</strong></summary>
 
-- **Explain/teach**: ""Explain Generative AI.""
-- **Create/generate**: ""Create a marketing plan.""
-- **Analyze/evaluate**: ""Analyze this paragraph.""
-- **Summarize**: ""Summarize this research paper.""
-- **Compare/contrast**: ""Compare these two approaches.""
-- **Brainstorm**: ""Brainstorm names for my startup.""
+- **Explain/teach**: "Explain Generative AI."
+- **Create/generate**: "Create a marketing plan."
+- **Analyze/evaluate**: "Analyze this paragraph."
+- **Summarize**: "Summarize this research paper."
+- **Compare/contrast**: "Compare these two approaches."
+- **Brainstorm**: "Brainstorm names for my startup."
 </details>
 
 <details>
 <summary><strong>Prompt</strong></summary>
 
 ```
-Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 
 Context: I'm a 22-year-old college student planning my first solo trip. I have a budget of 20,000, 10 days to travel in June, and I'm interested in both outdoor activities and experiencing local culture. I'm somewhat adventurous but also concerned about safety as a solo traveler.
 
@@ -969,7 +969,7 @@ Action: Recommend 2 specific destinations that would be ideal for my situation, 
 <summary><strong>Prompt</strong></summary>
 
 ```
-Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 
 Context: I'm a 22-year-old college student planning my first solo trip. I have a budget of 20,000, 10 days to travel in June, and I'm interested in both outdoor activities and experiencing local culture. I'm somewhat adventurous but also concerned about safety as a solo traveler.
 
@@ -1011,7 +1011,7 @@ The style, voice, or emotional quality you want the LLM to use in its response. 
 <summary><strong>Prompt</strong></summary>
 
 ```
-Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 
 Context: I'm a 22-year-old college student planning my first solo trip. I have a budget of 20,000, 10 days to travel in June, and I'm interested in both outdoor activities and experiencing local culture. I'm somewhat adventurous but also concerned about safety as a solo traveler.
 
@@ -1041,10 +1041,10 @@ Tone: Include some humor where appropriate, and write as if you're a slightly ol
 <summary><strong>Interview Preparation</strong></summary>
 
 ```
-Template: ""You're an experienced career counselor. I have an upcoming {{INTERVIEW_TYPE}} interview for a {{JOB_ROLE}} position. Provide me with 8-10 targeted practice questions I should prepare for, along with strategic tips for answering them effectively. Present this as a clear study guide with practical examples I can practice.""
+Template: "You're an experienced career counselor. I have an upcoming {{INTERVIEW_TYPE}} interview for a {{JOB_ROLE}} position. Provide me with 8-10 targeted practice questions I should prepare for, along with strategic tips for answering them effectively. Present this as a clear study guide with practical examples I can practice."
 Inputs:
-{{INTERVIEW_TYPE}}: ""technical"" / ""behavioral"" / ""panel"" / ""phone screening"" / ""final round""
-{{JOB_ROLE}}: ""software engineer"" / ""marketing manager"" / ""data analyst"" / ""sales representative"" / ""project manager”
+{{INTERVIEW_TYPE}}: "technical" / "behavioral" / "panel" / "phone screening" / "final round"
+{{JOB_ROLE}}: "software engineer" / "marketing manager" / "data analyst" / "sales representative" / "project manager”
 
 ```
 </details>
@@ -1054,9 +1054,9 @@ Inputs:
 <summary><strong>Summarizing an Article</strong></summary>
 
 ```
-Template: ""You're a research assistant skilled at distilling complex information. I need to quickly understand the key insights from {{ARTICLE_TOPIC}}. Read through the content and create a concise summary that captures the main arguments, supporting evidence, and conclusions. Format this as bullet points with the most important takeaways first, using clear and objective language.""
+Template: "You're a research assistant skilled at distilling complex information. I need to quickly understand the key insights from {{ARTICLE_TOPIC}}. Read through the content and create a concise summary that captures the main arguments, supporting evidence, and conclusions. Format this as bullet points with the most important takeaways first, using clear and objective language."
 Inputs:
-{{ARTICLE_TOPIC}}: ""climate change research paper"" / ""new technology trends report"" / ""healthcare policy analysis"" / ""market research study"" / ""historical analysis piece""
+{{ARTICLE_TOPIC}}: "climate change research paper" / "new technology trends report" / "healthcare policy analysis" / "market research study" / "historical analysis piece"
 
 ```
 </details>
@@ -1089,15 +1089,15 @@ I will tell you the name of an animal. Please respond with the sound that animal
 <summary><strong>Example</strong></summary>
 
 ```
-Template: ""Explain {{CONCEPT}} at a {{LEVEL}} level with examples.""
+Template: "Explain {{CONCEPT}} at a {{LEVEL}} level with examples."
 Inputs:
-{{CONCEPT}}: ""recursion in programming"" / ""object-oriented programming"" / ""Ohm’s Law"" 
-{{LEVEL}}: ""high school"" / ""first year btech student"" / ""intermediate"" / ""advanced""
+{{CONCEPT}}: "recursion in programming" / "object-oriented programming" / "Ohm’s Law" 
+{{LEVEL}}: "high school" / "first year btech student" / "intermediate" / "advanced"
 
 ```
 
 ```
-Final Prompt: ""Explain recursion in programming at a high school level with examples.""
+Final Prompt: "Explain recursion in programming at a high school level with examples."
 ```
 </details>
 
@@ -1470,7 +1470,7 @@ Zero-shot prompting is a technique that instructs an LLM to perform a task witho
 ```
 Summarize the following paragraph about Generative AI:
 
-Generative AI refers to artificial intelligence systems capable of creating new content, such as text, images, music, and videos that resemble human-created work. Unlike traditional AI, which focuses on analysis and prediction, generative AI can produce original outputs based on patterns learned from training data. Popular examples include GPT models for text, DALL-E for images, and MusicLM for music creation. These systems have sparked discussions about creativity, copyright, and the future of human-machine collaboration in creative fields.""
+Generative AI refers to artificial intelligence systems capable of creating new content, such as text, images, music, and videos that resemble human-created work. Unlike traditional AI, which focuses on analysis and prediction, generative AI can produce original outputs based on patterns learned from training data. Popular examples include GPT models for text, DALL-E for images, and MusicLM for music creation. These systems have sparked discussions about creativity, copyright, and the future of human-machine collaboration in creative fields."
 
 ```
 </details>
@@ -1494,7 +1494,7 @@ One-shot prompting involves providing a single example to the model so it has so
 <summary><strong>One-shot Example 1</strong></summary>
 
 ```
-Write a birthday message for my best friend who loves bikes""
+Write a birthday message for my best friend who loves bikes"
 
 
 Example:
@@ -1524,7 +1524,7 @@ Sentiment:
 <summary><strong>One-shot Exercise</strong></summary>
 
 ```
-Act as an AI career coach named ""CareerBuddy"". Your goal is to help students make informed career decisions by guiding them through different career options, resume tips, and interview preparation.
+Act as an AI career coach named "CareerBuddy". Your goal is to help students make informed career decisions by guiding them through different career options, resume tips, and interview preparation.
 
 You should maintain a friendly, professional, and informative tone.
 
@@ -1576,7 +1576,7 @@ Sentiment:
 
 ### 1.4 Chain-of-Thought
 
-<MultiLineWarning text=""Problem"" > 
+<MultiLineWarning text="Problem" > 
 AI models can make mistakes on complex problems because they might skip steps or guess
 
 </MultiLineWarning>
@@ -1687,7 +1687,7 @@ Can you apply to SDE jobs and send an email to my email (xyz) once applied?
 ```
 </details>
 
-<MultiLineWarning text=""LLM Limitations"">
+<MultiLineWarning text="LLM Limitations">
 **Hallucinations** - Can generate incorrect or nonsensical information that isn't supported by the input data or factual accuracy
 
 **Knowledge CutOff** - Doesn’t know anything that happened after the date it was trained on
@@ -1714,32 +1714,32 @@ You are writing the following:
 Follow these detailed step-by-step guidelines:
  
 Step 1: Use plain and simple language. Avoid long or complex sentences. Opt for short, clear statements.
-- Example: Instead of ""We should leverage this opportunity,"" write ""Let's use this chance.""
+- Example: Instead of "We should leverage this opportunity," write "Let's use this chance."
  
-Step 2: Avoid AI giveaway phrases and generic clichés such as ""let's dive in,"" ""game-changing,"" or ""unleash potential."" Replace them with straightforward language.
-- Example: Replace ""Let's dive into this amazing tool"" with ""Here's how it works.""
+Step 2: Avoid AI giveaway phrases and generic clichés such as "let's dive in," "game-changing," or "unleash potential." Replace them with straightforward language.
+- Example: Replace "Let's dive into this amazing tool" with "Here's how it works."
  
 Step 3: Be direct and concise. Eliminate filler words and unnecessary phrases. Focus on getting to the point.
-- Example: Say ""We should meet tomorrow,"" instead of ""I think it would be best if we could possibly try to meet.""
+- Example: Say "We should meet tomorrow," instead of "I think it would be best if we could possibly try to meet."
  
-Step 4: Maintain a natural tone. Write like you speak. It's okay to start sentences with ""and"" or ""but."" Make it feel conversational, not robotic.
-- Example: ""And that's why it matters.""
+Step 4: Maintain a natural tone. Write like you speak. It's okay to start sentences with "and" or "but." Make it feel conversational, not robotic.
+- Example: "And that's why it matters."
  
 Step 5: Avoid marketing buzzwords, hype, and overpromises. Use neutral, honest descriptions.
-- Avoid: ""This revolutionary app will change your life.""
-- Use instead: ""This app can help you stay organized.""
+- Avoid: "This revolutionary app will change your life."
+- Use instead: "This app can help you stay organized."
  
 Step 6: Keep it real. Be honest. Don't try to fake friendliness or exaggerate.
-- Example: ""I don't think that's the best idea.""
+- Example: "I don't think that's the best idea."
  
 Step 7: Simplify grammar. Don't worry about perfect grammar if it disrupts natural flow. Casual expressions are okay.
-- Example: ""i guess we can try that.""
+- Example: "i guess we can try that."
  
 Step 8: Remove fluff. Avoid using unnecessary adjectives or adverbs. Stick to the facts or your core message.
-- Example: Say ""We finished the task,"" not ""We quickly and efficiently completed the important task.""
+- Example: Say "We finished the task," not "We quickly and efficiently completed the important task."
  
 Step 9: Focus on clarity. Your message should be easy to read and understand without ambiguity.
-- Example: ""Please send the file by Monday.""
+- Example: "Please send the file by Monday."
  
 Follow this structure rigorously. Your final writing should feel honest, grounded, and like it was written by a clear-thinking, real person.
  
@@ -1757,11 +1757,11 @@ Never present generated, inferred, speculated, or deduced content as fact
 
 If you cannot verify something directly, say:
 
-""I cannot verify this.""
+"I cannot verify this."
 
-""I do not have access to that information.""
+"I do not have access to that information."
 
-""My knowledge base does not contain that.""
+"My knowledge base does not contain that."
 
 Label unverified content at the start of a sentence:
 
@@ -1799,9 +1799,9 @@ Do not invent or assume facts
 
 If unconfirmed, say:
 
-""I cannot verify this.""
+"I cannot verify this."
 
-""I do not have access to that information.""
+"I do not have access to that information."
 
 Label all unverified content:
 
@@ -1840,9 +1840,9 @@ Do not present guesses or speculation as fact
 
 If not confirmed, say:
 
-""I cannot verify this.""
+"I cannot verify this."
 
-""I do not have access to that information.""
+"I do not have access to that information."
 
 Label all uncertain or generated content:
 
@@ -2571,7 +2571,7 @@ Have you ever felt difficulty in keeping track of all your meeting notes, or str
 <details>
 <summary><strong>Step 1: Create Account</strong></summary>
 
-- Visit <a href=""https://otter.ai"" target=""_blank"">otter.ai</a>.
+- Visit <a href="https://otter.ai" target="_blank">otter.ai</a>.
 - Create an account using email or Google account.
 - Sync your calendar to auto-join and transcribe meetings.
 </details>
@@ -2583,7 +2583,7 @@ Have you ever felt difficulty in keeping track of all your meeting notes, or str
 
    <details>
   <summary><strong>Audio</strong></summary>
-  <a href=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/sample%20audio.mp3"" target=""_blank"">
+  <a href="https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/sample%20audio.mp3" target="_blank">
     Open Sample Audio
   </a>
 </details>
@@ -2615,7 +2615,7 @@ Have you ever felt difficulty in keeping track of all your meeting notes, or str
 <details>
 <summary><strong>Step 1: Create Account</strong></summary>
 
-- Visit <a href=""https://napkin.ai"" target=""_blank"">napkin.ai</a>.
+- Visit <a href="https://napkin.ai" target="_blank">napkin.ai</a>.
 - Create an account using email or Google account.
 </details>
 
@@ -2669,7 +2669,7 @@ What are Newton's three laws of motion?
 <details>
 <summary><strong>Step 1: Create Account</strong></summary>
 
-- Visit <a href=""https://quizgecko.com"" target=""_blank"">quizgecko.com</a>.
+- Visit <a href="https://quizgecko.com" target="_blank">quizgecko.com</a>.
 - Create an account using email or Google account.
 </details>
 <details>
@@ -2680,8 +2680,8 @@ Choose an input method:
 - **Upload Files**: Textbooks, lecture notes, or articles.
     <details>
     <summary><strong>Sample PDF</strong></summary>
-    <a href=""
-    https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/generative_ai_tutorial_u1cjga.pdf"" target=""_blank"">PDF</a>
+    <a href="
+    https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/generative_ai_tutorial_u1cjga.pdf" target="_blank">PDF</a>
     </details>
 
 - **Question Type**: Multiple choice, true/false, short answer.
@@ -2720,7 +2720,7 @@ Choose an input method:
 <details>
 <summary><strong>Step 1: Create Account</strong></summary>
 
-- Visit <a href=""https://www.perplexity.ai"" target=""_blank"">Perplexity.ai</a>.
+- Visit <a href="https://www.perplexity.ai" target="_blank">Perplexity.ai</a>.
 - Create an account (optional, just for history).
 </details>
 
@@ -2741,7 +2741,7 @@ Find recent academic papers (2020-2024) about the effects of social media on tee
 <details>
 <summary><strong>Step 3: Advanced Research Techniques</strong></summary>
 
-- **Study-Focused Questions**: Ask things like ""school articles about..."" or ""trusted research on...""
+- **Study-Focused Questions**: Ask things like "school articles about..." or "trusted research on..."
 - **Keep the Conversation Going**: Ask follow-up questions to get deeper answers.
 - **Choose Your Sources**: Ask for certain types like school journals, news articles, or government info.
 - **Check if It’s True**: Ask for more than one source to make sure the info is correct.
@@ -3118,7 +3118,7 @@ In cloud computing, all of these are available instantly through the internet, w
 
 ### On-Demand Delivery: The Key Advantage
 
-The ""on-demand"" aspect of cloud computing is what makes it powerful:
+The "on-demand" aspect of cloud computing is what makes it powerful:
 
 ✓ **Need Higher Storage?** Instantly increase storage space without buying new hard drives
 
@@ -3199,7 +3199,7 @@ Let's go through each step in detail.
 **Navigate to Kaggle Website**
 
 1. Open your web browser
-2. Go to <a href=""https://www.kaggle.com"" target=""_blank"">www.kaggle.com</a> 
+2. Go to <a href="https://www.kaggle.com" target="_blank">www.kaggle.com</a> 
 3. Click on `Register` button
 
 **Complete Your Profile**
@@ -3273,7 +3273,7 @@ Kaggle uses **Jupyter Notebooks**, interactive coding environments where you can
    
    ```
    # This is a code cell
-   print(""Hello, Kaggle!"")
+   print("Hello, Kaggle!")
    ```
 
 </details>
@@ -3400,18 +3400,18 @@ Kaggle provides 30 hours of GPU time per week. Here's how to make the most of it
 **Method 1**: Notebook Interface
 
 - Look at top-right corner when GPU is on
-- Shows something like ""GPU: On (27:15 remaining)""
+- Shows something like "GPU: On (27:15 remaining)"
 
 **Method 2**: Account Settings
 
 - Click profile picture → Settings
-- Find ""GPU Quota"" section
+- Find "GPU Quota" section
 - Shows detailed usage breakdown
 
 **What the Display Tells You**:
 
 ```
-""28:45 remaining this week""
+"28:45 remaining this week"
 ↓
 You have 28 hours and 45 minutes left until Saturday reset
 ```
@@ -3434,7 +3434,7 @@ You have 28 hours and 45 minutes left until Saturday reset
 **1. Disable GPU for Non-GPU Work**
 
    - If writing code, planning, or debugging (not generating images)
-   - Switch Accelerator back to ""None""
+   - Switch Accelerator back to "None"
    - GPU time stops counting immediately
 
 **2. Stop Session When Done**
@@ -3461,7 +3461,7 @@ Even with proper setup, you might encounter some issues. Here's how to solve the
 <details>
 <summary><strong>Issue 1: No GPU Available</strong></summary><br>
 
-**Problem**: When you try to enable GPU, the option is greyed out or shows ""Not available.""
+**Problem**: When you try to enable GPU, the option is greyed out or shows "Not available."
 
 **Solution**: Verify Phone Number
 </details>
@@ -3469,7 +3469,7 @@ Even with proper setup, you might encounter some issues. Here's how to solve the
 <details>
 <summary><strong>Issue 2: Session Disconnected</strong></summary><br>
 
-**Problem**: Your notebook session suddenly stops or shows ""Session crashed.""
+**Problem**: Your notebook session suddenly stops or shows "Session crashed."
 
 **Solution**: Normal 12-Hour Limit
 
@@ -3479,7 +3479,7 @@ Even with proper setup, you might encounter some issues. Here's how to solve the
 <details>
 <summary><strong>Issue 3: Out of GPU Hours</strong></summary><br>
 
-**Problem**: Message shows ""GPU quota exceeded"" or ""0:00 remaining this week.""
+**Problem**: Message shows "GPU quota exceeded" or "0:00 remaining this week."
 
 
 
@@ -3622,9 +3622,9 @@ Kaggle is a platform for data science and machine learning that provides:
 - **Limited weekly hours** but enough for learning and experimentation
 
 <MultiLineNote>
-<a href=""https://learning.ccbp.in/course?c_id=b9811b34-585b-47e0-a0be-65f1081a74f2&s_id=04b5d8ae-3e91-4215-be28-63ec61554c26&t_id=4915a7b0-b8d7-4148-8914-d8d3fb086944"" target=""_blank"">Kaggle Setup</a>
+<a href="https://learning.ccbp.in/course?c_id=b9811b34-585b-47e0-a0be-65f1081a74f2&s_id=04b5d8ae-3e91-4215-be28-63ec61554c26&t_id=4915a7b0-b8d7-4148-8914-d8d3fb086944" target="_blank">Kaggle Setup</a>
 <br>
-<a href=""https://www.kaggle.com/code/contentgenai/mastering-image-generation-with-stable-diffusion/edit/run/268462724"" target=""_blank"">Mastering Image Generation Notebook</a>
+<a href="https://www.kaggle.com/code/contentgenai/mastering-image-generation-with-stable-diffusion/edit/run/268462724" target="_blank">Mastering Image Generation Notebook</a>
 
 **CHECK BEFORE PROCEEDING**: Make sure your Kaggle notebook is ready and running with GPU enabled.
 </MultiLineNote>
@@ -3686,7 +3686,7 @@ At this point:
 <details>
 <summary><strong>Create Ngrok Account</strong></summary><br>
 
-1. Visit <a href=""https://ngrok.com"" target=""_blank"">ngrok.com</a>
+1. Visit <a href="https://ngrok.com" target="_blank">ngrok.com</a>
 2. Sign up with your email or Google account
 3. Verify your email address
 4. Log in to your Ngrok dashboard
@@ -3696,7 +3696,7 @@ At this point:
 <details>
 <summary><strong>Get Your Auth Token</strong></summary><br>
 
-1. After logging in, go to ""Your Authtoken"" section
+1. After logging in, go to "Your Authtoken" section
 2. Copy the authentication token (looks like: `2a1b3c4d5e6f7g8h9i0j`)
 3. Keep this token safe - you'll need it in the next step
 
@@ -3785,7 +3785,7 @@ Here are the essential controls you'll use:
 
 The prompt box is where you tell the AI what image you want to create. This is your primary way of communicating with Stable Diffusion.
 
-**Problem**: *""How do I tell the AI what I want?""*
+**Problem**: *"How do I tell the AI what I want?"*
 
 **Solution**: Write a detailed description using clear, descriptive language.
 
@@ -3796,7 +3796,7 @@ The prompt box is where you tell the AI what image you want to create. This is y
 
 The negative prompt tells the AI what NOT to include in your image. This helps prevent common problems like blurry faces, extra fingers, or unwanted styles.
 
-**Problem**: *""The AI keeps adding things I don't want!""*
+**Problem**: *"The AI keeps adding things I don't want!"*
 
 **Solution**: List unwanted elements in the negative prompt box.
 
@@ -3806,7 +3806,7 @@ The negative prompt tells the AI what NOT to include in your image. This helps p
 
 The seed is a number that controls the randomness in image generation. Using the same seed with the same prompt always produces the same image.
 
-**Problem**: *""I want to generate the exact same image again!""*
+**Problem**: *"I want to generate the exact same image again!"*
 
 **Solution**: Use a specific seed number instead of random (-1).
 
@@ -3817,7 +3817,7 @@ The seed is a number that controls the randomness in image generation. Using the
 
 CFG (Classifier Free Guidance) Scale controls how strictly the AI follows your prompt instructions.
 
-**Problem**: *""My image doesn't match my prompt!""*
+**Problem**: *"My image doesn't match my prompt!"*
 
 **Solution**: Adjust the CFG Scale to control adherence to your instructions.
 
@@ -3827,7 +3827,7 @@ CFG (Classifier Free Guidance) Scale controls how strictly the AI follows your p
 
 Sampling steps determine how many times the AI refines the image. More steps = more refinement = better quality (but slower generation).
 
-**Problem**: *""My image looks rough or unfinished!""*
+**Problem**: *"My image looks rough or unfinished!"*
 
 **Solution**: Increase the sampling steps for more refined results.
 
@@ -3837,7 +3837,7 @@ Sampling steps determine how many times the AI refines the image. More steps = m
 
 Sampling methods are different algorithms (mathematical approaches) the AI uses to generate images. Each method has trade-offs between speed, quality, and consistency.
 
-**Problem**: *""I want different styles or faster results!""*
+**Problem**: *"I want different styles or faster results!"*
 
 **Solution**: Choose a sampling method based on your priorities.
 
@@ -3899,7 +3899,7 @@ Sampling methods are different algorithms (mathematical approaches) the AI uses 
 
 Image size sets the width and height of your generated image in pixels. Different Stable Diffusion versions work best at specific resolutions.
 
-**Problem**: *""I need specific image dimensions!""*
+**Problem**: *"I need specific image dimensions!"*
 
 **Solution**: Set appropriate width and height based on your SD version and needs.
 
@@ -3928,7 +3928,7 @@ Image size sets the width and height of your generated image in pixels. Differen
 
 Batch count determines how many different images are generated at once from the same prompt. Each image will have variation due to different random seeds.
 
-**Problem**: *""I want different versions to choose from!""*
+**Problem**: *"I want different versions to choose from!"*
 
 **Solution**: Increase batch count to generate multiple variations simultaneously.
 
@@ -4066,7 +4066,7 @@ Let’s understand with a babysitter analogy
 ### AI Model - LLM
 
 - The model is essentially the agent’s “brain” – it interprets instructions, reasons about problems, and decides on actions (GPT-5, Claude, Llama, etc)
-- The ""brain"" of the agent that can do
+- The "brain" of the agent that can do
     - Goal Understanding
     - Planning & Reasoning
     - Adaptive Learning
@@ -4075,7 +4075,7 @@ Let’s understand with a babysitter analogy
 ### Tools
 
 - Tools are external functions or interfaces the agent can use to interact with the outside world
-- Tools are the agent's ""arms and legs"".
+- Tools are the agent's "arms and legs".
     - Extends Capabilities: Allow the agent to perform actions it couldn't do alone
     - Access Real-Time Data: Connect to current information beyond the model's training cutoff
     - Executes Specific Functions: Perform specialized tasks with precision
@@ -4182,7 +4182,7 @@ Transportation will be a significant portion of the total cost based on the star
 
 
 #### Action
-Search for **""Cheapest transportation to Ooty from Bangalore/Chennai/Delhi.""**
+Search for **"Cheapest transportation to Ooty from Bangalore/Chennai/Delhi."**
 
 
 #### Observation
@@ -4199,7 +4199,7 @@ With approximately 7,000 INR remaining for accommodation, the budget allows for 
 
 
 #### Action
-Search for **""Budget hotels in Ooty under 2,500 INR with good reviews.""**
+Search for **"Budget hotels in Ooty under 2,500 INR with good reviews."**
 
 
 
@@ -4448,9 +4448,9 @@ and many more models available in the open source community.
 <details>
 <summary><strong>Handson</strong></summary><br>
 
-<a href=""https://huggingface.co/spaces/Xenova/whisper-web"" target=""_blank"">Whisper</a>
+<a href="https://huggingface.co/spaces/Xenova/whisper-web" target="_blank">Whisper</a>
 <br>
-<a href=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat_programming_foundations/niat_coding_questions/A%20one%20minute%20TEDx%20Talk%20for%20the%20digital%20age%20%20Woody%20Roseland%20%20TEDxMileHigh.mp3"" target=""_blank"">Audio File</a>
+<a href="https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat_programming_foundations/niat_coding_questions/A%20one%20minute%20TEDx%20Talk%20for%20the%20digital%20age%20%20Woody%20Roseland%20%20TEDxMileHigh.mp3" target="_blank">Audio File</a>
 
 </details>
 
@@ -4470,7 +4470,7 @@ and many more models available in the open source community.
 <details>
 <summary><strong>Handson</strong></summary><br>
 
-<a href=""https://huggingface.co/spaces/neuromod0/MeloTTS-English-v3"" target=""_blank"">MeloTTS</a>
+<a href="https://huggingface.co/spaces/neuromod0/MeloTTS-English-v3" target="_blank">MeloTTS</a>
 <br>
 
 **Sample Text**:
@@ -4526,7 +4526,7 @@ Instead of working directly with models, many platforms provide user-friendly in
 
 <details>
 <summary><strong>Handson</strong></summary><br>
-<a href=""https://elevenlabs.io/"" target=""_blank"">ElevenLabs</a>
+<a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a>
 <br>
 
 **Text-to-Speech**:
@@ -4535,7 +4535,7 @@ Instead of working directly with models, many platforms provide user-friendly in
 Generative AI is a type of artificial intelligence that focuses on creating new content, like text, images, music, audio, and videos, rather than analyzing or classifying existing data. It does this by learning from large datasets and using its learned patterns to generate novel outputs in response to prompts or inputs
 ```
 
-<a href=""http://murf.ai/"" target=""_blank"">Murf.ai</a>
+<a href="http://murf.ai/" target="_blank">Murf.ai</a>
 <br>
 
 **Text-to-Speech**:
@@ -4545,7 +4545,7 @@ Artificial Intelligence (AI) revolutionizes the way we live and work through mac
 ```
 
 
-<a href=""https://aistudio.google.com/live"" target=""_blank"">Google AI Studio</a>
+<a href="https://aistudio.google.com/live" target="_blank">Google AI Studio</a>
 <br>
 
 **Speech-to-Speech**:
@@ -4608,8 +4608,8 @@ The Chat Trigger is the starting point that initiates our workflow. It allows us
 **Add Chat Trigger Node**:
 
 1. Click the `+` button to add a new node
-2. Search for ""Chat Trigger""
-3. Select ""Chat Trigger"" from the results
+2. Search for "Chat Trigger"
+3. Select "Chat Trigger" from the results
 4. The node will appear on your canvas
 
 **How It Works**:
@@ -4618,7 +4618,7 @@ The Chat Trigger is the starting point that initiates our workflow. It allows us
 - The trigger captures this input
 - Passes the topic to the next step for script generation
 
-**Example Input**: ""The history of artificial intelligence""
+**Example Input**: "The history of artificial intelligence"
 
 This input will be used throughout the workflow to generate relevant content.
 
@@ -4632,8 +4632,8 @@ This input will be used throughout the workflow to generate relevant content.
 **Steps**:
 
 1. Click `+` to add a new node after Chat Trigger
-2. Search for ""Basic LLM Chain""
-3. Select ""Basic LLM Chain"" from results
+2. Search for "Basic LLM Chain"
+3. Select "Basic LLM Chain" from results
 4. This node will generate our podcast script
 
 **Define Prompt for Generating Podcast Script**
@@ -4656,12 +4656,12 @@ Avoid any headings, labels, or formatting. Output plain text only.
 
 **Prompt Breakdown**:
 
-- **Role**: ""You are a professional podcast script writer"" - Sets AI's identity
-- **Task**: ""Write a conversational and engaging podcast script"" - Clear instruction
+- **Role**: "You are a professional podcast script writer" - Sets AI's identity
+- **Task**: "Write a conversational and engaging podcast script" - Clear instruction
 - **Input**: `{{ $json.chatInput }}` - Takes topic from Chat Trigger
-- **Length**: ""Keep it around 2 minutes when spoken"" - Controls output length
-- **Tone**: ""friendly and informative tone"" - Defines style
-- **Format**: ""Output plain text only"" - Ensures clean output for audio conversion
+- **Length**: "Keep it around 2 minutes when spoken" - Controls output length
+- **Tone**: "friendly and informative tone" - Defines style
+- **Format**: "Output plain text only" - Ensures clean output for audio conversion
 
 **Search and Add Chat Model**
 
@@ -4669,14 +4669,14 @@ Avoid any headings, labels, or formatting. Output plain text only.
 
 1. In the Basic LLM Chain node, look for the model selection
 2. Click `+` to add a chat model
-3. Search for ""Google Gemini Chat Model""
+3. Search for "Google Gemini Chat Model"
 4. Select it from the results
 
 **Choose Model and Connect to LLM Chain**
 
 **Configuration**:
 
-1. Select ""Google Gemini Chat Model""
+1. Select "Google Gemini Chat Model"
 2. Add your Gemini API credentials (refer to previous setup guides)
 3. Connect the Chat Trigger output to the LLM Chain input
 4. The LLM Chain will now receive the topic and generate a script
@@ -4684,7 +4684,7 @@ Avoid any headings, labels, or formatting. Output plain text only.
 **What Happens**:
 
 ```
-Topic: ""The future of renewable energy""
+Topic: "The future of renewable energy"
     ↓
 Gemini processes with the prompt
     ↓
@@ -4702,18 +4702,18 @@ Generates: [A 2-minute conversational podcast script about renewable energy]
 
 Before implementing, explore the platform:
 
-- Visit <a href=""https://murf.ai"" target=""_blank"">Murf.AI</a>
+- Visit <a href="https://murf.ai" target="_blank">Murf.AI</a>
 - Create a free account
 - Test different voices and see how natural they sound
-- Note the voice names you like (e.g., ""en-US-natalie"")
+- Note the voice names you like (e.g., "en-US-natalie")
 
 ### Add HTTP Request Node
 
 **Steps**:
 
 1. Click `+` to add new node after LLM Chain
-2. Search for ""HTTP Request""
-3. Select ""HTTP Request"" node
+2. Search for "HTTP Request"
+3. Select "HTTP Request" node
 4. This will connect to Murf.ai's API
 
 ### Configure API Endpoint
@@ -4730,7 +4730,7 @@ Before implementing, explore the platform:
 
 ### Set Voice to en-US-natalie
 
-""en-US-natalie"" is a natural-sounding female voice with American English accent. You can choose different voices based on your preference.
+"en-US-natalie" is a natural-sounding female voice with American English accent. You can choose different voices based on your preference.
 
 **Popular Voice Options**:
 
@@ -4862,11 +4862,11 @@ There are 100s of tools like:
 
 ```
 Design a minimal and visually appealing podcast interface. The interface should feature:
-A prominent text input field labeled ""Type podcast topic here..."" where users can enter their desired podcast topic.
-A ""Generate Podcast"" button, incorporating a speaker emoji, that triggers the podcast generation process. The button should exhibit a color change on hover.
+A prominent text input field labeled "Type podcast topic here..." where users can enter their desired podcast topic.
+A "Generate Podcast" button, incorporating a speaker emoji, that triggers the podcast generation process. The button should exhibit a color change on hover.
 A loading animation (e.g., pulsing dots) displayed while the podcast is being generated.
-An audio player area that initially displays ""Podcast will appear here.""
-Functionality: Upon clicking ""Generate Podcast,"" the loading animation should appear for 2 -3 seconds, followed by the message ""Feature coming soon!"" in the audio player area.
+An audio player area that initially displays "Podcast will appear here."
+Functionality: Upon clicking "Generate Podcast," the loading animation should appear for 2 -3 seconds, followed by the message "Feature coming soon!" in the audio player area.
 Visual Style: Utilize soft pastel colors (with appropriate contrast) and rounded corners throughout the design to create a cute and friendly appearance.
 Adaptive Design: Ensure the interface is flexible and adapts seamlessly to different screen sizes.
 
@@ -4888,7 +4888,7 @@ Adaptive Design: Ensure the interface is flexible and adapts seamlessly to diffe
 
 - To generate a podcast, n8n needs information We'll send this data in a specific format.
 
-`{""text"": ""whatever topic they typed""}`
+`{"text": "whatever topic they typed"}`
 
 <b>The Missing Link</b>
 <br>
@@ -4910,13 +4910,13 @@ We need to create a bridge between:
 - Think of a webhook like giving your workflow a phone number on the internet:
 
     - Your frontend knows this phone number
-    - It ""calls"" this number with the user's text - whenever a user enters text and presses the button
-    - Your workflow ""answers"" - processes the input and generates the podcast
-    - It ""calls back"" with the finished audio file - returns the final result
+    - It "calls" this number with the user's text - whenever a user enters text and presses the button
+    - Your workflow "answers" - processes the input and generates the podcast
+    - It "calls back" with the finished audio file - returns the final result
 
 <b>Replace Chat Trigger with Webhook</b>
 
-<MultiLineWarning text=""Why this change?"">
+<MultiLineWarning text="Why this change?">
 
 - Chat Trigger only works inside n8n
 - Webhook works from anywhere on the internet
@@ -5015,16 +5015,16 @@ Update the podcast interface to connect with this web address: [PASTE WEBHOOK UR
 
 When someone clicks Generate Podcast:
 Take the text they typed about their podcast topic
-Send it to the web address in this format: {""text"": ""the topic they typed""}
-Show loading dots saying ""Creating podcast... please wait!""
+Send it to the web address in this format: {"text": "the topic they typed"}
+Show loading dots saying "Creating podcast... please wait!"
 
 When the response comes back:
-It will contain {""audioFile"": ""link to the podcast""}
+It will contain {"audioFile": "link to the podcast"}
 Show this audio in the player using the audioFile link
-Display message "" Podcast is ready! Click play to listen""
+Display message " Podcast is ready! Click play to listen"
 
 If something goes wrong:
-Show ""Oops! Something went wrong. Please try again""
+Show "Oops! Something went wrong. Please try again"
 
 After successful generation:
 Clear the text box for next topic
@@ -5059,7 +5059,7 @@ The Complete Flow
 
 - Execute the workflow in n8n (to keep it ready)  
 2. Open your Lovable preview  
-3. Type a podcast topic (e.g., ""Generative AI"")  
+3. Type a podcast topic (e.g., "Generative AI")  
 4. Click the `Generate Podcast` button  
 5. Watch the loading animation appear  
 6. Switch to the n8n tab — see nodes turning green as workflow executes  
@@ -5175,7 +5175,7 @@ F5-TTS is an AI-powered text-to-speech synthesis tool that converts text into na
 
 Running an audio generation model requires a GPU. However, free cloud GPU access is available through platforms like Kaggle.
 
-<a href=""https://learning.ccbp.in/course?c_id=b9811b34-585b-47e0-a0be-65f1081a74f2&s_id=04b5d8ae-3e91-4215-be28-63ec61554c26&t_id=4915a7b0-b8d7-4148-8914-d8d3fb086944"" target=""_blank"">Kaggle Setup</a>
+<a href="https://learning.ccbp.in/course?c_id=b9811b34-585b-47e0-a0be-65f1081a74f2&s_id=04b5d8ae-3e91-4215-be28-63ec61554c26&t_id=4915a7b0-b8d7-4148-8914-d8d3fb086944" target="_blank">Kaggle Setup</a>
 </details>
 
 <details>
@@ -5183,7 +5183,7 @@ Running an audio generation model requires a GPU. However, free cloud GPU access
 
 After the Kaggle setup, executes notebook successfully, it will generate URLs that connect directly to the F5-TTS interface.
 
-<a href=""https://www.kaggle.com/code/contentgenai/mastering-ai-audio-generation-using-f5-tts"" target=""_blank"">Master Audio Generation using F5-TTS Notebook</a>
+<a href="https://www.kaggle.com/code/contentgenai/mastering-ai-audio-generation-using-f5-tts" target="_blank">Master Audio Generation using F5-TTS Notebook</a>
 </details>
 
 <MultiLineNote>
@@ -5207,7 +5207,7 @@ The process is straightforward:
 - **How to use?**: Upload a voice sample (3-10 seconds) or record directly using the mic icon.
 - **Why it matters?**: The model learns the voice characteristics, capturing tone, pitch, and accent.
 - **Tip**: Use clear speech with minimal background noise.
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/36d060ec-f8b6-401a-a8e1-c9b9a6db5450_example.mp3"" > Sample Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/36d060ec-f8b6-401a-a8e1-c9b9a6db5450_example.mp3" > Sample Audio File </a>
 - Reference Text
 
 ```
@@ -5262,12 +5262,12 @@ Click the generate button, and F5-TTS will produce the audio output. You will ha
 
 #### Multi Speech: Reference Audio
 
-Upload multiple audio clips, each with a specific speech type name (e.g., ""neutral"", ""sad"", ""anger"", ""surprise""). Each clip should represent a different voice, accent, or emotional style.
+Upload multiple audio clips, each with a specific speech type name (e.g., "neutral", "sad", "anger", "surprise"). Each clip should represent a different voice, accent, or emotional style.
 
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/d9abe905-b7e6-4052-94d9-77bd8fe13939_neutral016%20(1).wav"" > Neutral Audio File </a>
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/768692de-1184-4174-b119-ce88377c681b_sad016%20(1).wav"" > Sad Audio File </a>
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/fa6d5d90-6027-4eca-9aa4-11f8af3cb87b_anger016%20(1).wav"" > Anger Audio File </a>
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/4c0d885e-9088-4a7d-9b89-9d4489546c4a_surprise016%20(1).wav"" > Surprise Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/d9abe905-b7e6-4052-94d9-77bd8fe13939_neutral016%20(1).wav" > Neutral Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/768692de-1184-4174-b119-ce88377c681b_sad016%20(1).wav" > Sad Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/fa6d5d90-6027-4eca-9aa4-11f8af3cb87b_anger016%20(1).wav" > Anger Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/4c0d885e-9088-4a7d-9b89-9d4489546c4a_surprise016%20(1).wav" > Surprise Audio File </a>
 
 </details>
 
@@ -5360,7 +5360,7 @@ The Chat Trigger provides a chat interface for users to interact with the agent 
 **Configuration:**
 
 1.  Place the **Chat Trigger** node at the beginning of your workflow.
-2.  This node will activate the workflow whenever a user sends a message, allowing them to input their learning goal (e.g., ""create a 5-day learning plan for React"").
+2.  This node will activate the workflow whenever a user sends a message, allowing them to input their learning goal (e.g., "create a 5-day learning plan for React").
 
 </details>
 
@@ -5373,7 +5373,7 @@ The AI Agent is the core of our workflow. It understands the user's learning goa
 **Configuration:**
 
 1.  Add an **AI Agent** node and connect it to the **Chat Trigger**.
-2.  Connect a **Google Gemini Chat Model** to the AI Agent's ""Language Model"" input.
+2.  Connect a **Google Gemini Chat Model** to the AI Agent's "Language Model" input.
     -   Select the `gemini-2.0-flash` model.
     -   You will need to provide an API Key from Google AI Studio.
 
@@ -5410,7 +5410,7 @@ Since the SerpAPI Tool node is currently unreliable, we will integrate SerpAPI u
 <details><summary>**Steps to Integrating Serp API with HTTP Request Tool **</summary>
 1. Add an **HTTP Request** node as a tool to your AI Agent.  
 2. Describe what the tool does.  
-3. Import the <a href=""https://serpapi.com/search-api"" target=""_blank"">cURL</a> from SerpAPI and map it inside the HTTP Request node.
+3. Import the <a href="https://serpapi.com/search-api" target="_blank">cURL</a> from SerpAPI and map it inside the HTTP Request node.
 </details>
 
 
@@ -5425,7 +5425,7 @@ We'll use the Google Docs tool to create a new document that will store the gene
 **What it does:**
 
 -   Creates a new, blank Google Document.
--   Assigns a title to the document (e.g., ""5-Day React Learning Path"").
+-   Assigns a title to the document (e.g., "5-Day React Learning Path").
 -   Returns the document ID for later steps.
 
 **Configuration:**
@@ -5434,8 +5434,8 @@ We'll use the Google Docs tool to create a new document that will store the gene
     -   Creating a new project.
     -   Enabling the **Google Docs API** and **Google Drive API**.
     -   Configuring the OAuth consent screen and creating OAuth 2.0 credentials (Client ID and Secret).
-2.  Add a **Google Docs** tool node for the ""Create a document"" action.
-3.  Connect it to the **AI Agent's** ""Tools"" input.
+2.  Add a **Google Docs** tool node for the "Create a document" action.
+3.  Connect it to the **AI Agent's** "Tools" input.
 4.  Connect it with the OAuth credentials you just created.
 
 </details>
@@ -5454,9 +5454,9 @@ Once the document is created, the agent needs to fill it with the structured lea
 
 **Configuration:**
 
-1.  Add another **Google Docs** tool node, this time for the ""Update a document"" action.
-2.  Connect it to the **AI Agent's** ""Tools"" input.
-3.  Use the same OAuth credentials as the ""Create"" tool. The agent will use this tool to add all the content at once.
+1.  Add another **Google Docs** tool node, this time for the "Update a document" action.
+2.  Connect it to the **AI Agent's** "Tools" input.
+3.  Use the same OAuth credentials as the "Create" tool. The agent will use this tool to add all the content at once.
 
 </details>
 
@@ -5476,8 +5476,8 @@ Finally, to help the user commit to their learning schedule, the agent will crea
 **Configuration:**
 
 1.  In the Google Cloud Console, ensure the **Google Calendar API** is enabled for your project.
-2.  Add a **Google Calendar** tool node for the ""Create an event"" action.
-3.  Connect it to the **AI Agent's** ""Tools"" input.
+2.  Add a **Google Calendar** tool node for the "Create an event" action.
+3.  Connect it to the **AI Agent's** "Tools" input.
 4.  Use the same OAuth credentials. The agent will call this tool multiple times, once for each day in the learning plan.
 
 </details>
@@ -5499,9 +5499,9 @@ STEP 1: PLAN THE CURRICULUM
 Plan the topics based on the number of days requested. Structure from beginner to advanced.
 STEP 2: DETERMINE START DATE
 
-If user says ""starting tomorrow"" → use tomorrow's date
-If user says ""starting next Monday"" → calculate next Monday
-If user says ""starting from [date]"" → use that date
+If user says "starting tomorrow" → use tomorrow's date
+If user says "starting next Monday" → calculate next Monday
+If user says "starting from [date]" → use that date
 If NO date mentioned → use TODAY's date
 Today is {{$now.format('YYYY-MM-DD')}}
 
@@ -5514,10 +5514,10 @@ Documentation
 Extract real URLs from results.
 
 STEP 4: CREATE GOOGLE DOCUMENT
-Call ""Create a document in Google Docs"" tool with title ""[X]-Day [Topic] Learning Path""
+Call "Create a document in Google Docs" tool with title "[X]-Day [Topic] Learning Path"
 Note the document ID from response.
 STEP 5: UPDATE GOOGLE DOCUMENT
-Call ""Update a document in Google Docs"" once with all days' content in this format:
+Call "Update a document in Google Docs" once with all days' content in this format:
 Day 1: [Topic Name]
 Description: [2-3 sentence overview]
 Key Learning Points:
@@ -5545,7 +5545,7 @@ Day 2: START_DATE + 1 day at 11:00 AM
 Day 3: START_DATE + 2 days at 11:00 AM
 Continue incrementing by 1 day.
 
-Call ""Create an event in Google Calendar"" separately for each day with:
+Call "Create an event in Google Calendar" separately for each day with:
 
 Start: [DATE]T11:00:00+05:30
 End: [DATE]T13:00:00+05:30
@@ -5555,10 +5555,10 @@ Use_Default_Reminders: true
 
 STEP 7: PROVIDE FINAL OUTPUT
 After all events are created, respond with:
-""Learning Path Complete!
+"Learning Path Complete!
 Document: [Google Docs URL]
 Calendar: I've added [X] events from [START_DATE] to [END_DATE] at 11:00 AM.
-Your [X]-day [topic] learning journey is ready!""
+Your [X]-day [topic] learning journey is ready!"
 Then stop immediately.
 CRITICAL RULES:
 
@@ -5594,9 +5594,9 @@ With this setup, you have an autonomous agent that can take a simple request and
 
 In the previous unit, we understood the concept of AI Agents and built a learning path generator agent that researches, finds learning resources and creates a structured day wise learning path. In this unit, we will focus on building a practical AI-powered shopping assistant. This assistant will help users find products quickly, provide personalized styling advice, and simplify the online shopping experience-all within Telegram.
 
-> _""Have you ever felt frustrated while searching for products online? Let's explore how an AI assistant can make the process faster and more personalized.""_
+> _"Have you ever felt frustrated while searching for products online? Let's explore how an AI assistant can make the process faster and more personalized."_
 
-> _""In this section, we will guide you through the steps to build an AI shopping assistant on Telegram using N8N and AI models like Google Gemini.""_
+> _"In this section, we will guide you through the steps to build an AI shopping assistant on Telegram using N8N and AI models like Google Gemini."_
 
 ## 1. AI Shopping Assistant Overview
 
@@ -5652,11 +5652,11 @@ To create the Telegram bot, we use BotFather on Telegram
 
 ### Step 2: Adding an AI Agent
 
-- **Integrate AI Model**: Use AI models like **Google Gemini** or **Claude** to process the user’s query (e.g., ""red dress under 2000"") and return relevant product results.
+- **Integrate AI Model**: Use AI models like **Google Gemini** or **Claude** to process the user’s query (e.g., "red dress under 2000") and return relevant product results.
 
 ### Step 3: Searching for Products
 
-When users ask for products like ""red shirt under 2000"", we need to Search Amazon India in real-time, Get actual product names, prices, and ratings and Show only relevant results
+When users ask for products like "red shirt under 2000", we need to Search Amazon India in real-time, Get actual product names, prices, and ratings and Show only relevant results
 
 - **Scraper API**: The Scraper API allows you to fetch live product data from Amazon. This helps in scraping product names, prices, ratings, and other relevant details in real time.
 
@@ -5673,20 +5673,20 @@ You are Maya, a shopping and styling assistant on Telegram.
 
 ## Your Job
 
-1. **Product Search**: User asks ""shoes under 5000"" → Search Amazon → Show results
-2. **Styling Advice**: User asks ""how to style blue jeans"" or ""outfit for wedding"" → Ask questions → Give personalized styling tips
+1. **Product Search**: User asks "shoes under 5000" → Search Amazon → Show results
+2. **Styling Advice**: User asks "how to style blue jeans" or "outfit for wedding" → Ask questions → Give personalized styling tips
 
 ## When to Use Scraper API Tool
 
 ### For Product Searches Only
 
-When user requests products (e.g., ""I want sneakers under ₹3000"" or ""show me dresses""), follow these steps:
+When user requests products (e.g., "I want sneakers under ₹3000" or "show me dresses"), follow these steps:
 
 1. **Extract the search query** from user's message
 2. **Build the Amazon India search URL**:
    - Format: `https://www.amazon.in/s?k=SEARCH_QUERY`
    - Replace spaces with `+` in the query
-   - Example: ""white sneakers under 3000"" → `https://www.amazon.in/s?k=white+sneakers+under+3000`
+   - Example: "white sneakers under 3000" → `https://www.amazon.in/s?k=white+sneakers+under+3000`
 
 3. **Call the Scraper API tool** with the Amazon URL as the `url` parameter
    - The tool already has api_key configured
@@ -5701,7 +5701,7 @@ When user requests products (e.g., ""I want sneakers under ₹3000"" or ""show m
 5. **Show top 5 products** in clean format
 
 **Example Flow:**
-- User says: ""show me running shoes under 2000""
+- User says: "show me running shoes under 2000"
 - You create URL: `https://www.amazon.in/s?k=running+shoes+under+2000`
 - Call tool with this URL
 - Display top 5 results from the scraped data
@@ -5712,10 +5712,10 @@ When user asks for styling advice (without wanting to search products):
 
 **Step 1: Understand the Context**
 Ask clarifying questions:
-- ""What's the occasion? (casual/formal/party/wedding/office)""
-- ""What's your preferred style? (traditional/western/fusion)""
-- ""Any color preferences?""
-- ""What season/weather?""
+- "What's the occasion? (casual/formal/party/wedding/office)"
+- "What's your preferred style? (traditional/western/fusion)"
+- "Any color preferences?"
+- "What season/weather?"
 
 **Step 2: Give Personalized Styling Tips**
 Based on their answers, provide:
@@ -5728,13 +5728,13 @@ Based on their answers, provide:
 
 **Example:**
 
-*User: ""How to style a kurti?""*
-**You:** ""I'd love to help! Quick questions:
+*User: "How to style a kurti?"*
+**You:** "I'd love to help! Quick questions:
 - What occasion? (Office/casual/festive)
 - What color is the kurti?
-- Traditional or modern look?""
+- Traditional or modern look?"
 
-*User: ""Casual, blue kurti, modern look""*
+*User: "Casual, blue kurti, modern look"*
 **You:**
 
 - Blue Kurti - Modern Casual Look
@@ -5791,9 +5791,9 @@ Want me to search for any of these items?
 
 In the previous part, we learned how to build an AI-powered shopping assistant on Telegram. In this section, we will enhance the assistant by adding **voice input** functionality. This will allow users to speak their product requests instead of typing them, making the shopping experience more intuitive and accessible.
 
-> _""Have you ever found it difficult to type your shopping queries? Let’s explore how voice input can improve the shopping assistant experience.""_
+> _"Have you ever found it difficult to type your shopping queries? Let’s explore how voice input can improve the shopping assistant experience."_
 
-> _""In this section, we will guide you through the steps of adding voice message support to the AI shopping assistant, enabling automatic speech-to-text conversion for better interaction.""_
+> _"In this section, we will guide you through the steps of adding voice message support to the AI shopping assistant, enabling automatic speech-to-text conversion for better interaction."_
 
 ## 1. Enhancing the Telegram Shopping Assistant with Audio Support
 
@@ -5936,7 +5936,7 @@ In this session, we will explore agents with memory and Adding Memory to AI Shop
 
 An AI agent is a system that works autonomously to achieve a specific goal. The core components of an agent are:
 
--   **AI Model:** The ""brain"" of the agent (e.g., GPT-4, Claude).
+-   **AI Model:** The "brain" of the agent (e.g., GPT-4, Claude).
 -   **Tools:** External resources the agent can use (e.g., search engines, databases).
 -   **Memory:** The agent's ability to store and recall information.
 
@@ -5951,7 +5951,7 @@ Agents with memory are AI systems that can store and use past information to mak
 Memory allows an agent to:
 
 -   **Store information:** Keep a record of important details from previous interactions.
--   **Learn from past interactions:** Refine its responses based on what it has ""learned.""
+-   **Learn from past interactions:** Refine its responses based on what it has "learned."
 -   **Maintain context and continuity:** Turn isolated conversations into a single, continuous dialogue.
 
 Without memory, an agent treats every interaction as a new one, unable to recall previous instructions, preferences, or context.
@@ -5981,7 +5981,7 @@ Short-term memory is the agent's ability to remember information relevant to the
 
 #### Context Window
 
-Short-term memory is limited by the model's **context window**. The context window is the maximum amount of text the model can process at once to generate a response. If a conversation exceeds the context window, the model may ""forget"" earlier parts of the conversation.
+Short-term memory is limited by the model's **context window**. The context window is the maximum amount of text the model can process at once to generate a response. If a conversation exceeds the context window, the model may "forget" earlier parts of the conversation.
 
 #### Implementing Short-Term Memory in n8n
 
@@ -6007,7 +6007,7 @@ Long-term memory can be implemented using external data stores like:
 Long-term memory can be further categorized into:
 
 -   **Episodic Memory:** Stores specific events and experiences .
--   **Procedural Memory:** Stores learned skills and ""how-to"" knowledge .
+-   **Procedural Memory:** Stores learned skills and "how-to" knowledge .
 -   **Semantic Memory:** Stores general knowledge, facts, and concepts .
 
 ## Building an AI Shopping Assistant with Memory

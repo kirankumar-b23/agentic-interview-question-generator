@@ -11,3 +11,7 @@ flask>=3.0.0
 python-dotenv>=1.0.0
 pytest>=8.0.0
 tavily-python>=0.5
+# Local semantic embeddings (free, no API key) for retrieval/MMR/coverage/attribution.
+# Falls back to TF-IDF if unavailable. Install CPU torch to keep it lean:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+sentence-transformers>=2.2.0

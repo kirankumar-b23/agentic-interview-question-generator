@@ -56,8 +56,16 @@ def understand_session(session_names: list[str], data_store: DataStore) -> Sessi
     """
     combined_name = " + ".join(session_names)
 
-    # Check cache
-    cached = memory.get_cached_resolution(combined_name)
+    # Cache key includes a hash of the sessions' reading material, so an edit to the RM
+    # (or a session split/rename) self-invalidates the cache instead of serving stale
+    # outcomes forever (the old key was the bare combined name with no invalidation).
+    import hashlib
+    rm_sig = hashlib.md5(
+        " ".join((data_store.get_session_content(n) or "") for n in session_names).encode("utf-8")
+    ).hexdigest()[:10]
+    cache_key = f"{combined_name}::{rm_sig}"
+
+    cached = memory.get_cached_resolution(cache_key)
     if cached:
         return SessionContext(**cached)
 
@@ -67,7 +75,7 @@ def understand_session(session_names: list[str], data_store: DataStore) -> Sessi
         per_session = [_resolve_single(name, data_store) for name in session_names]
         context = _merge_contexts(per_session, combined_name)
 
-    memory.cache_resolution(combined_name, context.model_dump())
+    memory.cache_resolution(cache_key, context.model_dump())
     return context
 
 

@@ -10,7 +10,12 @@ if TYPE_CHECKING:
     from src.agent import AgentState
 
 
-_TOOL_NAMES = {"search_question_bank", "search_github_questions", "search_web_questions"}
+from src.config import GITHUB_ENABLED
+
+# GitHub disabled by default (general ML/DS noise, no company attribution).
+_TOOL_NAMES = {"search_question_bank", "search_web_questions"}
+if GITHUB_ENABLED:
+    _TOOL_NAMES.add("search_github_questions")
 _SCHEMAS = [s for s in TOOL_SCHEMAS if s["function"]["name"] in _TOOL_NAMES]
 _DISPATCH = {k: TOOL_DISPATCH[k] for k in _TOOL_NAMES}
 
@@ -27,15 +32,20 @@ class RetrievalAgent(BaseAgent):
         return _DISPATCH
 
     def run(self, state: "AgentState", emit) -> None:
-        """Run Tavily first (company questions), then the LLM loop (bank + GitHub fill remaining)."""
+        """LLM loop (bank first, then web, then GitHub per the prompt) fills a wide pool;
+        a later stage scores relevance and trims to max. The curated bank goes first so it
+        is never starved by web results."""
         from src.tools import tool_search_web_questions
         from src.agent import _summarize_result
 
-        # Run Tavily before bank/GitHub — guaranteed company-attributed questions.
-        # Running first ensures capacity is available before bank/GitHub fill up.
+        # LLM loop: bank → web → github, gathering up to the candidate pool.
+        super().run(state, emit)
+
+        # Safety net: guarantee company-attributed web questions were fetched even if the
+        # LLM skipped that step (bank has already had first pick of the pool).
         outcomes = (state.session_context.learning_outcomes
                     if state.session_context else [])
-        if outcomes:
+        if outcomes and "web" not in state.raw_fetched:
             emit("search_web_questions", "running",
                  "Retrieving Questions: fetching company-attributed questions from Tavily...")
             result = tool_search_web_questions(state, outcomes)
@@ -43,13 +53,11 @@ class RetrievalAgent(BaseAgent):
                                    "args_keys": ["outcomes"], "has_error": "error" in result})
             emit("search_web_questions", "done", _summarize_result("search_web_questions", result))
 
-        # LLM loop fills remaining capacity with bank + GitHub questions
-        super().run(state, emit)
-
     def get_system_prompt(self, state: AgentState) -> str:
         if not state.session_context:
             return "No session context available — do not call any tools."
 
+        from src.config import BANK_POOL_CAP, WEB_POOL_CAP, GITHUB_POOL_CAP
         ctx = state.session_context
         min_q = state.config.min_questions
         max_q = state.config.max_questions
@@ -65,16 +73,19 @@ class RetrievalAgent(BaseAgent):
         return f"""You are a question retrieval specialist. Find REAL interview questions from verified sources.
 
 ## Session: {ctx.session_name}  |  Type: {ctx.session_type}
-## Target: {min_q}–{max_q} questions
+## Final target: {min_q}–{max_q} questions — but first gather a WIDE candidate pool from BOTH sources.
+A later stage scores every candidate for relevance to the reading material and trims to the
+final {max_q}. So your job here is RECALL: collect many plausible candidates from every source.
+Do NOT stop early at {max_q}. Each source has its own quota, so use BOTH — a source being
+"full" does NOT mean you are done; move to the next source.
 
-## Retrieval Strategy (interview data first, then the web)
-1. Call `search_question_bank` 3–5 times, once per query below — this is the provided interview data, always check it first
-2. Call `search_web_questions` — always, to get real company-attributed questions from Glassdoor, AmbitionBox, Exponent etc.
+## Retrieval Strategy — use BOTH sources (each has an independent quota)
+1. `search_question_bank` (up to {BANK_POOL_CAP}) — the curated interview data; call it 3–5 times, once per query below.
+2. `search_web_questions` (up to {WEB_POOL_CAP}) — ALWAYS call it for real company-attributed questions (Glassdoor, AmbitionBox, Exponent…). This is the freshest source; never skip it.
    Pass SHORT topic keywords (2–4 words each), NOT full outcome sentences.
    Good: ["LangChain RAG", "AI agents memory", "RAG retrieval augmented generation"]
    Bad:  ["Implement LangChain RecursiveCharacterTextSplitter", "Build RAG pipelines using LangChain"]
-3. Call `search_github_questions` — for additional structured technical questions from curated repos
-4. Stop once you reach {max_q} questions or all queries are exhausted
+3. Stop only when both sources are exhausted or at their quota.
 
 ## Queries to Use
 {queries}

@@ -25,7 +25,9 @@ _MAX_RECORDS = config.TAVILY_MAX_RECORDS
 _ATTRIBUTION_DOMAINS = ["glassdoor.com", "ambitionbox.com", "tryexponent.com", "datalemur.com",
                         "levels.fyi", "interviewquery.com", "prepfully.com", "igotanoffer.com",
                         "teamblind.com", "leetcode.com", "1point3acres.com",
-                        "comparably.com", "bigtechinterviews.com"]
+                        "comparably.com", "bigtechinterviews.com",
+                        # High-signal, company-tagged GenAI/ML interview sources
+                        "hellointerview.com", "indeed.com", "dataford.io"]
 _BROAD_DOMAINS = [
     "glassdoor.com", "ambitionbox.com", "tryexponent.com", "datalemur.com",
     "levels.fyi", "interviewquery.com", "prepfully.com", "igotanoffer.com",
@@ -37,6 +39,8 @@ _BROAD_DOMAINS = [
     "ai.stackexchange.com", "huggingface.co", "kaggle.com", "machinelearningmastery.com",
     "techinterviewhandbook.org", "neetcode.io", "taro.co", "bigtechinterviews.com",
     "mlstack.cafe", "comparably.com", "fishbowlapp.com",
+    # High-signal company-tagged GenAI/ML sources + practitioner roundups
+    "hellointerview.com", "indeed.com", "dataford.io", "towardsai.net", "prachub.com",
 ]
 
 
@@ -87,7 +91,24 @@ def _company_from_url(url: str) -> Optional[str]:
         m = re.search(r"/(?:sql-interview-questions|interview-questions)/([a-z0-9\-]+?)-[a-z]", path)
         if m:
             return m.group(1).replace("-", " ").title()
+    if net.endswith("dataford.io"):
+        # /interview-guides/<company>[/<role>] — grab the company slug (role optional).
+        m = re.search(r"/interview-guides/([a-z0-9\-]+?)(?:/|$)", path)
+        if m:
+            return m.group(1).replace("-", " ").title()
+    if "indeed.com" in net:
+        # /cmp/<Company>/interviews  or  /cmp/<Company>/faq/interviews
+        m = re.search(r"/cmp/([A-Za-z0-9\-]+?)/(?:interviews|faq)", path)
+        if m:
+            return m.group(1).replace("-", " ").title()
     return None
+
+
+def _company_from_hellointerview(text: str) -> Optional[str]:
+    """hellointerview.com puts the company in body copy, not the URL slug —
+    e.g. '... system design interview question from Meta and Higgsfield'."""
+    m = re.search(r"\bfrom ([A-Z][A-Za-z0-9&.\- ]+?)(?:\.|,| and | \(|$)", text[:400])
+    return m.group(1).strip() if m else None
 
 
 _NOT_COMPANY = {
@@ -112,20 +133,111 @@ _NOT_COMPANY = {
 }
 
 
+# Bare legal suffixes / filler that are NOT a company name on their own.
+_JUNK_COMPANY = {
+    "inc", "inc.", "llc", "ltd", "ltd.", "pvt", "pvt.", "limited", "corp", "corp.",
+    "co", "co.", "gmbh", "plc", "technologies", "technology", "solutions", "systems",
+    "services", "labs", "group", "global", "pvt ltd", "private limited",
+}
+
+# LLM/model names — never a company on their own.
+_MODEL_NAMES = {
+    "gpt", "gpt-3", "gpt-4", "gpt-4o", "gpt4", "chatgpt", "llama", "llama2", "llama3",
+    "gemini", "claude", "bert", "roberta", "mistral", "falcon", "palm", "t5", "dalle",
+    "dall-e", "midjourney", "bard", "copilot",
+}
+
+_MONTHS = {"jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "sept", "oct",
+           "nov", "dec", "january", "february", "march", "april", "june", "july",
+           "august", "september", "october", "november", "december"}
+
+# Job-title / interview-prep / legal tokens — STRIPPED from the ends of a name so
+# "Meta Production" → "Meta", "Openai Forward Deployed" → "Openai", "... Interview Questions" → "...".
+# (Kept out of here: crack/face/open/… — those only appear as standalone junk, handled by
+#  _WHOLE_REJECT, so multi-word names like "Hugging Face" survive.)
+_STRIP_ENDS = _JUNK_COMPANY | _MODEL_NAMES | _MONTHS | {
+    "interview", "interviews", "question", "questions", "answer", "answers", "guide",
+    "overview", "introduction", "conclusion", "summary", "notes", "note", "tips", "faq",
+    "prep", "preparation", "role", "roles", "engineer", "developer", "scientist", "analyst",
+    "manager", "onsite", "forward", "deployed", "production", "remote", "round", "rounds",
+    "phone", "screen", "screening", "coding", "technical", "behavioral", "consultancy",
+    "personnel", "staffing", "recruitment", "hiring", "careers", "jobs", "job",
+    "cracking", "improving", "example", "examples", "sample",
+    # role-title tokens that leak onto real names ("Bytedance Llm Specialist" → "Bytedance",
+    # "Vector Marketing Sales Representative" → "Vector Marketing", "Servicenow Research" → …)
+    "specialist", "representative", "executive", "extern", "account", "sales", "marketing",
+    "research", "software", "ml", "llm", "enterprise", "corporate", "division", "generative",
+    "agent",
+}
+
+# Source/site brands — the site, not the hiring company (Dataford/HelloInterview/Indeed/…).
+_SOURCE_BRANDS = {
+    "dataford", "hello", "hellointerview", "indeed", "glassdoor", "ambitionbox", "leetcode",
+    "geeksforgeeks", "interviewbit", "prepinsta", "indiabix", "naukri", "quora", "reddit",
+    "medium", "kaggle", "exponent", "tryexponent", "datalemur", "levels", "prepfully",
+    "igotanoffer", "comparably", "fishbowl", "fishbowlapp", "careercup", "workat",
+    "hackerearth", "hackerrank", "freecodecamp", "bigtechinterviews", "mlstack", "taro",
+    "neetcode", "techinterviewhandbook", "machinelearningmastery", "towardsai", "prachub",
+    "stratascratch", "teamblind", "blind", "simplilearn", "edureka", "intellipaat", "scaler",
+    "educative", "testbook", "prepfully",
+}
+
+# Tool/framework/protocol/field names + concept fragments that are NOT hiring companies.
+_TOOL_FIELD_JUNK = {
+    "langchain", "llamaindex", "mcp", "vector", "concept", "multi-agent", "multi agent",
+    "natural language processing", "nlp", "ai-enabled", "scenario-based", "meeting protocol",
+    "ai first", "decode protocol", "becoming", "os", "my", "every", "pytorch", "tensorflow",
+    "kubernetes", "docker", "embedding", "embeddings", "transformer", "transformers", "rag",
+    "llms", "diffusion", "crewai", "autogen",
+}
+
+# Reject if the WHOLE cleaned name is one of these: models, standalone junk fragments,
+# source brands, tool/field terms, or a single generic/role word.
+_WHOLE_REJECT = _MODEL_NAMES | _SOURCE_BRANDS | _NOT_COMPANY | _TOOL_FIELD_JUNK | {
+    "crack", "face", "onsite", "open", "improve", "most", "practical", "traditional",
+    "modern", "various", "general", "large", "small", "deep",
+    # states / generic non-company words seen in extractions
+    "offline", "online", "remote", "virtual", "hybrid", "unknown", "none", "other",
+    "anonymous", "confidential", "startup", "employer", "freelance", "self", "n/a",
+}
+
+
 def _valid_company(name: Optional[str]) -> Optional[str]:
-    """Return the name only if it looks like a real company — i.e. not made up
-    purely of generic/role words. Otherwise None, so callers fall back to an
-    honest source label instead of a misleading 'Manager'/'L1'."""
-    if not name:
+    """Return a cleaned company name only if it looks like a REAL company, else None.
+
+    Strips trailing/leading job/title/legal/model/date tokens, then rejects the result if it
+    is a model name, a source-site brand ("Dataford"/"Hello"), a standalone junk fragment
+    ("GPT"/"Crack"/"Face"), a single character ("A"), or an all-generic name. Multi-word real
+    names ("Hugging Face") survive. Callers fall back to an honest source label on None."""
+    if not name or not any(ch.isalpha() for ch in name):
         return None
     tokens = [t for t in re.split(r"\s+", name.strip()) if t]
+
+    def _norm(t):
+        return t.lower().strip(".,&-()")
+
+    def _rem_ok(toks):
+        # Don't strip into an empty or whole-rejected remainder (keeps "Vector Marketing",
+        # "Vector Solutions" intact instead of collapsing to the blocklisted "Vector").
+        return bool(toks) and " ".join(toks).lower() not in _WHOLE_REJECT
+
+    # Strip title/role/legal/model/date tokens from the ends, but never the last token and
+    # never such that the remainder becomes a rejected term.
+    while len(tokens) > 1 and (_norm(tokens[0]) in _STRIP_ENDS or _norm(tokens[0]).isdigit()) and _rem_ok(tokens[1:]):
+        tokens.pop(0)
+    while len(tokens) > 1 and (_norm(tokens[-1]) in _STRIP_ENDS or _norm(tokens[-1]).isdigit()) and _rem_ok(tokens[:-1]):
+        tokens.pop()
     if not tokens:
         return None
-    # Reject an all-generic candidate only for short names (≤2 tokens) — a longer
-    # name like "Cloud Nine Hospitals" gets the benefit of the doubt.
-    if len(tokens) <= 2 and all(t.lower().strip(".&-") in _NOT_COMPANY for t in tokens):
+    cleaned = " ".join(tokens)
+    if len(cleaned.replace(" ", "")) <= 1:            # single char like "A"
         return None
-    return name
+    low = cleaned.lower()
+    if low in _WHOLE_REJECT:                          # site brand / model / fragment / generic
+        return None
+    if all(_norm(t) in (_STRIP_ENDS | _WHOLE_REJECT) for t in tokens):
+        return None
+    return cleaned
 _COMPANY_BEFORE_INTERVIEW = re.compile(
     r"([A-Z][A-Za-z0-9&.\-]*(?:\s+[A-Z][A-Za-z0-9&.\-]*){0,2})\s+[Ii]nterview")
 
@@ -255,8 +367,10 @@ def _records_from_results(results, allow: set, seen: set) -> List[Record]:
             continue
         text = r.get("raw_content") or r.get("content") or ""
         title = r.get("title", "") or ""
+        # hellointerview embeds the company in body copy ("... question from Meta"), not the URL.
+        hi = _company_from_hellointerview(title + " " + text) if dom.endswith("hellointerview.com") else None
         company = _valid_company(
-            _company_from_url(url) or _company_from_text(title) or _company_from_text(text[:200])
+            _company_from_url(url) or hi or _company_from_text(title) or _company_from_text(text[:200])
         )
         for cand in _extract_from_text(text):
             cand = _strip_trailing_company(cand, company)
