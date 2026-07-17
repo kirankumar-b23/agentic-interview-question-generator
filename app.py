@@ -229,7 +229,7 @@ def _parse_course_markdown(md: str, default_topic: str):
 def api_generate():
     body = request.get_json(force=True) or {}
     session_names = body.get("session_names", [])
-    max_questions = int(body.get("max_questions", 7))
+    max_questions = int(body.get("max_questions", 12))
     custom_topic = body.get("custom_topic", "").strip()
     model = (body.get("model") or "").strip() or None
     preview = bool(body.get("preview", False))  # TESTING: preview mode

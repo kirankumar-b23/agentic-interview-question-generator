@@ -140,6 +140,7 @@ def _critique_question_set(state: AgentState) -> dict:
         return {"pass": True, "must_fix": []}
 
     outcomes = "\n".join(f"- {o}" for o in state.session_context.learning_outcomes)
+    topics = ", ".join(getattr(state.session_context, "interview_topics", None) or []) or "(same as outcomes)"
     q_list = [{"id": q.question_id, "content": q.content[:200], "difficulty": q.difficulty}
               for q in state.questions.values()]
     cq_list = [{"id": q.id, "title": q.title, "difficulty": q.difficulty}
@@ -151,9 +152,12 @@ def _critique_question_set(state: AgentState) -> dict:
 Session: {state.session_context.session_name}
 Learning Outcomes:
 {outcomes}
+Interview Topics (transferable concepts this session prepares for — questions testing these are ON-topic
+even if they don't name the specific tool/product used in the session): {topics}
 
 Check ONLY these hard failures — only flag something if it is CLEARLY wrong:
-1. A question is from a completely different domain (e.g. a SQL question in an AI agents session)
+1. A question is from a completely different domain (e.g. a SQL question in an AI agents session).
+   A question about one of the Interview Topics is NOT a different domain — do not flag it.
 2. Two questions are near-identical duplicates (same wording, not just same topic)
 3. Total set has fewer than {MIN_QUESTIONS} questions
 

@@ -176,20 +176,21 @@ def main() -> int:
 
     items = _dedup_with_corroboration(all_records)
 
-    # Company-only harvested questions (junk attribution already filtered by _valid_company),
-    # role-tagged + corroboration count.
+    # Harvested questions — company kept when a credible one was extracted (junk already filtered by
+    # _valid_company), otherwise left empty. No-company questions are now KEPT (team decision): they are
+    # still valuable for prep and are attributed to their SOURCE SITE at output time (see models.attribution_label).
     seed_keys = {_norm(c) for c, *_ in SEED_QUESTIONS}
     harvested = [{
         "id": str(uuid.uuid4()),
         "content": it["record"].question_text,
         "topic": "Gen AI",
         "difficulty": "Medium",                     # re-tagged at runtime by validate_relevance
-        "company": _canon(it["record"].company),
+        "company": _canon(it["record"].company),    # may be None → source-site attribution downstream
         "role": _infer_role(it["record"].question_text),
         "source": "web",
         "source_url": it["record"].source_url,
         "source_count": it["source_count"],
-    } for it in items if it["record"].company and _norm(it["record"].question_text) not in seed_keys]
+    } for it in items if _norm(it["record"].question_text) not in seed_keys]
 
     # Hand-verified seed (report §1) — always included, marked verified.
     seed = [{

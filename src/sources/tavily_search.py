@@ -32,8 +32,8 @@ _BROAD_DOMAINS = [
     "glassdoor.com", "ambitionbox.com", "tryexponent.com", "datalemur.com",
     "levels.fyi", "interviewquery.com", "prepfully.com", "igotanoffer.com",
     "teamblind.com", "leetcode.com", "1point3acres.com",
-    "reddit.com", "stackoverflow.com", "github.com", "medium.com", "dev.to",
-    "geeksforgeeks.org", "quora.com", "hackerrank.com",
+    "stackoverflow.com", "github.com",
+    "geeksforgeeks.org", "hackerrank.com",
     "interviewbit.com", "workat.tech", "hackerearth.com", "freecodecamp.org", "careercup.com",
     # GenAI/ML Q&A + forums, SWE interview-experience, extra attribution
     "ai.stackexchange.com", "huggingface.co", "kaggle.com", "machinelearningmastery.com",
@@ -189,6 +189,10 @@ _TOOL_FIELD_JUNK = {
     "ai first", "decode protocol", "becoming", "os", "my", "every", "pytorch", "tensorflow",
     "kubernetes", "docker", "embedding", "embeddings", "transformer", "transformers", "rag",
     "llms", "diffusion", "crewai", "autogen",
+    # tech terms wrongly extracted as companies (seen in bank audit)
+    "fine-tuning", "fine tuning", "finetuning", "rest api", "rest apis", "api", "apis",
+    "prompt engineering", "machine learning", "deep learning", "generative ai", "gen ai",
+    "genai", "gpt", "bert", "lora", "peft", "http", "sql", "python", "javascript",
 }
 
 # Reject if the WHOLE cleaned name is one of these: models, standalone junk fragments,
@@ -305,11 +309,13 @@ def _extract_from_text(text: str) -> List[str]:
             segments.append(line)
         else:
             segments.extend(s.strip() for s in re.split(r"(?<=[.?!])\s+", line) if s.strip())
+    from src.quality import is_quality_question, strip_artifacts
     seen = set()
     for seg in segments:
-        seg = _clean_seg(seg)
+        seg = strip_artifacts(_clean_seg(seg))
         key = _dedup_key(seg)
-        if looks_like_question(seg) and key and key not in seen:
+        # Form-quality gate (rejects boilerplate/logistics/fragments/headings), not just "looks like a Q".
+        if is_quality_question(seg) and key and key not in seen:
             seen.add(key)
             out.append(seg)
             if len(out) >= _PER_RESULT:
@@ -383,6 +389,11 @@ def _records_from_results(results, allow: set, seen: set) -> List[Record]:
     return out
 
 
+# Job-title / role frames so queries surface role-specific interview questions (the session's target
+# profiles), not just bare concept queries. Kept small so total Tavily calls stay bounded.
+_ROLE_SUFFIXES = ["GenAI Engineer", "Machine Learning Engineer", "Prompt Engineer", "Data Scientist"]
+
+
 class TavilyConnector:
     name = "tavily"
 
@@ -392,33 +403,48 @@ class TavilyConnector:
         error is None on success, or a short string describing why searches
         failed (e.g. quota/usage limit) so callers can surface it instead of
         silently looking like 'no results found'.
+
+        Searches the FULL INTERVIEW_SOURCE_ALLOWLIST (Tavily caps include_domains ~300; the
+        allowlist is well under that) so every trusted source — including blog sources like
+        DataCamp that were previously never searched — is reachable. Each concept term gets a
+        broad + an attribution-framed query; role/job-title queries are added for the first term
+        to keep the call count bounded (~2·terms + roles).
         """
         if not config.TAVILY_API_KEY:
             return [], 0, "TAVILY_API_KEY not set"
         allow = set(config.INTERVIEW_SOURCE_ALLOWLIST or [])
+        domains = list(config.INTERVIEW_SOURCE_ALLOWLIST or []) or None
         client = _client()
         records: List[Record] = []
         seen: set = set()
         errors: list = []
         search_count = 0
-        for outcome in (outcomes or [])[:_MAX_OUTCOMES]:
-            q = outcome.replace("_", " ").strip()
-            # Pass 1 (broad — community + attribution): catch forum/community questions
+
+        terms = [o.replace("_", " ").strip() for o in (outcomes or []) if o and o.strip()][:_MAX_OUTCOMES]
+
+        def run(query: str) -> bool:
+            """Run one search; return True if the run should stop (limit / terminal error)."""
+            nonlocal search_count
             records.extend(_records_from_results(
-                _search(client, f"{q} interview question asked at company",
-                        include_domains=_BROAD_DOMAINS, errors=errors), allow, seen))
+                _search(client, query, include_domains=domains, errors=errors), allow, seen))
             search_count += 1
-            # Pass 2 (attribution — company-keyed sites only)
-            records.extend(_records_from_results(
-                _search(client, f"{q} interview questions",
-                        include_domains=_ATTRIBUTION_DOMAINS, errors=errors), allow, seen))
-            search_count += 1
-            if len(records) >= _MAX_RECORDS:
+            return len(records) >= _MAX_RECORDS or _is_terminal_error(errors)
+
+        for i, q in enumerate(terms):
+            if run(f"{q} interview questions"):
                 break
-            # Quota/auth errors are terminal for this run — bail immediately across
-            # all outcomes rather than burning calls that can't succeed.
-            if _is_terminal_error(errors):
+            if run(f"{q} interview question asked at company"):
                 break
+            # Role/job-title framing only on the first (primary) term — bounds total calls.
+            if i == 0:
+                stop = False
+                for role in _ROLE_SUFFIXES:
+                    if run(f"{q} {role} interview questions"):
+                        stop = True
+                        break
+                if stop:
+                    break
+
         error = None
         if not records and errors:
             error = _summarize_tavily_error(errors)

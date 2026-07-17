@@ -9,9 +9,31 @@ def new_uuid() -> str:
     return str(uuid.uuid4())
 
 
-NIAT = "NIAT"  # default company for questions without a real company attribution
+NIAT = "NIAT"  # last-resort label when neither a real company nor a source site is known
 
 _QNUM_PREFIX = re.compile(r"^\s*(?:[•\-*]\s*)?(?:q(?:uestion)?\s*)?\d+\s*[.):]\s*", re.IGNORECASE)
+
+# Friendly display names for known question sources (used when a question has no verified company).
+# Team decision: show the SOURCE SITE for no-company questions (blogs like GeeksforGeeks/DataCamp are
+# valuable for prep even without a company tag); fall back to NIAT only when neither is known.
+_SOURCE_SITE_NAMES = {
+    "geeksforgeeks.org": "GeeksforGeeks", "datacamp.com": "DataCamp",
+    "interviewbit.com": "InterviewBit", "analyticsvidhya.com": "Analytics Vidhya",
+    "kdnuggets.com": "KDnuggets", "machinelearningmastery.com": "Machine Learning Mastery",
+    "towardsdatascience.com": "Towards Data Science", "towardsai.net": "Towards AI",
+    "simplilearn.com": "Simplilearn", "edureka.co": "Edureka", "intellipaat.com": "Intellipaat",
+    "projectpro.io": "ProjectPro", "turing.com": "Turing", "365datascience.com": "365 Data Science",
+    "mlstack.cafe": "MLStack.cafe", "tryexponent.com": "Exponent",
+    "interviewquery.com": "Interview Query", "hellointerview.com": "Hello Interview",
+    "glassdoor.com": "Glassdoor", "glassdoor.co.in": "Glassdoor", "ambitionbox.com": "AmbitionBox",
+    "prepfully.com": "Prepfully", "igotanoffer.com": "IGotAnOffer", "leetcode.com": "LeetCode",
+    "kaggle.com": "Kaggle", "huggingface.co": "Hugging Face", "medium.com": "Medium", "dev.to": "DEV",
+    "stackoverflow.com": "Stack Overflow", "ai.stackexchange.com": "AI Stack Exchange",
+    "prachub.com": "PracHub", "dataford.io": "Dataford", "prepinsta.com": "PrepInsta",
+    "scaler.com": "Scaler", "educative.io": "Educative", "naukri.com": "Naukri",
+    "techinterviewhandbook.org": "Tech Interview Handbook", "neetcode.io": "NeetCode",
+    "builtin.com": "Built In", "365datascience.com": "365 Data Science",
+}
 
 
 def strip_question_prefix(text: str) -> str:
@@ -21,13 +43,34 @@ def strip_question_prefix(text: str) -> str:
     return _QNUM_PREFIX.sub("", text).strip()
 
 
+def _site_name_from_url(source_url: str | None) -> str | None:
+    """Friendly source-site name from a URL, or None. E.g. https://www.geeksforgeeks.org/x → GeeksforGeeks."""
+    if not source_url:
+        return None
+    m = re.search(r"https?://([^/]+)", source_url) or re.match(r"([^/]+)", source_url)
+    host = (m.group(1) if m else "").lower()
+    if host.startswith("www."):
+        host = host[4:]
+    if not host:
+        return None
+    if host in _SOURCE_SITE_NAMES:
+        return _SOURCE_SITE_NAMES[host]
+    # Unknown allowlisted-ish host → derive a readable label from the registrable name.
+    label = host.split(":")[0].split(".")
+    base = label[-2] if len(label) >= 2 else label[0]
+    return base[:1].upper() + base[1:] if base else None
+
+
 def attribution_label(asked_in_company: str | None, source: str | None = None,
                       source_url: str | None = None) -> str:
-    """Company attribution for output: the real company in UPPERCASE if known,
-    otherwise the org placeholder "NIAT". Never a website name or fragment —
-    garbage values are filtered upstream (tavily `_valid_company`)."""
+    """Attribution for output: the real company in UPPERCASE if known; otherwise the SOURCE SITE
+    (e.g. "GeeksforGeeks") derived from the source URL; else the placeholder "NIAT".
+    Fabricated/garbage company values are filtered upstream (tavily `_valid_company`)."""
     if asked_in_company and asked_in_company.strip():
         return asked_in_company.strip().upper()
+    site = _site_name_from_url(source_url)
+    if site:
+        return site
     return NIAT
 
 
@@ -71,6 +114,11 @@ class SessionContext(BaseModel):
     session_name: str
     learning_outcomes: list[str]
     key_concepts: list[str]
+    # Transferable, interview-relevant GenAI concepts a candidate would actually be asked about — derived
+    # from the session so hands-on tool/build sessions (e.g. an n8n workflow) map to real interview topics
+    # (LLM summarization, prompt engineering, API integration) rather than tool UI/nodes. Used for
+    # retrieval queries + relevance grounding. Defaults empty for backward-compat with cached resolutions.
+    interview_topics: list[str] = Field(default_factory=list)
     scope_in: list[str]
     scope_out: list[str]
     session_type: Literal["theory_heavy", "code_heavy", "mixed"]

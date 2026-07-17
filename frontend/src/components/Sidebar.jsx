@@ -12,7 +12,7 @@ export default function Sidebar() {
   const [selectedTopic, setSelectedTopic] = useState('')
   const [selectMode, setSelectMode] = useState('topic')   // 'topic' | 'session'
   const [selectedUnit, setSelectedUnit] = useState('')
-  const [maxQuestions, setMaxQuestions] = useState(7)
+  const [maxQuestions, setMaxQuestions] = useState(12)
   const [preview, setPreview] = useState(false)   // TESTING: preview before quality gate
   const [starting, setStarting] = useState(false)
   const [history, setHistory] = useState([])

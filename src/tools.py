@@ -335,13 +335,18 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
                 filtered.append(qd)
         results = filtered[:actual_limit]
 
+    from src.quality import is_quality_question, strip_artifacts
     added = []
     for qd in results:
+        qd.content = strip_artifacts(qd.content)
         # Split a compound bank question down to its on-topic clause (same as web).
         if scope_keywords:
             trimmed = _trim_to_topic(qd.content, scope_keywords)
             if trimmed:
                 qd.content = trimmed
+        # Form-quality gate — drop boilerplate/logistics/fragments/headings that slipped into the bank.
+        if not is_quality_question(qd.content):
+            continue
         state.questions[qd.question_id] = qd
         added.append({
             "id": qd.question_id,
@@ -380,6 +385,7 @@ def tool_validate_relevance(state: AgentState) -> dict:
 
     outcomes_str = "\n".join(f"- {o}" for o in state.session_context.learning_outcomes)
     concepts_str = ", ".join(state.session_context.key_concepts)
+    topics_str = ", ".join(getattr(state.session_context, "interview_topics", None) or []) or "(same as key concepts)"
     scope_out_str = ", ".join(state.session_context.scope_out) if state.session_context.scope_out else "none"
 
     # Ground the judge in the ACTUAL reading material (the outcomes list alone is too thin —
@@ -402,13 +408,16 @@ Learning Outcomes:
 {outcomes_str}
 
 Key Concepts: {concepts_str}
+Interview Topics (transferable concepts this session prepares a candidate for — a question testing one of
+these IS on-topic, even if it doesn't name the specific tool/product used in the session): {topics_str}
 Out of Scope (score these ≤0.2): {scope_out_str}
 
 ## What this session actually teaches (reading material — judge against THIS, not just keywords)
 {rm_block}
 
-Give EACH question a relevance score from 0.0 to 1.0 for how well it tests a concept the session teaches:
-- 0.8–1.0 — directly tests a technical concept explained in the reading material above.
+Give EACH question a relevance score from 0.0 to 1.0 for how well it tests a concept the session teaches
+(a concept from the reading material OR one of the Interview Topics above):
+- 0.8–1.0 — directly tests a technical concept explained in the reading material / interview topics above.
 - 0.4–0.7 — genuinely about the session's subject matter but broad or only partially on-topic.
 - 0.0–0.2 — NOT testing this session's subject matter. Score LOW even if a keyword overlaps and even
   if it came from a real company. This INCLUDES:
@@ -438,6 +447,7 @@ Respond in JSON only:
     items = list(state.questions.items())   # [(q_id, QuestionDetail), ...]
     score_by_qid: dict[str, float] = {}
     diff_by_qid: dict[str, str] = {}
+    failed_qids: set[str] = set()   # items in a batch the model failed to score at all (API/parse failure)
     _valid_diff = {"easy": "Easy", "medium": "Medium", "hard": "Hard"}
     for start in range(0, len(items), RELEVANCE_BATCH_SIZE):
         batch = items[start:start + RELEVANCE_BATCH_SIZE]
@@ -445,9 +455,10 @@ Respond in JSON only:
         result = chat_completion_json(
             system_prompt=system_prompt,
             user_prompt=f"Score these {len(numbered)} questions:\n{json.dumps(numbered)}",
-            max_tokens=2560,
+            max_tokens=4096,   # roomy vs a 25-item batch (~30 tokens/item) so JSON never truncates
             on_usage=_usage_cb(state),
         )
+        batch_scored = 0
         for s in (result.get("scores") or []):
             try:
                 n = int(s["n"]); score = max(0.0, min(1.0, float(s["score"])))
@@ -456,33 +467,49 @@ Respond in JSON only:
             if 1 <= n <= len(batch):
                 q_id = batch[n - 1][0]
                 score_by_qid[q_id] = score
+                batch_scored += 1
                 d = _valid_diff.get(str(s.get("difficulty", "")).strip().lower())
                 if d:
                     diff_by_qid[q_id] = d
+        # If the whole batch produced ZERO scores, that's an API/parse failure, not a real
+        # "all irrelevant" signal — don't nuke those questions to a low default; mark them so
+        # they keep a neutral (threshold) score below.
+        if batch_scored == 0:
+            failed_qids.update(q_id for q_id, _ in batch)
 
-    from src.config import RELEVANCE_THRESHOLD
+    from src.config import RELEVANCE_THRESHOLD, RELEVANCE_FLOOR
     THRESHOLD = RELEVANCE_THRESHOLD
     min_keep = max(1, state.config.min_questions)
 
-    # Apply scores + LLM difficulty tags (difficulty was hard-coded "Medium" for web/github;
-    # the content-based tag makes difficulty real across all sources).
+    # Apply scores + LLM difficulty tags. A question the model OMITTED (present in a partially-scored
+    # batch) is treated as BELOW threshold (default just under the floor) so unscored items don't leak
+    # in at 0.5 — the previous default. A question in a fully-FAILED batch keeps a neutral THRESHOLD
+    # score so a transient API failure doesn't wipe the pool.
+    default_unscored = round(RELEVANCE_FLOOR - 0.05, 3)   # below the floor → not eligible for backfill
     scored = []  # (q_id, score)
     for q_id, q in items:
-        score = score_by_qid.get(q_id, 0.5)
+        if q_id in score_by_qid:
+            score = score_by_qid[q_id]
+        elif q_id in failed_qids:
+            score = THRESHOLD
+        else:
+            score = default_unscored
         q.relevance_score = score
         if q_id in diff_by_qid:
             q.difficulty = diff_by_qid[q_id]
         scored.append((q_id, score))
 
-    # Drop below-threshold candidates, but keep at least `min_keep` (backfill with the
-    # highest-scored below-threshold ones so a wide-but-weak pool never underfills).
+    # Keep everything at/above THRESHOLD. If that's fewer than `min_keep`, top up toward min_keep
+    # ONLY from candidates at/above RELEVANCE_FLOOR (never pad below the floor). A genuinely thin
+    # on-topic pool therefore returns FEWER questions instead of loosely-related filler.
     scored.sort(key=lambda t: t[1], reverse=True)
     keep_ids = {q_id for q_id, s in scored if s >= THRESHOLD}
     if len(keep_ids) < min_keep:
         for q_id, s in scored:
             if len(keep_ids) >= min_keep:
                 break
-            keep_ids.add(q_id)
+            if s >= RELEVANCE_FLOOR:
+                keep_ids.add(q_id)
 
     to_remove = [q_id for q_id, s in scored if q_id not in keep_ids]
     for q_id in to_remove:
@@ -638,74 +665,17 @@ def tool_generate_interview_questions(state: AgentState, count: int, outcomes: l
     }
 
 
-def tool_generate_coding_questions(state: AgentState, count: int, topics: list[str] = None, language: str = "Python") -> dict:
-    """Generate coding questions in Nxtmock portal format: concise content + separate starter code."""
-    from src.models import CodeSnippet
-
-    count = min(count, 4)
-    max_to_add = state.config.max_questions - len(state.questions) - len(state.coding_questions)
-    count = min(count, max(0, max_to_add))
-    if count <= 0:
-        return {"generated": 0, "warning": "At max capacity"}
-
-    topics_str = ", ".join(topics) if topics else state.config.session_name
-    lang_upper = language.upper()
-
-    result = chat_completion_json(
-        system_prompt=f"""Generate {count} coding interview questions about: {topics_str}.
-
-IMPORTANT FORMAT — match this exact style:
-
-For each question provide:
-- title: Short name (e.g., "Build a Gemini API Chat Function")
-- content: Plain text problem description. Concise, 1-4 sentences describing what to build. Include sample input/output if applicable. Do NOT use markdown headers (no ## or **).
-- difficulty: "Easy", "Medium", or "Hard" (vary them)
-- topic: Clean topic name
-- starter_code: A {language} code template with the function signature and a "# Write your code here" comment. Just the skeleton, no solution.
-
-Example output format:
-{{
-    "title": "Build a Gemini API Chat Function",
-    "content": "Write a function that connects to the Google Gemini API using the google-genai package, sends a user prompt, and returns the model's text response. The function should load the API key from environment variables.\\n\\nSample Input: prompt = 'What is machine learning?'\\nSample Output: 'Machine learning is a subset of AI...'",
-    "difficulty": "Medium",
-    "topic": "Gemini API",
-    "starter_code": "import os\\nfrom google import genai\\n\\ndef chat_with_gemini(prompt: str) -> str:\\n    # Write your code here\\n    pass"
-}}
-
-Respond in JSON: {{"coding_questions": [...]}}""",
-        user_prompt=f"Generate {count} coding questions in {language}.", max_tokens=4000,
-        on_usage=_usage_cb(state),
-    )
-
-    added = []
-    for cq_data in result.get("coding_questions", []):
-        q_id = str(uuid.uuid4())
-        code_id = str(uuid.uuid4())
-        starter = cq_data.get("starter_code", f"# Write your {language} code here\n")
-
-        cq = CodingQuestion(
-            id=q_id,
-            category=f"{lang_upper}_CODING",
-            title=cq_data.get("title", "Coding Question"),
-            content=cq_data.get("content", ""),
-            code_id=code_id,
-            topic=cq_data.get("topic", topics_str[:50]),
-            difficulty=cq_data.get("difficulty", "Medium"),
-            language=language,
-            source="generated",
-        )
-        state.coding_questions[q_id] = cq
-
-        # Store starter code as separate CodeSnippet
-        snippet = CodeSnippet(
-            code_id=code_id,
-            code_content=starter,
-            language=lang_upper,
-        )
-        state.code_snippets[code_id] = snippet
-
-        added.append({"id": q_id, "title": cq.title, "difficulty": cq.difficulty})
-    return {"generated": len(added), "questions": added}
+def tool_generate_coding_questions(state: AgentState, count: int = 0, topics: list[str] = None, language: str = "Python") -> dict:
+    """Blocked — coding questions are NOT generated. Only real coding questions found in retrieval are
+    used (if any); otherwise the coding set is left empty."""
+    return {
+        "generated": 0,
+        "blocked": True,
+        "reason": (
+            "Coding-question generation is disabled. No questions are created — only real, retrieved "
+            "questions are used. Proceed to submit_question_set with the questions you have."
+        ),
+    }
 
 
 def tool_search_github_questions(state: AgentState, outcomes: list) -> dict:
@@ -812,21 +782,24 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
     if capacity <= 0:
         return {"found": 0, "warning": f"Web quota full ({WEB_POOL_CAP})."}
 
-    # Query the session's substantive CONCEPTS (key_concepts + scope_in), not just short
-    # scope labels — so deep conceptual questions (CoT, prompting, RAG) surface, not only
-    # generic company-review noise. Supplement with whatever the agent passed.
+    # Query the session's substantive CONCEPTS. interview_topics come FIRST — these are the
+    # transferable, interview-relevant concepts (so hands-on tool/build sessions retrieve real
+    # questions about the underlying skills, not the tool UI), and the first term also carries the
+    # role/job-title queries in TavilyConnector.fetch. Then key_concepts + scope_in + agent-passed.
+    interview_topics = (ctx.interview_topics if ctx and getattr(ctx, "interview_topics", None) else [])
     seen_terms: set[str] = set()
     search_terms: list[str] = []
-    for t in ((ctx.key_concepts[:4] if ctx and ctx.key_concepts else [])
+    for t in (list(interview_topics[:6])
+              + (ctx.key_concepts[:4] if ctx and ctx.key_concepts else [])
               + (ctx.scope_in[:4] if ctx and ctx.scope_in else [])
               + list(outcomes)):
         tl = t.lower().strip()
         if tl and tl not in seen_terms:
             seen_terms.add(tl)
             search_terms.append(t)
-    # Cap terms for latency — each term costs several Tavily calls; recall is already
-    # high (hundreds of records) with a handful of terms.
-    search_terms = search_terms[:4]
+    # Cap terms for latency — each term costs a couple of Tavily calls (plus role queries on the
+    # first term). Raised from 4 → 8 so multi-outcome sessions get broader recall.
+    search_terms = search_terms[:8]
     records, tavily_calls, tavily_error = TavilyConnector().fetch(search_terms or outcomes)
     state.api_usage["tavily_calls"] += tavily_calls
 
@@ -854,16 +827,20 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
 
     # Fill the web quota (relevance ranking + trim-to-max happen later); scan a
     # generous slice of the sorted records since the keyword pre-filter drops many.
+    from src.quality import is_quality_question, strip_artifacts
     take = min(len(records), capacity + 40)
     added = []
     for rec in records[:take]:
         # Trim a two-part question down to its on-topic clause (drops an unrelated
         # trailing ask); "" means no clause is on-topic → skip the whole record.
-        content = rec.question_text
+        content = strip_artifacts(rec.question_text)
         if topic_keywords:
             content = _trim_to_topic(content, topic_keywords)
             if not content:
                 continue
+        # Form-quality gate — reject boilerplate/logistics/fragments/headings.
+        if not is_quality_question(content):
+            continue
 
         if len(added) >= capacity:
             break

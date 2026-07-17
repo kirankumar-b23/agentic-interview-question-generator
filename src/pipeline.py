@@ -37,6 +37,14 @@ class AgentPipeline:
         UnderstandingAgent().run(state, emit)
         RetrievalAgent().run(state, emit)
         ValidationAgent().run(state, emit)
+        # Guarantee relevance filtering ran — the validation agent is prompt-advised, not code-forced,
+        # so if it never scored anything (no question carries a relevance_score) we run it directly.
+        # Without this, an agent that skips validate_relevance lets the whole raw pool through unfiltered.
+        if state.questions and not any(q.relevance_score is not None for q in state.questions.values()):
+            from src.tools import tool_validate_relevance
+            emit("validate_relevance", "running", "Enforcing relevance validation (agent skipped it)...")
+            tool_validate_relevance(state)
+            emit("validate_relevance", "done", f"{len(state.questions)} question(s) after relevance filter.")
 
     def _evaluate_and_gate(self, state, emit) -> int:
         """Stage 4 + quality-gate loop. Returns revision rounds used."""
@@ -189,7 +197,12 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     coverage_score = round(_outcome_coverage(state), 3)
 
     # Secondary hygiene metrics.
-    size_score = 1.0 if MIN_QUESTIONS <= total_q <= MAX_QUESTIONS else max(0.0, 1.0 - abs(total_q - 10) / 10)
+    # size_score rewards reaching the REQUESTED target (was: flat 1.0 for any count in [MIN,MAX], which
+    # gave the gate zero incentive to exceed MIN — the "always 5" symptom). A full set scores 1.0; a
+    # smaller set gets proportional credit. This never pushes toward off-topic padding: the relevance
+    # floor upstream caps supply, and the gate/eval agent are told not to pad below the floor.
+    target = max(MIN_QUESTIONS, min(getattr(state.config, "max_questions", MAX_QUESTIONS) or MAX_QUESTIONS, MAX_QUESTIONS))
+    size_score = 1.0 if total_q >= target else round(max(0.0, total_q / target), 3)
     diversity_score = min(1.0, len(sources) / 2)
     diff_target = {"Easy": 0.3, "Medium": 0.5, "Hard": 0.2}
     diff_score = (
@@ -213,7 +226,10 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     if total_q < MIN_QUESTIONS:
         notes.append(f"Only {total_q} question(s) — few real interview questions were available "
                      f"for this session (minimum is {MIN_QUESTIONS}).")
-    elif relevance_score < 0.6:
+    elif total_q < target:
+        notes.append(f"{total_q} question(s) — fewer than the requested {target}; the on-topic real "
+                     f"questions available for this session were limited (kept on-topic over padding).")
+    if relevance_score < 0.6:
         notes.append("Low mean relevance — the available real questions are only loosely on-topic "
                      "for this session.")
     if coverage_score < 0.6:

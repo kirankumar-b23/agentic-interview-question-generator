@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 _TOOL_NAMES = {
     "check_difficulty_balance",
     "check_outcome_coverage",
-    "generate_coding_questions",
     "remove_question",
     "submit_question_set",
 }
@@ -53,12 +52,6 @@ class EvaluationAgent(BaseAgent):
 Use `remove_question` for flagged IDs, then re-check and submit.
 """
 
-        coding_section = (
-            "- Call `generate_coding_questions` (2–3 Qs) — session is code_heavy"
-            if session_type == "code_heavy"
-            else "- DO NOT call `generate_coding_questions` (not a code-heavy session)"
-        )
-
         return f"""You are the final evaluator for an interview question set.
 
 ## Session: {session_label}  |  Type: {session_type}
@@ -69,10 +62,10 @@ top {max_q} by relevance score — you do NOT need to prune the pool down to the
 ## Workflow (in order)
 1. `check_difficulty_balance` — check Easy/Medium/Hard distribution (informational)
 2. `check_outcome_coverage` — check outcome coverage (informational)
-3. {coding_section}
-4. `submit_question_set` — LAST step; it trims to the top {max_q} by relevance and ends this agent's run
+3. `submit_question_set` — LAST step; it trims to the top {max_q} by relevance and ends this agent's run
 
-Do NOT generate expected answers — answers are not produced.
+Do NOT generate any questions — no coding questions and no expected answers are produced. Only real,
+retrieved questions are used; if the retrieval found no coding questions, the coding set stays empty.
 
 ## Rules
 - Target difficulty: 30% Easy, 50% Medium, 20% Hard

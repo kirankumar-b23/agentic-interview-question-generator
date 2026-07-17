@@ -307,15 +307,13 @@ def _candidates() -> list[dict]:
             # company set: curriculum rows carry the whole list; others carry one
             raw_companies = row.get("companies") or ([row["company"]] if row.get("company") else [])
             companies = {c for c in (_clean_company(x) for x in raw_companies) if c}
-            primary = _clean_company(row.get("company"))
-            if not primary:
-                primary = next(iter(companies), None)
-            if not primary:                       # company-only policy: drop no-company rows
-                continue
-            companies.add(primary)
+            primary = _clean_company(row.get("company")) or next(iter(companies), None)
+            # No-company rows are now KEPT (team decision) — company falls back to source/NIAT downstream.
+            if primary:
+                companies.add(primary)
             out.append({
                 "text": q,
-                "company": primary,
+                "company": primary,                 # may be None
                 "companies": companies,
                 "difficulty": _difficulty(row.get("difficulty")),
                 "source": source,
@@ -370,7 +368,7 @@ def main() -> int:
     existing = {_norm(q["content"]) for q in bank}
 
     cands = _candidates()
-    print(f"extracted {len(cands)} GenAI candidate rows (company-only) from raw files")
+    print(f"extracted {len(cands)} GenAI candidate rows from raw files")
     merged = _dedup(cands)
     print(f"→ {len(merged)} distinct after dedup")
 
@@ -388,7 +386,7 @@ def main() -> int:
             "role": _infer_role(it["text"]),
             "source": it["source"],
             "source_url": "",
-            "source_count": len(it["companies"]),
+            "source_count": max(1, len(it["companies"])),
         })
 
     bank.extend(added)

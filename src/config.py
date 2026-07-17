@@ -24,6 +24,10 @@ GEN_AI_RM = DATA_DIR / "reading_materials/gen_ai_reading_material.md"
 LLM_APPS_RM = DATA_DIR / "reading_materials/llm_applications_reading_material.md"
 # Precise per-session reading-material map (built by scripts/build_session_reading_material.py)
 SESSION_MAP_JSON = DATA_DIR / "reading_materials/session_map.json"
+# Human-curated learning-outcome/interview-topic OVERRIDES (editable). When a session appears here,
+# its curated outcomes/interview_topics win over the LLM-derived ones. Built/seeded by
+# scripts/audit_outcomes.py; safe to hand-edit. Missing file → pure LLM derivation (unchanged).
+SESSION_OUTCOMES_JSON = DATA_DIR / "reading_materials/session_outcomes.json"
 # Raw source files (used by prepare_data.py only)
 INTERVIEW_CSV = DATA_DIR / "raw/Interview Intelligence Master_ 2026 - Master Sheet.csv"
 MEMORY_DB = PROJECT_ROOT / "memory.db"
@@ -66,11 +70,15 @@ BANK_POOL_CAP = 40        # curated interview data
 WEB_POOL_CAP = 60         # fresh company-attributed questions (Tavily)
 GITHUB_POOL_CAP = 30      # curated GitHub repos
 CANDIDATE_POOL_TARGET = BANK_POOL_CAP + WEB_POOL_CAP + GITHUB_POOL_CAP  # ~130 total ceiling
-RELEVANCE_BATCH_SIZE = 40  # candidates scored per LLM call in validate_relevance
+RELEVANCE_BATCH_SIZE = 25  # candidates scored per LLM call in validate_relevance (smaller → no JSON truncation)
 # Keep candidates scoring at/above this relevance; below → dropped (min-floor still applies).
 # 0.5 (not 0.6) because the scorer rates good foundational questions ~0.55–0.75; a stricter
 # bar under-fills sets and starves coverage/per-session representation.
 RELEVANCE_THRESHOLD = float(os.getenv("RELEVANCE_THRESHOLD", "0.5"))
+# Absolute lower bound for the min-questions backfill. When too few candidates clear RELEVANCE_THRESHOLD,
+# we top up toward min_questions ONLY from candidates at/above this floor — never below it. So a session
+# with a genuinely thin on-topic pool returns FEWER questions rather than padding with off-topic ones.
+RELEVANCE_FLOOR = float(os.getenv("RELEVANCE_FLOOR", "0.35"))
 # Final selection: greedy MMR with coverage + difficulty bonuses.
 #   score = λ·relevance − (1−λ)·redundancy + COVERAGE_BONUS·(covers a new outcome)
 #                                           + DIFFICULTY_BONUS·(fills an under-filled difficulty bucket)
@@ -151,8 +159,10 @@ INTERVIEW_SOURCE_ALLOWLIST = {
     "interviewquery.com", "prepfully.com", "igotanoffer.com", "glassdoor.com",
     "teamblind.com", "leetcode.com", "indeed.com", "interviewing.io",
     "hellointerview.com", "ambitionbox.com", "geeksforgeeks.org", "interviewbit.com",
-    "prepinsta.com", "indiabix.com", "naukri.com", "reddit.com", "medium.com",
-    "quora.com", "datascience.stackexchange.com", "stats.stackexchange.com",
+    "prepinsta.com", "indiabix.com", "naukri.com",
+    # NOTE: reddit.com, quora.com, medium.com, dev.to are DELIBERATELY EXCLUDED — low-trust
+    # (comment fragments, personal blogs, headings-as-questions). Credibility over volume.
+    "datascience.stackexchange.com", "stats.stackexchange.com",
     "stackoverflow.com", "datacamp.com", "analyticsvidhya.com", "kdnuggets.com",
     "towardsai.net", "towardsdatascience.com", "tredence.com", "igmguru.com",
     "vinsys.com", "novelvista.com", "generativeaimasters.in", "blockchain-council.org",

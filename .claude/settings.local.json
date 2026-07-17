@@ -4,7 +4,8 @@
       "Bash(npm run:*)",
       "Bash(python3 -m py_compile app.py)",
       "Bash(pkill -9 -f \"[a]pp.py\")",
-      "Bash(PYTHONUNBUFFERED=1 python3 app.py)"
+      "Bash(PYTHONUNBUFFERED=1 python3 app.py)",
+      "Bash(cd *)"
     ]
   }
 }
