@@ -53,6 +53,16 @@ XLSX_MASTERS = [
 CURRICULUM_FILE = RAW / "Fulltime_Jobs_Curriculum_v2_COMPLETE - Rejection Selection Analysis.xlsx"
 NXTMOCK_FILE = RAW / "GEN_AI_NXTMOCK_INTERVIEW.xlsx"
 
+
+def _nxtmock_files() -> list[Path]:
+    """All NxtMock product-export files (the interview export + any per-unit exports dropped in data/raw/,
+    e.g. Introduction_to_Langchain_NxtMock_Unit.xlsx). Matched case-insensitively on 'nxtmock'."""
+    files = [NXTMOCK_FILE] if NXTMOCK_FILE.exists() else []
+    for p in sorted(RAW.glob("*.xlsx")):
+        if "nxtmock" in p.name.lower() and p not in files:
+            files.append(p)
+    return files
+
 # ── GenAI filter ──────────────────────────────────────────────────────────────────────────
 # Long/unambiguous phrases match as substrings; short/ambiguous tokens match on WORD BOUNDARIES
 # (so "rag" no longer matches inside "sto-rag-e"/"ave-rag-e", "ai" not inside "email", etc.).
@@ -296,7 +306,9 @@ def _candidates() -> list[dict]:
         ("nxtmock", _rows_from_csv(CSV_FILE)),
         ("nxtmock", (r for p in XLSX_MASTERS for r in _rows_from_xlsx_masters(p))),
         ("curriculum", _rows_from_curriculum(CURRICULUM_FILE)),
-        ("nxtmock", _rows_from_nxtmock(NXTMOCK_FILE)),
+        # The interview export + every per-unit NxtMock export (QuestionDetails/GEN_AI only; coding
+        # + metadata sheets are never read by _rows_from_nxtmock).
+        ("nxtmock", (r for p in _nxtmock_files() for r in _rows_from_nxtmock(p))),
     ]
     out = []
     for source, rows in sources:

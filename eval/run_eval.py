@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.models import GenerationConfig                # noqa: E402
 from src.pipeline import AgentPipeline                 # noqa: E402
 from src.config import MIN_QUESTIONS, MAX_QUESTIONS    # noqa: E402
+from src import memory                                 # noqa: E402
 
 EVAL_PATH = Path(__file__).resolve().parent / "eval_sets.json"
 # A run PASSES only if it is genuinely relevant AND covers the session AND is the right size.
@@ -52,7 +53,17 @@ def run_one(session_name: str, max_q: int) -> dict:
         "difficulty": m.get("difficulty_balance", 0.0),
         "composite": res.quality_report.composite_score,
         "sources": dict(out.metadata.source_counts),
+        "contents": [q.content for q in out.question_details],
     }
+
+
+def _bad_by_session() -> dict:
+    """Reviewer-rejected ('bad') question texts (normalized) grouped by session, from feedback_examples.json."""
+    out: dict[str, set] = {}
+    for ex in memory.get_feedback_examples():
+        if ex.get("decision") == "bad" and ex.get("question"):
+            out.setdefault(ex.get("session", ""), set()).add(memory.normalize_content(ex["question"]))
+    return out
 
 
 def _passed(r: dict) -> bool:
@@ -79,10 +90,18 @@ def main() -> int:
     else:
         targets = random.Random(args.seed).sample(all_sessions, min(args.n, len(all_sessions)))
 
+    bad_by_session = _bad_by_session()
+    fb_examples = memory.get_feedback_examples()
+
     rows, errors = [], []
     for name in targets:
         try:
-            rows.append(run_one(name, args.max_questions))
+            r = run_one(name, args.max_questions)
+            # Feedback alignment: did any reviewer-rejected ('bad') question reappear in this run?
+            bad = bad_by_session.get(name, set())
+            r["fb_violations"] = sum(1 for c in r["contents"]
+                                     if memory.normalize_content(c) in bad) if bad else 0
+            rows.append(r)
         except Exception as e:  # noqa: BLE001
             errors.append((name, str(e)[:100]))
 
@@ -93,8 +112,9 @@ def main() -> int:
     for r in rows:
         ok = _passed(r)
         fails += 0 if ok else 1
+        viol = f"  ⚠{r['fb_violations']} rejected-reappeared" if r.get("fb_violations") else ""
         print(f"{r['session'][:45]:45s} {r['count']:>3} {r['relevance']:>5.2f} {r['coverage']:>5.2f} "
-              f"{r['diversity']:>5.2f} {r['difficulty']:>5.2f} {r['composite']:>5.2f}  {'PASS' if ok else 'FAIL'}")
+              f"{r['diversity']:>5.2f} {r['difficulty']:>5.2f} {r['composite']:>5.2f}  {'PASS' if ok else 'FAIL'}{viol}")
     for name, err in errors:
         fails += 1
         print(f"{name[:45]:45s}  ERROR: {err}")
@@ -103,6 +123,14 @@ def main() -> int:
         print(f"\nAGGREGATE  mean_relevance={statistics.mean(r['relevance'] for r in rows):.2f}  "
               f"mean_coverage={statistics.mean(r['coverage'] for r in rows):.2f}  "
               f"mean_count={statistics.mean(r['count'] for r in rows):.1f}")
+    # Feedback loop summary (reviewer decisions fed back into eval).
+    if fb_examples:
+        good = sum(1 for e in fb_examples if e.get("decision") == "good")
+        bad = sum(1 for e in fb_examples if e.get("decision") == "bad")
+        total_viol = sum(r.get("fb_violations", 0) for r in rows)
+        print(f"FEEDBACK   {len(fb_examples)} reviewer decisions ({good} good / {bad} bad) across "
+              f"{len({e.get('session') for e in fb_examples})} session(s); "
+              f"rejected-reappeared this run: {total_viol}")
     total = len(rows) + len(errors)
     print(f"RESULT  {total - fails}/{total} passed")
     return 1 if fails else 0

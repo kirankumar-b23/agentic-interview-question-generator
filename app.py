@@ -243,7 +243,7 @@ def api_generate():
 
     config = GenerationConfig(
         session_names=session_names,
-        max_questions=min(max_questions, 15),
+        max_questions=min(max_questions, 60),  # legacy input only — final set is uncapped (kept by relevance)
         model=model,
         preview=preview,
         category=category,
@@ -351,6 +351,17 @@ def api_approve(run_id: str):
     rejected_feedback = body.get("rejected_feedback", {})
 
     if action == "approve":
+        # Record reviewer decisions (feedback loop) BEFORE filtering to accepted-only.
+        try:
+            _sess = result.context.session_name if result.context else "Unknown"
+            _acc, _rej = set(accepted_ids), set(rejected_feedback.keys())
+            for q in list(result.curated_output.question_details):
+                if q.question_id in _rej:
+                    memory.record_feedback(run_id, _sess, q.question_id, q.content, "bad")
+                elif not accepted_ids or q.question_id in _acc:
+                    memory.record_feedback(run_id, _sess, q.question_id, q.content, "good")
+        except Exception:
+            pass
         if accepted_ids:
             result.curated_output.question_details = [
                 q for q in result.curated_output.question_details
@@ -406,25 +417,50 @@ def api_approve(run_id: str):
         return jsonify(resp)
 
     elif action == "reject":
-        # Distil rejection reasons into learned rules (max 5 per run)
+        session_name = result.context.session_name if result.context else "Unknown"
+        all_q = list(result.curated_output.question_details)
+        original_count = len(all_q) or 12
+
+        # Which questions were rejected. If the client sent no rejected ids (legacy reject-all),
+        # treat everything currently shown as rejected → fully different regeneration.
+        rejected_ids = set(rejected_feedback.keys())
+        if not rejected_ids and not accepted_ids:
+            rejected_ids = {q.question_id for q in all_q}
+        rejected_qs = [q for q in all_q if q.question_id in rejected_ids]
+        accepted_qs = [q for q in all_q if q.question_id in accepted_ids] if accepted_ids else \
+                      [q for q in all_q if q.question_id not in rejected_ids]
+
+        # Persist rejected content (per session) so it never resurfaces on any future run.
+        try:
+            memory.record_rejections(session_name, [q.content for q in rejected_qs])
+        except Exception:
+            pass
+        # Feedback loop: record rejected → bad, kept/accepted → good.
+        try:
+            for q in rejected_qs:
+                memory.record_feedback(run_id, session_name, q.question_id, q.content, "bad")
+            for q in accepted_qs:
+                memory.record_feedback(run_id, session_name, q.question_id, q.content, "good")
+        except Exception:
+            pass
+
+        # Distil any typed rejection reasons into learned rules (max 5).
         reasons = [v for v in rejected_feedback.values() if isinstance(v, str) and v.strip()]
         for reason in reasons[:5]:
             try:
-                rule = memory.distill_rule(
-                    result.context.session_name if result.context else "Unknown", reason)
+                rule = memory.distill_rule(session_name, reason)
                 if rule:
                     memory.append_learned_rule(rule)
             except Exception:
                 pass
 
-        session_names = result.context.session_name.split(" + ")
+        session_names = session_name.split(" + ")
         from src.llm_client import get_active_model
-        config = GenerationConfig(session_names=session_names, max_questions=15,
+        config = GenerationConfig(session_names=session_names, max_questions=original_count,
                                   model=get_active_model())
         try:
             conn = memory.get_connection()
-            conn.execute("DELETE FROM session_resolutions WHERE session_name = ?",
-                        (result.context.session_name,))
+            conn.execute("DELETE FROM session_resolutions WHERE session_name = ?", (session_name,))
             conn.commit()
             conn.close()
         except Exception:
@@ -437,6 +473,13 @@ def api_approve(run_id: str):
             from src.llm_client import set_active_model
             set_active_model(config.model)
             new_result = run_pipeline(config, run_id=new_run_id)
+            # PIN the accepted questions; fill the freed slots with NEW distinct ones (rejected content is
+            # already suppressed inside the pipeline). Keep the original set size.
+            accepted_norms = {memory.normalize_content(q.content) for q in accepted_qs}
+            fresh = [q for q in new_result.curated_output.question_details
+                     if memory.normalize_content(q.content) not in accepted_norms]
+            merged = (accepted_qs + fresh)[:original_count]
+            new_result.curated_output.question_details = merged
             _results[new_run_id] = new_result
             _persist_result(new_run_id, new_result)
 

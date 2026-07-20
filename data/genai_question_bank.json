@@ -11,8 +11,19 @@
     "source_count": 3
   },
   {
-    "id": "454d5c32-56ff-4525-a0d8-9ce4d8502412",
-    "content": "What is a transformer model, and what is the attention mechanism?",
+    "id": "a77c6d79-1fd7-41de-bf63-758d7bf34e4f",
+    "content": "What is a transformer model",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Capgemini",
+    "role": "ML/AI Engineer",
+    "source": "seed",
+    "source_url": "",
+    "source_count": 3
+  },
+  {
+    "id": "34e33cc6-6b82-4095-aab8-487b6882590c",
+    "content": "what is the attention mechanism?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Capgemini",
@@ -33,8 +44,8 @@
     "source_count": 3
   },
   {
-    "id": "ff2547e5-a327-4b1d-9057-ec6989adf7c6",
-    "content": "What is Responsible AI? What are the ethical risks of Generative AI, and how does AI bias occur?",
+    "id": "ab2910ef-d25b-4db0-b0af-71c3fd74181b",
+    "content": "What is Responsible AI?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Capgemini",
@@ -44,8 +55,8 @@
     "source_count": 3
   },
   {
-    "id": "2fef1f36-4f17-47e5-b6c9-0bd006191964",
-    "content": "What are hallucinations in LLMs, and how can they be reduced?",
+    "id": "5070e340-471e-492f-972a-1d6d85c5fa2f",
+    "content": "What are the ethical risks of Generative AI",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Capgemini",
@@ -55,8 +66,8 @@
     "source_count": 3
   },
   {
-    "id": "d83eb178-1cbf-45c8-a992-06fd058d2294",
-    "content": "What is Retrieval-Augmented Generation (RAG), why is it needed in enterprise GenAI, and how does it improve accuracy?",
+    "id": "4a626248-c5a5-4fe2-a2aa-addd7402e411",
+    "content": "how does AI bias occur?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Capgemini",
@@ -66,8 +77,63 @@
     "source_count": 3
   },
   {
-    "id": "a7433d28-23a3-499e-a3a1-4608bf2bb240",
-    "content": "How would you validate the output of an AI model, and how would you handle incorrect or biased responses?",
+    "id": "ed58baed-08ef-4bab-8ef6-2f6d57f61a27",
+    "content": "What are hallucinations in LLMs",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Capgemini",
+    "role": "ML/AI Engineer",
+    "source": "seed",
+    "source_url": "",
+    "source_count": 3
+  },
+  {
+    "id": "2e696e4e-3766-47fe-b2e5-21e6eeb258ed",
+    "content": "how can they be reduced?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Capgemini",
+    "role": "ML/AI Engineer",
+    "source": "seed",
+    "source_url": "",
+    "source_count": 3
+  },
+  {
+    "id": "0472dfc8-2e26-4327-b104-a129d95784c5",
+    "content": "What is Retrieval-Augmented Generation (RAG), why is it needed in enterprise GenAI",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Capgemini",
+    "role": "ML/AI Engineer",
+    "source": "seed",
+    "source_url": "",
+    "source_count": 3
+  },
+  {
+    "id": "49bfd825-fddf-419b-8414-a7d6b8a90f01",
+    "content": "how does it improve accuracy?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Capgemini",
+    "role": "ML/AI Engineer",
+    "source": "seed",
+    "source_url": "",
+    "source_count": 3
+  },
+  {
+    "id": "e03e1955-e07e-4778-b563-9b5e8cc7196e",
+    "content": "How would you validate the output of an AI model",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Capgemini",
+    "role": "ML/AI Engineer",
+    "source": "seed",
+    "source_url": "",
+    "source_count": 3
+  },
+  {
+    "id": "703e0db8-0b08-4ea1-b6b6-fab195190a5a",
+    "content": "how would you handle incorrect or biased responses?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Capgemini",
@@ -110,8 +176,8 @@
     "source_count": 3
   },
   {
-    "id": "ffc85518-bedd-425b-b36a-3d6e84840077",
-    "content": "Explain RAG and LoRA, and how you would apply them in a Generative AI solution.",
+    "id": "a375e480-dad6-4d4a-9aa2-48f69b387c6e",
+    "content": "Explain RAG and LoRA",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "Amazon",
@@ -121,15 +187,26 @@
     "source_count": 3
   },
   {
-    "id": "33b2e105-bbfd-415c-a701-22db1b0221ce",
-    "content": "What is prompt engineering?",
+    "id": "c74d02a3-cf4d-4b82-b11e-8ff35e95a87f",
+    "content": "how you would apply them in a Generative AI solution.",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "Amazon",
+    "role": "Data Scientist",
+    "source": "seed",
+    "source_url": "",
+    "source_count": 3
+  },
+  {
+    "id": "30786f04-a263-450e-b294-6371961c9ec1",
+    "content": "What is prompt engineering",
     "topic": "Gen AI",
     "difficulty": "Medium",
-    "company": null,
+    "company": "GVCC",
     "role": "Prompt Engineer",
-    "source": "web",
-    "source_url": "https://www.simplilearn.com/generative-ai-interview-questions-article",
-    "source_count": 8
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
   },
   {
     "id": "867794e3-0f22-4884-b894-c271a7f14c83",
@@ -187,8 +264,19 @@
     "source_count": 4
   },
   {
-    "id": "eda2a018-3d56-4038-90ae-026099831cea",
-    "content": "What do you understand about Agentic AI? How is it different from Traditional AI?",
+    "id": "f7c91f6c-819e-4f89-8f08-17a53be7c19c",
+    "content": "What do you understand about Agentic AI?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://www.projectpro.io/article/agentic-ai-interview-questions-and-answers/1127",
+    "source_count": 4
+  },
+  {
+    "id": "7e7ec2f0-9a88-4e09-832f-30302db5affa",
+    "content": "How is it different from Traditional AI?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -209,8 +297,19 @@
     "source_count": 4
   },
   {
-    "id": "74a59b21-d8e5-400a-89c9-03874f60dc8d",
-    "content": "What is fine-tuning in the context of LLMs, and why is it important?",
+    "id": "de5e960f-9d13-4c10-81cd-a17bf8a9bccc",
+    "content": "What is fine-tuning in the context of LLMs",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://www.datacamp.com/blog/llm-interview-questions",
+    "source_count": 3
+  },
+  {
+    "id": "61e27eb9-8907-4ba8-8eaa-57574da50c42",
+    "content": "why is it important?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -264,8 +363,19 @@
     "source_count": 3
   },
   {
-    "id": "9c96385a-a0b1-4cb5-8b82-330a9c873478",
-    "content": "What is overfitting, and how can you prevent it?",
+    "id": "4109322e-c30d-41a9-aacd-fa50b0ada854",
+    "content": "What is overfitting",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.interviewquery.com/interview-guides/box-machine-learning-engineer",
+    "source_count": 3
+  },
+  {
+    "id": "8caf493c-bf65-46d9-9dc2-2c14beb382b9",
+    "content": "how can you prevent it?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -352,8 +462,19 @@
     "source_count": 3
   },
   {
-    "id": "f4e9ff9b-7421-4d9f-bdbf-fd5b7c0ef463",
-    "content": "What is the Transformer architecture, and how is it used in LLMs?",
+    "id": "39ed8bed-67a7-4ccd-bc3a-174346bbdd98",
+    "content": "What is the Transformer architecture",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://www.datacamp.com/blog/llm-interview-questions",
+    "source_count": 2
+  },
+  {
+    "id": "88f65aeb-3814-41c2-ae6d-e26d3295d195",
+    "content": "how is it used in LLMs?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -396,8 +517,19 @@
     "source_count": 2
   },
   {
-    "id": "94cb6568-7f68-442b-a81c-ae8045992127",
-    "content": "What causes hallucinations in LLMs and how do you detect and reduce them?",
+    "id": "713cfb7b-225e-40d1-a447-d4e71ff07163",
+    "content": "What causes hallucinations in LLMs",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.interviewbit.com/generative-ai-interview-questions-and-answers",
+    "source_count": 2
+  },
+  {
+    "id": "fa26c7fc-f858-49bf-b546-d8a2d4aef4ff",
+    "content": "how do you detect and reduce them?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -418,8 +550,19 @@
     "source_count": 2
   },
   {
-    "id": "0144cb15-85b8-4e0e-bdc3-3349c4108318",
-    "content": "Explain the Transformer architecture. What are its key components?",
+    "id": "c7bad0c5-e671-4f69-8a27-04f371d86555",
+    "content": "Explain the Transformer architecture.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://www.interviewbit.com/llm-interview-questions-answers",
+    "source_count": 2
+  },
+  {
+    "id": "bb18e194-e514-4b51-a607-90130f831e35",
+    "content": "What are its key components?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -517,8 +660,8 @@
     "source_count": 2
   },
   {
-    "id": "f31eef2d-3da0-4494-bd47-cde4d95ef6e0",
-    "content": "Explain the attention mechanism in transformers and why it matters for LLMs.",
+    "id": "1b7fa6c7-7d0f-405f-bb34-599c22496c1c",
+    "content": "Explain the attention mechanism in transformers",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -528,8 +671,8 @@
     "source_count": 2
   },
   {
-    "id": "42642202-eb30-45dd-af3f-1d02aa8d0541",
-    "content": "What is the context window, and what are the practical challenges of a large one?",
+    "id": "1701262b-f316-48c4-809e-0ffa15eb609c",
+    "content": "why it matters for LLMs.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -539,8 +682,41 @@
     "source_count": 2
   },
   {
-    "id": "aa433751-0746-4676-923a-510a7057565c",
-    "content": "What is temperature, and how does it affect generation?",
+    "id": "c5ab5d83-be9b-4a54-97e1-a139b452b4e5",
+    "content": "What is the context window",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://pub.towardsai.net/40-generative-ai-interview-questions-that-actually-get-asked-in-2026-with-answers-b4c647f1e2e8",
+    "source_count": 2
+  },
+  {
+    "id": "c446f5f2-8bcb-4975-a966-860b11179f6f",
+    "content": "what are the practical challenges of a large one?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://pub.towardsai.net/40-generative-ai-interview-questions-that-actually-get-asked-in-2026-with-answers-b4c647f1e2e8",
+    "source_count": 2
+  },
+  {
+    "id": "81cf69f8-5783-4b35-93d0-c127906297d7",
+    "content": "What is temperature",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://pub.towardsai.net/40-generative-ai-interview-questions-that-actually-get-asked-in-2026-with-answers-b4c647f1e2e8",
+    "source_count": 2
+  },
+  {
+    "id": "11824a7f-35d1-4875-958d-ece1ed5842e5",
+    "content": "how does it affect generation?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -561,8 +737,19 @@
     "source_count": 2
   },
   {
-    "id": "cee9919f-bf83-4373-b3db-e3b44dd94233",
-    "content": "What problem does RAG solve, and what are its core components?",
+    "id": "60358ab0-f9aa-48eb-a683-99141b989450",
+    "content": "What problem does RAG solve",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://pub.towardsai.net/40-generative-ai-interview-questions-that-actually-get-asked-in-2026-with-answers-b4c647f1e2e8",
+    "source_count": 2
+  },
+  {
+    "id": "40586549-e6e5-42dd-8bee-7644a20bdb24",
+    "content": "what are its core components?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -660,8 +847,8 @@
     "source_count": 2
   },
   {
-    "id": "f4390b87-9729-477c-bda2-2428eba7146e",
-    "content": "What are word embeddings and why are they important?",
+    "id": "fd5b2e4d-e4bd-469c-81dc-35b806b5ba8f",
+    "content": "What are word embeddings",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -669,6 +856,17 @@
     "source": "web",
     "source_url": "https://www.geeksforgeeks.org/nlp/advanced-natural-language-processing-interview-question",
     "source_count": 2
+  },
+  {
+    "id": "1b2d4115-e839-46a8-bd15-a871041e58de",
+    "content": "why are they important?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Product",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.igmguru.com/blog/product-manager-interview-questions",
+    "source_count": 1
   },
   {
     "id": "aec1bdba-9755-4a9a-8451-50bf703daa8a",
@@ -891,8 +1089,19 @@
     "source_count": 2
   },
   {
-    "id": "eed7f9b3-29a9-4733-b26e-a7e10f515229",
-    "content": "Where MCP is used and why it matters.",
+    "id": "5482ab2c-072a-478b-be51-1b0ae443f962",
+    "content": "Where MCP is used",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://interviewkickstart.com/ai-glossary/model-context-protocol",
+    "source_count": 2
+  },
+  {
+    "id": "707e0f14-26f2-4be4-a5aa-6e14d920029c",
+    "content": "why it matters.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -1078,14 +1287,25 @@
     "source_count": 2
   },
   {
-    "id": "343ebee8-6112-4920-ae5f-2258b5f1dc4e",
-    "content": "What are some common pre-training objectives for LLMs, and how do they work?",
+    "id": "cb649983-f1a7-4cd9-9c6e-921ffb310a36",
+    "content": "What are some common pre-training objectives for LLMs",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
     "role": "General",
     "source": "web",
     "source_url": "https://www.datacamp.com/blog/llm-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "88636871-5b53-49b8-b19c-f694fbaf5e70",
+    "content": "how do they work?",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "TARDID",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
     "source_count": 1
   },
   {
@@ -1155,8 +1375,8 @@
     "source_count": 1
   },
   {
-    "id": "7f766142-9f20-42bd-8530-34d50c0e7e2a",
-    "content": "What is a Variational Autoencoder (VAE)? How does it differ from a standard autoencoder?",
+    "id": "77a2c8d8-766a-4859-a318-cb7f82df819a",
+    "content": "What is a Variational Autoencoder (VAE)?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -1166,8 +1386,30 @@
     "source_count": 1
   },
   {
-    "id": "a75bcfff-0c6b-4528-8c83-738125fb3eda",
-    "content": "Explain GANs (Generative Adversarial Networks) and how the generator and discriminator interact.",
+    "id": "477c536b-bcc2-41b4-a617-1db27e80407c",
+    "content": "How does it differ from a standard autoencoder?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.geeksforgeeks.org/artificial-intelligence/generative-ai-interview-question-with-answer",
+    "source_count": 1
+  },
+  {
+    "id": "a62aa4d1-dfd9-4c93-92dd-3b61d510acd3",
+    "content": "Explain GANs (Generative Adversarial Networks)",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.geeksforgeeks.org/artificial-intelligence/generative-ai-interview-question-with-answer",
+    "source_count": 1
+  },
+  {
+    "id": "f4f6ee64-6d12-4b7c-9b82-b9ec7a0d463b",
+    "content": "how the generator and discriminator interact.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -1331,8 +1573,19 @@
     "source_count": 1
   },
   {
-    "id": "f51d1f3b-15eb-4382-9e61-4a470ae1432c",
-    "content": "How does the retriever work in a RAG system? What are common retrieval methods?",
+    "id": "a677c2c8-e82b-4623-bf19-b0a2d5a814eb",
+    "content": "How does the retriever work in a RAG system?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://www.datacamp.com/blog/rag-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "452dc117-0873-4742-90d0-2b19cc7c3f40",
+    "content": "What are common retrieval methods?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -1408,17 +1661,6 @@
     "source_count": 1
   },
   {
-    "id": "afbb0b83-6e2b-429d-9a59-775ca0edc364",
-    "content": "How is it different from traditional AI?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://generativeaimasters.in/generative-ai-interview-questions",
-    "source_count": 1
-  },
-  {
     "id": "f1f5ac48-84aa-4468-92be-83789ea413e4",
     "content": "| Machine Learning & Deep Learning | Supervised/unsupervised learning, neural networks | What is the difference between ML and DL?",
     "topic": "Gen AI",
@@ -1452,8 +1694,19 @@
     "source_count": 1
   },
   {
-    "id": "584dc2e3-2a33-40ad-b8e3-0fd8ec5a3798",
-    "content": "Explain the following concepts and how they relate to building and scaling LLMs: 1.",
+    "id": "7be63842-961e-4ac9-ba9f-49a67b9a7d5c",
+    "content": "Explain the following concepts",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Amazon",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://prachub.com/interview-questions/explain-transformers-and-moe-in-llms",
+    "source_count": 1
+  },
+  {
+    "id": "1197c579-255f-483c-a9bf-dbcd4026741a",
+    "content": "how they relate to building and scaling LLMs: 1.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Amazon",
@@ -1705,8 +1958,8 @@
     "source_count": 1
   },
   {
-    "id": "092c37b7-50a3-4006-bac0-3542b8b5eba4",
-    "content": "What is a neural network and why is it important in generative AI?",
+    "id": "98de6c24-12fb-445d-8298-1639d422767c",
+    "content": "What is a neural network",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -1716,8 +1969,30 @@
     "source_count": 1
   },
   {
-    "id": "aef0104f-5f67-427b-9c1f-ed38a90362cc",
-    "content": "What is a training dataset and why does its quality matter in generative AI?",
+    "id": "c4749a27-85a6-4920-adec-cc4cfd9fb668",
+    "content": "why is it important in generative AI?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.novelvista.com/blogs/ai-and-ml/generative-ai-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "b30e3f64-392f-4100-baaf-9a502a579a8d",
+    "content": "What is a training dataset",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "Data Scientist",
+    "source": "web",
+    "source_url": "https://www.novelvista.com/blogs/ai-and-ml/generative-ai-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "bd2c6ba4-dd66-4d7d-8632-bce48bb58bcd",
+    "content": "why does its quality matter in generative AI?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -1793,8 +2068,19 @@
     "source_count": 1
   },
   {
-    "id": "bce2505d-aba8-418d-a9f0-8b61ba224089",
-    "content": "How do you evaluate the quality of LLM outputs? Explain BLEU, ROUGE, and BERTScore.",
+    "id": "4d6a9564-63f3-433a-965b-c5595413b4d6",
+    "content": "How do you evaluate the quality of LLM outputs?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.interviewbit.com/generative-ai-interview-questions-and-answers",
+    "source_count": 1
+  },
+  {
+    "id": "4faccc41-8c4f-49b5-a07b-f9342947572e",
+    "content": "Explain BLEU, ROUGE, and BERTScore.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -1958,8 +2244,8 @@
     "source_count": 1
   },
   {
-    "id": "43879ea7-267d-4753-b303-a7003278e59b",
-    "content": "What is the attention mechanism? Explain self-attention and multi-head attention.",
+    "id": "2618833c-53a2-4307-ad4d-9a39f5d7fc8a",
+    "content": "Explain self-attention and multi-head attention.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -1980,8 +2266,19 @@
     "source_count": 1
   },
   {
-    "id": "907e4cf6-f6f9-400c-935f-8b287fd8f51c",
-    "content": "What are embeddings in LLMs? Explain word embeddings vs contextual embeddings.",
+    "id": "1167e7c7-f6fa-4d51-b23f-77bfcf96e6f2",
+    "content": "What are embeddings in LLMs?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://www.interviewbit.com/llm-interview-questions-answers",
+    "source_count": 1
+  },
+  {
+    "id": "19db639a-afe8-41ad-b237-2c3d657a97da",
+    "content": "Explain word embeddings vs contextual embeddings.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -2013,8 +2310,30 @@
     "source_count": 1
   },
   {
-    "id": "0d42b5f9-dd5d-4747-b83b-1fca0f5ce97a",
-    "content": "Describe a machine learning project you have worked on. What were the challenges, and how did you overcome them?",
+    "id": "b4f5d48a-5ad7-4dce-a9f1-21a554075131",
+    "content": "Describe a machine learning project you have worked on.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.interviewquery.com/interview-guides/box-machine-learning-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "26e0cccc-3cb4-461a-8064-d6117374550b",
+    "content": "What were the challenges",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.interviewquery.com/interview-guides/box-machine-learning-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "e1014a8f-7bbe-41cb-9942-4765b8eec9e6",
+    "content": "how did you overcome them?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -2057,8 +2376,19 @@
     "source_count": 1
   },
   {
-    "id": "480f4d05-0ac6-4981-a24d-0da16b26f795",
-    "content": "What happens when a Large Language Model (LLM) hallucinates, and how would you prevent it?",
+    "id": "8e204d12-e763-46ab-9c7e-dfde987c2596",
+    "content": "What happens when a Large Language Model (LLM) hallucinates",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Accenture",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.ambitionbox.com/interviews/accenture-interview-questions/ai-ml-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "97e752f0-07b7-42fa-916e-057f974e7d05",
+    "content": "how would you prevent it?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Accenture",
@@ -2343,8 +2673,8 @@
     "source_count": 1
   },
   {
-    "id": "30841ac3-37db-4ef7-961b-d55021e04dd0",
-    "content": "What is perplexity and what are its limitations?",
+    "id": "94a2be32-961b-46a3-9a25-78db8916ba6f",
+    "content": "What is perplexity",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -2354,8 +2684,30 @@
     "source_count": 1
   },
   {
-    "id": "cff0769f-de7f-470b-b06c-593d4a320d3d",
-    "content": "How do BLEU and ROUGE work and when should you use them?",
+    "id": "93227853-1c11-492b-b804-daef819e1292",
+    "content": "what are its limitations?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.educative.io/courses/ai-interview-crash-course/evaluating-ai-and-llm-models",
+    "source_count": 1
+  },
+  {
+    "id": "fdd53bd4-f197-40e1-a42d-9f0fec636f3a",
+    "content": "How do BLEU and ROUGE work",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.educative.io/courses/ai-interview-crash-course/evaluating-ai-and-llm-models",
+    "source_count": 1
+  },
+  {
+    "id": "3ccf588f-a80c-4d9c-b7a9-900813cfd1e3",
+    "content": "when should you use them?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -2519,8 +2871,19 @@
     "source_count": 1
   },
   {
-    "id": "7c95ce6d-7ac0-4137-8287-47cc5a93935a",
-    "content": "What is the difference between stack and heap memory, and how are they managed by the operating system?",
+    "id": "53315c3b-37c6-4141-8a08-2452f33f7749",
+    "content": "What is the difference between stack and heap memory",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.glassdoor.com/Interview/united-states-llm-interview-questions-SRCH_IL.0,13_KO14,17.htm",
+    "source_count": 1
+  },
+  {
+    "id": "2900db97-572c-46cb-b505-03822bb7ba4b",
+    "content": "how are they managed by the operating system?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -3058,8 +3421,19 @@
     "source_count": 1
   },
   {
-    "id": "600b5312-3c52-488d-8e0d-f7494939b681",
-    "content": "What is hybrid search, and when does it outperform pure vector search?",
+    "id": "7f4aacdd-8eb8-46bc-af34-e7281f621a4d",
+    "content": "What is hybrid search",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://pub.towardsai.net/40-generative-ai-interview-questions-that-actually-get-asked-in-2026-with-answers-b4c647f1e2e8",
+    "source_count": 1
+  },
+  {
+    "id": "0aa80c25-6943-4869-bba7-c0349dd99ff0",
+    "content": "when does it outperform pure vector search?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -3102,8 +3476,19 @@
     "source_count": 1
   },
   {
-    "id": "f6c87881-6dc1-4c01-bcce-603d0671f641",
-    "content": "What do you do in cash case? How do we achieve this?",
+    "id": "13a3b01d-6672-4a6e-aef4-f639f29f2d70",
+    "content": "What do you do in cash case?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.geeksforgeeks.org/nlp/build-rag-pipeline-using-open-source-large-language-models",
+    "source_count": 1
+  },
+  {
+    "id": "1d96e09b-daf9-4fbf-b356-22c6ef18f61a",
+    "content": "How do we achieve this?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -3630,17 +4015,6 @@
     "source_count": 1
   },
   {
-    "id": "bfdb84a7-b5b4-4fb4-a45d-04e96b622a85",
-    "content": "What is prompt engineering, and why is it important in Generative AI?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "Prompt Engineer",
-    "source": "web",
-    "source_url": "https://www.edureka.co/blog/generative-ai-interview-questions",
-    "source_count": 1
-  },
-  {
     "id": "77b213a2-9f9b-4d0d-ae09-c40118e6865c",
     "content": "What differentiates LLMs from traditional chatbots?",
     "topic": "Gen AI",
@@ -4125,8 +4499,8 @@
     "source_count": 1
   },
   {
-    "id": "3e850cd5-7814-461c-a611-92f1a43e46d2",
-    "content": "What are the central parts of this system? How do they work?",
+    "id": "49ee55c2-2103-45cd-8a63-69b19dc166c5",
+    "content": "What are the central parts of this system?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -4224,8 +4598,19 @@
     "source_count": 1
   },
   {
-    "id": "1e29f57b-2dbb-4ba8-baca-ff1795b3403e",
-    "content": "How GenAI interviews have evolved: A brief history of generative AI interviews and how they differ from traditional ML interviews.",
+    "id": "7cea7335-3211-43f9-8b5c-73ad761c34d3",
+    "content": "How GenAI interviews have evolved: A brief history of generative AI interviews",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.educative.io/guide/generative-ai-interview-preparation",
+    "source_count": 1
+  },
+  {
+    "id": "488be00e-8f72-411e-a909-c38d9c091f04",
+    "content": "how they differ from traditional ML interviews.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -4554,17 +4939,6 @@
     "source_count": 1
   },
   {
-    "id": "2472e1d9-4cb5-4681-9d04-96cb44c58008",
-    "content": "With a clear understanding of these models' capabilities and applications, how can businesses determine the right approach for their specific needs?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.tredence.com/blog/llm-vs-multimodal",
-    "source_count": 1
-  },
-  {
     "id": "346d59a4-d642-4a52-9c29-610d8613cab0",
     "content": "Explain your engineering project – problem statement and your role",
     "topic": "Gen AI",
@@ -4840,8 +5214,8 @@
     "source_count": 1
   },
   {
-    "id": "12504c99-4838-49db-8dee-5ad2297b457d",
-    "content": "Given two sorted lists, write a function to merge them into one sorted list. Bonus: What's the time complexity?",
+    "id": "75a0175c-2a65-47e7-9935-6a1362b80982",
+    "content": "Given two sorted lists, write a function to merge them into one sorted list.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -4851,8 +5225,30 @@
     "source_count": 1
   },
   {
-    "id": "5a60805a-4fad-48bc-bbc2-53a6ada50465",
-    "content": "Given a 2-D matrix P of predicted values and actual values, write a function precisionrecall to calculate precision and recall metrics. Return the ordered pair (precision, recall).",
+    "id": "bf387626-efed-4f01-9eb5-77c5f51de2d5",
+    "content": "Bonus: What's the time complexity?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.interviewquery.com/interview-guides/huggingface-software-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "115e771a-6cd8-4135-858d-7e99186e9ebc",
+    "content": "Given a 2-D matrix P of predicted values and actual values, write a function precisionrecall to calculate precision and recall metrics.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "Data Scientist",
+    "source": "web",
+    "source_url": "https://www.interviewquery.com/interview-guides/huggingface-software-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "7b43cbdb-b285-4163-8ae5-53bc0914cd81",
+    "content": "Return the ordered pair (precision, recall).",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -5192,8 +5588,19 @@
     "source_count": 1
   },
   {
-    "id": "d8e38ee4-9217-436a-a179-7eedf35ea93f",
-    "content": "That's the name of the company including the emoji? What do they do?",
+    "id": "371ca634-2d8d-4fec-8e4e-a043239c8209",
+    "content": "That's the name of the company including the emoji?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.teamblind.com/post/hugging-face-interview-c7k4qc7u",
+    "source_count": 1
+  },
+  {
+    "id": "112b0c18-a43e-4301-a75d-3204376acdc1",
+    "content": "What do they do?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -5291,8 +5698,8 @@
     "source_count": 1
   },
   {
-    "id": "99c8d8e9-266c-4e6c-935f-c69b9aaa0f48",
-    "content": "What is the Bag of Words (BoW) model and what are its limitations?",
+    "id": "72dc4b42-04b1-462b-80aa-3a645762df8c",
+    "content": "What is the Bag of Words (BoW) model",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -5379,8 +5786,8 @@
     "source_count": 1
   },
   {
-    "id": "1f4e7be4-6a7f-4e84-a80d-0199b93fdc4c",
-    "content": "What is the role of self-attention in LLMs, and why is it critical for capturing context?",
+    "id": "7c183b64-43a3-4884-806c-e45df8d0eee7",
+    "content": "What is the role of self-attention in LLMs",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -5390,8 +5797,30 @@
     "source_count": 1
   },
   {
-    "id": "5023e109-b9b3-4d86-8e29-d8e3fc91a6bc",
-    "content": "Explain what \"post-training\" means and why a raw base model is usually a poor product assistant despite having absorbed huge amounts of text.",
+    "id": "2771d71c-6d5d-46df-b3ee-00cda1ff10c0",
+    "content": "why is it critical for capturing context?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://pub.towardsai.net/10-must-know-questions-about-large-language-models-and-attention-mechanisms-2ea304b0f565",
+    "source_count": 1
+  },
+  {
+    "id": "6508bb60-be23-492e-a99f-702dab52cb33",
+    "content": "Explain what \"post-training\" means",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Google",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://prachub.com/interview-questions/llm-foundations-architecture-adaptation-and-steering",
+    "source_count": 1
+  },
+  {
+    "id": "a85ffc37-5376-4ce7-baa1-8fa50211610f",
+    "content": "why a raw base model is usually a poor product assistant despite having absorbed huge amounts of text.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Google",
@@ -5522,8 +5951,19 @@
     "source_count": 1
   },
   {
-    "id": "6954286f-464b-4b1a-b644-0ff5cad2368e",
-    "content": "Explain how context windows work, and why a 200K context model is not always better than an 8K model.",
+    "id": "ea1cec8e-4b1e-489f-b377-2d2f50e08f1a",
+    "content": "Explain how context windows work",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://dataford.io/questions/why-bigger-context-is-not-always-better",
+    "source_count": 1
+  },
+  {
+    "id": "6d4b3223-77e3-4056-8d39-ac164175ade9",
+    "content": "why a 200K context model is not always better than an 8K model.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -5590,17 +6030,6 @@
   {
     "id": "ed5b9906-6d23-4d0a-b700-45789cd8e453",
     "content": "What are LLM Parameters?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.projectpro.io/article/llm-parameters/1029",
-    "source_count": 1
-  },
-  {
-    "id": "eca6d748-d457-42fd-970a-1f172f967bc6",
-    "content": "List of Key LLM Parameters",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -5808,8 +6237,19 @@
     "source_count": 1
   },
   {
-    "id": "f6193add-1738-46ee-8e0c-190463d63e90",
-    "content": "Explain the difference between Gini impurity and information gain; when would results diverge?",
+    "id": "15171f96-d3d8-46ca-b10a-646b70ee6a31",
+    "content": "Explain the difference between Gini impurity and information gain",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "OpenAI",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/openai/machine-learning-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "688e66cd-9168-4cad-87e3-adf1c76cf89d",
+    "content": "when would results diverge?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "OpenAI",
@@ -5973,8 +6413,19 @@
     "source_count": 1
   },
   {
-    "id": "9e6bdbeb-c041-45db-873e-a7da5cb313a8",
-    "content": "Explain the limitations of using LLM-as-a-judge for evaluating instruction-following capabilities, and how you would mitigate bias in this setup.",
+    "id": "94e6658a-ce6c-4c9e-8c51-f80a7c6f72ec",
+    "content": "Explain the limitations of using LLM-as-a-judge for evaluating instruction-following capabilities",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Scale",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/scale/research-scientist",
+    "source_count": 1
+  },
+  {
+    "id": "d3a3d539-0218-425d-bb87-ee8678c375ab",
+    "content": "how you would mitigate bias in this setup.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Scale",
@@ -6028,8 +6479,19 @@
     "source_count": 1
   },
   {
-    "id": "9356fcef-b623-4d6f-a872-587d40c64833",
-    "content": "Why WebSockets don’t scale easily — and how AWS changes the game",
+    "id": "010b232b-4790-4fe3-bfd8-fd2e9236605a",
+    "content": "Why WebSockets don’t scale easily —",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://towardsai.net/p/machine-learning/llm-ai-agent-applications-with-langchain-and-langgraph-part-8-temperature-top-p-top-k-and-max-tokens-how-to-shape-model-behavior",
+    "source_count": 1
+  },
+  {
+    "id": "cd715b9c-974b-413a-b169-6db36e4900cf",
+    "content": "how AWS changes the game",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -6182,8 +6644,30 @@
     "source_count": 1
   },
   {
-    "id": "7484ab98-750b-49ab-97b9-4fd7fde53b6e",
-    "content": "When T=1, the logits are unchanged. When T<1, the model’s output distribution sharpens, making high-probability words even more likely. When T>1, the distribution flattens, making the model more likely to sample from lower-probability words.",
+    "id": "5757341f-ca5d-4553-ad6b-c34ec5bde98b",
+    "content": "When T=1, the logits are unchanged.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "Data Scientist",
+    "source": "web",
+    "source_url": "https://www.analyticsvidhya.com/blog/2024/07/temperature-in-prompt-engineering",
+    "source_count": 1
+  },
+  {
+    "id": "c11864b6-031f-49d3-86ee-fc366663abf7",
+    "content": "When T<1, the model’s output distribution sharpens, making high-probability words even more likely.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "Data Scientist",
+    "source": "web",
+    "source_url": "https://www.analyticsvidhya.com/blog/2024/07/temperature-in-prompt-engineering",
+    "source_count": 1
+  },
+  {
+    "id": "f048a2da-7781-4a85-8969-f84846f20961",
+    "content": "When T>1, the distribution flattens, making the model more likely to sample from lower-probability words.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -6644,8 +7128,8 @@
     "source_count": 1
   },
   {
-    "id": "74939a84-3235-4682-b3fa-5c0a9fa16180",
-    "content": "What is negative prompting, and why is it less reliable than positive instruction?",
+    "id": "04e29665-dd44-40c8-a062-27131d497a01",
+    "content": "What is negative prompting",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -6655,8 +7139,30 @@
     "source_count": 1
   },
   {
-    "id": "0a89c513-a60b-4211-9839-ccd79082e641",
-    "content": "What is a context window, and why does it constrain prompt design?",
+    "id": "a4710b94-3191-45e3-b81d-07b1ffabec4f",
+    "content": "why is it less reliable than positive instruction?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "Prompt Engineer",
+    "source": "web",
+    "source_url": "https://www.mlstack.cafe/interview-questions/prompt-engineering",
+    "source_count": 1
+  },
+  {
+    "id": "3c6938d8-ab9d-4f75-8383-57bd1d246177",
+    "content": "What is a context window",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "Prompt Engineer",
+    "source": "web",
+    "source_url": "https://www.mlstack.cafe/interview-questions/prompt-engineering",
+    "source_count": 1
+  },
+  {
+    "id": "c2a913dc-aa61-4739-b6c4-90b0cb96cfdb",
+    "content": "why does it constrain prompt design?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -6721,8 +7227,19 @@
     "source_count": 1
   },
   {
-    "id": "1d30cc05-a0ff-462e-9729-3588da3d376d",
-    "content": "How did you choose the right model, and what scaling issues did you run into?”",
+    "id": "4b596720-695b-4d64-8811-519a2bddaa4d",
+    "content": "How did you choose the right model",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://pub.towardsai.net/the-10-questions-that-decide-whether-youre-an-ai-engineer-or-just-an-ai-user-fdaadf2de912",
+    "source_count": 1
+  },
+  {
+    "id": "87130461-f233-4f47-9706-223482b4634a",
+    "content": "what scaling issues did you run into?”",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -7007,8 +7524,19 @@
     "source_count": 1
   },
   {
-    "id": "a537969d-2835-4d9d-a7ed-920bad42d444",
-    "content": "What is Attention? What are some attention mechanism types?",
+    "id": "ddecf9f0-8cdf-43e6-99e5-b06c0b84d340",
+    "content": "What is Attention?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.analyticsvidhya.com/blog/2024/11/generative-ai-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "2c8dea0a-5ff5-4cd5-8ce5-3031356420d4",
+    "content": "What are some attention mechanism types?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -7227,8 +7755,8 @@
     "source_count": 1
   },
   {
-    "id": "fe5bd8fc-2ba5-454d-a2fb-ff4a4b76d285",
-    "content": "What do you understand by Machine Learning (ML) and how does it differ from artificial intelligence (AI) and Data Science?",
+    "id": "faf21df2-b8a4-403f-9531-8e8399ec546a",
+    "content": "What do you understand by Machine Learning (ML)",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -7238,8 +7766,30 @@
     "source_count": 1
   },
   {
-    "id": "e980b2ec-a620-4c1e-b580-fa6e11bb36bd",
-    "content": "What is overfitting in machine learning and how can it be avoided?",
+    "id": "9c935cb3-171d-48ed-9989-4da7af8af30a",
+    "content": "how does it differ from artificial intelligence (AI) and Data Science?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.geeksforgeeks.org/machine-learning/machine-learning-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "bbe05b6c-8c71-4064-98f1-294a0548b389",
+    "content": "What is overfitting in machine learning",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.geeksforgeeks.org/machine-learning/machine-learning-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "5ea4e154-bd0a-418a-a79d-e46ff8c6f397",
+    "content": "how can it be avoided?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -7260,8 +7810,19 @@
     "source_count": 1
   },
   {
-    "id": "e859a908-d4cb-4b3a-956d-c5af54f38c7a",
-    "content": "Explain Lasso and Ridge Regularization. How do they help in Elastic Net Regularization?",
+    "id": "8dfac783-ccb8-4986-b7e8-f018f5e1b454",
+    "content": "Explain Lasso and Ridge Regularization.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.geeksforgeeks.org/machine-learning/machine-learning-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "7581c2a6-1c44-4d4b-ad13-8e8bb5c16658",
+    "content": "How do they help in Elastic Net Regularization?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -7293,8 +7854,19 @@
     "source_count": 1
   },
   {
-    "id": "9d9009a3-3481-4352-bc72-d597a488a545",
-    "content": "What is the difference between precision and recall? How F1 combines both?",
+    "id": "68482f6f-47a0-499f-ad57-245c0721c933",
+    "content": "What is the difference between precision and recall?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.geeksforgeeks.org/machine-learning/machine-learning-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "89c56483-9922-4831-8a1c-b1d22c2e60a3",
+    "content": "How F1 combines both?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -7491,8 +8063,8 @@
     "source_count": 1
   },
   {
-    "id": "087e216d-15f4-4e99-abd3-076550cc65b1",
-    "content": "Explain the tradeoff and when you would set it to 0.",
+    "id": "93f8cf3a-b66e-44f2-a861-ab7752979f51",
+    "content": "Explain the tradeoff",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -7502,8 +8074,30 @@
     "source_count": 1
   },
   {
-    "id": "902a8f8a-974d-4523-8996-3cda9cd436e6",
-    "content": "Describe the discipline and why it matters for LLM applications.",
+    "id": "21637fa4-94a9-49a2-81bc-110d750a0628",
+    "content": "when you would set it to 0.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.mlstack.cafe/blog/prompt-engineering-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "53d703e4-5936-4438-be3d-7b07dce41f1c",
+    "content": "Describe the discipline",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.mlstack.cafe/blog/prompt-engineering-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "4c7e4d4a-da58-48ac-9407-33af0563c367",
+    "content": "why it matters for LLM applications.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -7920,8 +8514,19 @@
     "source_count": 1
   },
   {
-    "id": "6f28d903-6baa-47f4-a7ae-3e6645373b7f",
-    "content": "Can you explain the architecture of a Transformer model and how it improves upon previous sequence-to-sequence models?",
+    "id": "ff24c6da-621b-4f9e-a15a-abddaa25ffdc",
+    "content": "Can you explain the architecture of a Transformer model",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Genentech",
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/genentech/data-scientist",
+    "source_count": 1
+  },
+  {
+    "id": "6eb07ee7-01be-41bc-9944-040892d76fec",
+    "content": "how it improves upon previous sequence-to-sequence models?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Genentech",
@@ -7953,8 +8558,19 @@
     "source_count": 1
   },
   {
-    "id": "ec6b1636-eaaa-40b3-aac1-c0673512b970",
-    "content": "Describe a time you deployed an open-source LLM versus using a proprietary API. What drove your decision?",
+    "id": "eb419e86-c7a8-4d97-af3e-e79c40e50018",
+    "content": "Describe a time you deployed an open-source LLM versus using a proprietary API.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Genentech",
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/genentech/data-scientist",
+    "source_count": 1
+  },
+  {
+    "id": "0d654443-7b63-43f0-be41-9d0869a56792",
+    "content": "What drove your decision?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Genentech",
@@ -7986,8 +8602,19 @@
     "source_count": 1
   },
   {
-    "id": "4c3d2493-2038-4de6-b6da-fb38236eb054",
-    "content": "Explain the trade-offs between Random Forests and Gradient Boosting Machines. When would you choose one over the other?",
+    "id": "d6427ba9-929c-4a3c-9a9b-df3bd776432c",
+    "content": "Explain the trade-offs between Random Forests and Gradient Boosting Machines.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Genentech",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/genentech/data-scientist",
+    "source_count": 1
+  },
+  {
+    "id": "b0620e45-48ac-4408-9907-c6d36af13d17",
+    "content": "When would you choose one over the other?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Genentech",
@@ -8646,8 +9273,8 @@
     "source_count": 1
   },
   {
-    "id": "9ef2c806-74dc-42df-af6f-3167c3045c74",
-    "content": "What Is System Design? what is system design",
+    "id": "1890483f-b978-4203-9860-d979a9acbc19",
+    "content": "What Is System Design?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -8976,8 +9603,41 @@
     "source_count": 1
   },
   {
-    "id": "2f595be7-623d-4991-ae10-a39ef2121d12",
-    "content": "Results - What was the outcome of your actions? What did you achieve through your actions and what did you learn? What steps did you take to improve after the experience?",
+    "id": "580daafc-3e18-4534-b9cc-46103fd43c6e",
+    "content": "Results - What was the outcome of your actions?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Tech",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.techinterviewhandbook.org/behavioral-interview",
+    "source_count": 1
+  },
+  {
+    "id": "7fd143f3-6ccf-4c0f-b3ec-09be48a9a6a5",
+    "content": "What did you achieve through your actions",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Tech",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.techinterviewhandbook.org/behavioral-interview",
+    "source_count": 1
+  },
+  {
+    "id": "b121c1ea-fb65-45bf-90d9-868524105d8e",
+    "content": "what did you learn?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Tech",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.techinterviewhandbook.org/behavioral-interview",
+    "source_count": 1
+  },
+  {
+    "id": "b20187a6-77d5-497d-8967-c4445f59b91b",
+    "content": "What steps did you take to improve after the experience?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Tech",
@@ -9570,8 +10230,19 @@
     "source_count": 1
   },
   {
-    "id": "4868c2ec-617a-4ac1-9d1e-ade28ad4bff5",
-    "content": "How did you learn what users actually needed, what evidence changed your view, and what changes did you make to improve relevance, recall, or the overall experience?",
+    "id": "c3233455-f6a3-4585-8ba0-0a8a52eec8f4",
+    "content": "How did you learn what users actually needed, what evidence changed your view",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://dataford.io/questions/user-empathy-in-embeddings-and-vector-search",
+    "source_count": 1
+  },
+  {
+    "id": "f9d37057-6d4a-4514-b73a-3ff264503558",
+    "content": "what changes did you make to improve relevance, recall, or the overall experience?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -9713,8 +10384,8 @@
     "source_count": 1
   },
   {
-    "id": "c31c7d32-1045-43e1-b4bb-a619a58644c2",
-    "content": "Why does traditional database sharding sometimes fail to improve search performance in high-dimensional vector spaces, and how do you mitigate this?",
+    "id": "fad1fda3-ad5f-48ff-a12c-32f3953a2cd5",
+    "content": "Why does traditional database sharding sometimes fail to improve search performance in high-dimensional vector spaces",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Mercor",
@@ -9724,8 +10395,19 @@
     "source_count": 1
   },
   {
-    "id": "9e4286e8-ec51-4f92-a984-348e49929bab",
-    "content": "Design a URL shortener service. How would you handle high-volume deletions in this system without degrading read throughput?",
+    "id": "8c0a4eb9-354e-47e2-bdc0-76f695497ac8",
+    "content": "how do you mitigate this?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Mercor",
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/mercor/data-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "0cc398fd-0aee-4936-8701-3b118aadd513",
+    "content": "Design a URL shortener service.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Mercor",
@@ -9735,8 +10417,30 @@
     "source_count": 1
   },
   {
-    "id": "76639e7a-f9b9-4ac4-8633-9d3ed6b33627",
-    "content": "When retrieving massive datasets from AWS S3, network drops and worker crashes are inevitable. How do you design your ingestion workers to be fault-tolerant and ensure exactly-once or at-least-once delivery?",
+    "id": "6996cc94-6967-4a6d-bc6c-3ad28db8f8a6",
+    "content": "How would you handle high-volume deletions in this system without degrading read throughput?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Mercor",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/mercor/data-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "fc71df40-b1f2-44ac-bc65-dc8879f19fe4",
+    "content": "When retrieving massive datasets from AWS S3, network drops and worker crashes are inevitable.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Mercor",
+    "role": "Data Scientist",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/mercor/data-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "178bebc0-b97e-411f-acdf-601b06cea6f3",
+    "content": "How do you design your ingestion workers to be fault-tolerant and ensure exactly-once or at-least-once delivery?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Mercor",
@@ -9845,8 +10549,19 @@
     "source_count": 1
   },
   {
-    "id": "c1c859f3-c0b6-438d-b41d-6750bc1b9f2c",
-    "content": "What are some of the techniques used for sampling? What is the main advantage of sampling?",
+    "id": "58a89fff-babb-48d1-a01a-87c86fcc6dcc",
+    "content": "What are some of the techniques used for sampling?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.interviewbit.com/data-science-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "18a3b2c0-fe7d-43bb-bce4-83afa74b69c8",
+    "content": "What is the main advantage of sampling?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -10062,17 +10777,6 @@
     "role": "General",
     "source": "web",
     "source_url": "https://www.analyticsvidhya.com/blog/2023/12/vector-databases-in-generative-ai-solutions",
-    "source_count": 1
-  },
-  {
-    "id": "b5d75d54-01ab-42c2-97b9-e1aa6d0e615b",
-    "content": "How do they Work?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.geeksforgeeks.org/data-science/what-is-a-vector-database",
     "source_count": 1
   },
   {
@@ -10307,8 +11011,19 @@
     "source_count": 1
   },
   {
-    "id": "d16c99e1-9f64-4dbe-be4b-f10c819bf187",
-    "content": "What is the internal covariate shift and what are the consequences of it?",
+    "id": "222ab3db-753a-414a-9271-6d5629d47498",
+    "content": "What is the internal covariate shift",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://towardsai.net/p/l/machine-learning-interview-questions-2",
+    "source_count": 1
+  },
+  {
+    "id": "36cb07a0-af74-41d1-91fd-2dba6591f267",
+    "content": "what are the consequences of it?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -10417,8 +11132,19 @@
     "source_count": 1
   },
   {
-    "id": "5ff55523-3ac3-4d0b-a4b3-ff7684999c71",
-    "content": "Explain Model Context Protocol at a high level and why it is useful in AI applications.",
+    "id": "09de9c3c-211e-4a32-943a-dd67e97751aa",
+    "content": "Explain Model Context Protocol at a high level",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.mlstack.cafe/blog/mcp-interview-questions-ai-agent-developer",
+    "source_count": 1
+  },
+  {
+    "id": "5551a845-3509-4a3f-a950-6da2903c10bf",
+    "content": "why it is useful in AI applications.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -10571,8 +11297,19 @@
     "source_count": 1
   },
   {
-    "id": "7ef0e867-5e81-47c9-bf03-0c4f8c5437f0",
-    "content": "When should you adopt MCP? When you have many integrations, multiple agent apps, or you need consistent governance and observability across tool access.",
+    "id": "09541d0b-b379-45ba-a887-10bbf9d82c66",
+    "content": "When should you adopt MCP?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://interviewkickstart.com/ai-glossary/model-context-protocol",
+    "source_count": 1
+  },
+  {
+    "id": "0ce55a7c-6e0c-4650-930f-39a7e0e3ecc6",
+    "content": "When you have many integrations, multiple agent apps, or you need consistent governance and observability across tool access.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -11825,8 +12562,19 @@
     "source_count": 1
   },
   {
-    "id": "593fc522-2486-46f0-9f14-3677f6899782",
-    "content": "Explain how you would evaluate whether the output meets the “ideal answer” criteria and how you would iteratively improve prompts and guards to increase reliability.",
+    "id": "5a420d4e-56a9-49b5-8f22-60d9da44ddee",
+    "content": "Explain how you would evaluate whether the output meets the “ideal answer” criteria",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Intuit",
+    "role": "Prompt Engineer",
+    "source": "web",
+    "source_url": "https://prachub.com/interview-questions/design-prompts-for-json-only-llm-responses",
+    "source_count": 1
+  },
+  {
+    "id": "6df9eedd-febe-4d13-b684-afa7ec2ac953",
+    "content": "how you would iteratively improve prompts and guards to increase reliability.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Intuit",
@@ -12353,8 +13101,19 @@
     "source_count": 1
   },
   {
-    "id": "c56f77e5-1c63-4f63-a828-9da42f25a9a1",
-    "content": "How did you align stakeholders who had different goals, such as quality, latency, cost, and safety, and how did you handle disagreements about what metrics mattered most?",
+    "id": "52d24be3-0b26-4bb6-acdb-92d6e6844ed6",
+    "content": "How did you align stakeholders who had different goals, such as quality, latency, cost, and safety",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "GenAI Product Manager",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/questions/cross-functional-collaboration-on-llm-evaluation-and-serving",
+    "source_count": 1
+  },
+  {
+    "id": "50070dad-b5c9-42c1-9283-41f8207c7f6a",
+    "content": "how did you handle disagreements about what metrics mattered most?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -12837,8 +13596,19 @@
     "source_count": 1
   },
   {
-    "id": "a287cf39-729e-4ae0-b490-d68a068599cd",
-    "content": "Can you explain what General AI is, and how does it differ from Narrow AI?",
+    "id": "20e1a778-755d-47dc-9862-294e54184b7e",
+    "content": "Can you explain what General AI is",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.datacamp.com/blog/ai-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "1eee6e15-ff97-4aab-9046-c886f5402020",
+    "content": "how does it differ from Narrow AI?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -12969,8 +13739,8 @@
     "source_count": 1
   },
   {
-    "id": "476c2e2d-2771-4e46-9057-1982e4ec85cd",
-    "content": "Tell me about your research background and how it led you to AI",
+    "id": "1004ff8c-9b9f-4dec-bfa6-f2f903b64fab",
+    "content": "Tell me about your research background",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -12980,8 +13750,30 @@
     "source_count": 1
   },
   {
-    "id": "d982f22b-3ca8-41b4-9107-068787480c15",
-    "content": "Why they ask this: Interviewers want to understand your research journey, what drives your passion for AI, and how your background uniquely positions you for the role.",
+    "id": "d8925ff1-b190-47ad-ac82-41e4ec6459d2",
+    "content": "how it led you to AI",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.tealhq.com/career-paths/ai-researcher-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "da3243d2-1b93-4fa4-9ba1-a77cc10650b0",
+    "content": "Why they ask this: Interviewers want to understand your research journey, what drives your passion for AI",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.tealhq.com/career-paths/ai-researcher-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "6401d180-5667-444b-8533-31120c9d686f",
+    "content": "how your background uniquely positions you for the role.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -13046,8 +13838,19 @@
     "source_count": 1
   },
   {
-    "id": "ff828caa-65b3-4401-b25c-bea547b47ef8",
-    "content": "Explain Stable diffusion and difference between AI/ML/DL.",
+    "id": "b72ce8b1-667f-44c2-842a-836cc14caf1b",
+    "content": "Explain Stable diffusion",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Nexuslink",
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.glassdoor.co.in/Interview/NexusLink-Interview-Questions-E2307860.htm",
+    "source_count": 1
+  },
+  {
+    "id": "3b68bb58-b50b-423d-ae82-1113ec46c1ee",
+    "content": "difference between AI/ML/DL.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Nexuslink",
@@ -13134,8 +13937,19 @@
     "source_count": 1
   },
   {
-    "id": "68109065-22b3-42d6-b0ba-d340d9056df8",
-    "content": "What roles do the retriever and generator play, and how are they coupled?",
+    "id": "92a9bd38-4f36-4937-8a66-79c3a937c3ae",
+    "content": "What roles do the retriever and generator play",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.analyticsvidhya.com/blog/2026/02/rag-interview-questions-and-answers",
+    "source_count": 1
+  },
+  {
+    "id": "7f476753-9b04-47c3-a493-4aeeccb6d781",
+    "content": "how are they coupled?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -13156,8 +13970,8 @@
     "source_count": 1
   },
   {
-    "id": "7f02a437-f5fc-4c99-9bdd-c78d5b850270",
-    "content": "What is a vector embedding, and why is it essential for dense retrieval?",
+    "id": "fa68d394-7c9c-4112-8dd8-eec961afa0a0",
+    "content": "What is a vector embedding",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -13167,8 +13981,30 @@
     "source_count": 1
   },
   {
-    "id": "187ebe2c-4fee-4531-ba62-1a6b5d40d229",
-    "content": "What is chunking, and why does chunk size matter?",
+    "id": "e0276499-65b7-40c6-ad3a-f3bd7aa3e5c9",
+    "content": "why is it essential for dense retrieval?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://www.analyticsvidhya.com/blog/2026/02/rag-interview-questions-and-answers",
+    "source_count": 1
+  },
+  {
+    "id": "5b12191a-918c-45a1-93b6-c9170cfda95b",
+    "content": "What is chunking",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.analyticsvidhya.com/blog/2026/02/rag-interview-questions-and-answers",
+    "source_count": 1
+  },
+  {
+    "id": "cd7664f3-358a-4d8b-9276-2f70eadb5266",
+    "content": "why does chunk size matter?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -13222,8 +14058,8 @@
     "source_count": 1
   },
   {
-    "id": "32f88c45-e5d1-45ff-88e0-23dd595564e3",
-    "content": "What are tokens, and why do they matter in ChatGPT?",
+    "id": "20bd89de-e3cd-428f-b8ef-70b4ae69c363",
+    "content": "why do they matter in ChatGPT?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -13332,8 +14168,8 @@
     "source_count": 1
   },
   {
-    "id": "1055784a-3770-4948-b611-4a709dd3966f",
-    "content": "What is retrieval-augmented generation, and how would you design and implement a production-ready RAG system for this enterprise data so that answers stay grounded in the source documents while handling noisy content, permissions, and evolving knowledge?",
+    "id": "bfe426e5-25bd-4503-a99f-b80198b14625",
+    "content": "how would you design and implement a production-ready RAG system for this enterprise data so that answers stay grounded in the source documents while handling noisy content, permissions, and evolving knowledge?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -13618,8 +14454,19 @@
     "source_count": 1
   },
   {
-    "id": "95fd32e6-9700-40ad-946e-be44e7854061",
-    "content": "Explain the preprocessing, embedding and indexing strategy, model choices, training or fine-tuning approach, and how you would evaluate the end-to-end quality.",
+    "id": "b33a8c56-7344-4e9c-ac25-2d7a4734f1d9",
+    "content": "Explain the preprocessing, embedding and indexing strategy, model choices, training or fine-tuning approach",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/questions/design-enterprise-document-rag-architecture",
+    "source_count": 1
+  },
+  {
+    "id": "79142aa8-c6b6-44b7-ab7b-8bda84c791b3",
+    "content": "how you would evaluate the end-to-end quality.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -13739,8 +14586,8 @@
     "source_count": 1
   },
   {
-    "id": "a043e15a-a008-4796-b211-767dff55012a",
-    "content": "How would you implement a reranking step in a RAG pipeline, and what metrics would you use to measure its success?",
+    "id": "174147a0-ade2-4633-8c53-0398e920424f",
+    "content": "How would you implement a reranking step in a RAG pipeline",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Price Waterhouse Coopers",
@@ -13750,8 +14597,30 @@
     "source_count": 1
   },
   {
-    "id": "f90e76c9-8766-4327-9da5-74a259709bb3",
-    "content": "Describe a scenario where a vector database failed to retrieve the correct context, and how you resolved it.",
+    "id": "c1477783-eede-4ef2-98dc-5203776710c4",
+    "content": "what metrics would you use to measure its success?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Price Waterhouse Coopers",
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/price-waterhouse-coopers/genai-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "f847adda-81b9-4c17-877c-17b87a9b1c58",
+    "content": "Describe a scenario where a vector database failed to retrieve the correct context",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Price Waterhouse Coopers",
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/price-waterhouse-coopers/genai-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "808fa165-2611-4198-bcb4-e3b7f8d1b890",
+    "content": "how you resolved it.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Price Waterhouse Coopers",
@@ -13849,14 +14718,25 @@
     "source_count": 1
   },
   {
-    "id": "be23102c-48f5-44e9-91f4-4a77f8549980",
-    "content": "Describe a project where you implemented generative AI. What challenges did you face, and how did you overcome them?",
+    "id": "2530e0e9-69c0-42a5-9e14-b69ac15caa6f",
+    "content": "Describe a project where you implemented generative AI.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
     "role": "General",
     "source": "web",
     "source_url": "https://dataford.io/questions/discuss-a-genai-project",
+    "source_count": 1
+  },
+  {
+    "id": "7ab06c2e-88d8-4502-8662-f666c3f9c833",
+    "content": "What challenges did you face?",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "DiligenceVault",
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
     "source_count": 1
   },
   {
@@ -13915,8 +14795,8 @@
     "source_count": 1
   },
   {
-    "id": "c928dbba-f6b7-4111-b772-9c4e3693c0ae",
-    "content": "Describe a scenario where an agent fails during tool use (e.g., an API returns a 500 error). How should the agentic framework handle this autonomously?",
+    "id": "3876b8f4-372a-4b56-b0b2-f4e6c372e36c",
+    "content": "Describe a scenario where an agent fails during tool use (e.g., an API returns a 500 error).",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Ema",
@@ -13926,8 +14806,8 @@
     "source_count": 1
   },
   {
-    "id": "1b14f3c5-fe05-47c9-b006-95b1b1ae64ec",
-    "content": "Explain the difference between fine-tuning an LLM using LoRA versus full parameter fine-tuning. When would you choose one over the other?",
+    "id": "07efc226-f6b1-44fa-bb6f-a314a2fa968f",
+    "content": "How should the agentic framework handle this autonomously?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Ema",
@@ -13937,8 +14817,30 @@
     "source_count": 1
   },
   {
-    "id": "d70f4a55-c9c1-4cf2-84dc-0a568e222ead",
-    "content": "How does the self-attention mechanism in Transformers scale with sequence length, and how do long-context models address this bottleneck?",
+    "id": "4d28bd2c-1c9c-4393-b646-ed2ef5e40a91",
+    "content": "Explain the difference between fine-tuning an LLM using LoRA versus full parameter fine-tuning.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Ema",
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/ema/machine-learning-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "a5071dff-10ac-4489-a1b5-bc199544ddae",
+    "content": "How does the self-attention mechanism in Transformers scale with sequence length",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Ema",
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/ema/machine-learning-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "f330c6ef-ee45-49eb-b209-ddf38ec03a85",
+    "content": "how do long-context models address this bottleneck?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Ema",
@@ -14289,8 +15191,19 @@
     "source_count": 1
   },
   {
-    "id": "d57ad22d-9c51-4aaf-8e83-fed0e2f3c72d",
-    "content": "What are python sets? Explain some of the properties of sets.",
+    "id": "61ede568-ba73-4ce0-8ed4-86034ba29d00",
+    "content": "What are python sets?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.analyticsvidhya.com/blog/2026/01/data-science-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "a104e9e6-b0c5-471f-b236-3f09e9314bfd",
+    "content": "Explain some of the properties of sets.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -14740,8 +15653,19 @@
     "source_count": 1
   },
   {
-    "id": "c7523ac7-277e-49f9-ba2f-64bc62373441",
-    "content": "When does agent reasoning go off the rails, and what guardrails do you put in place?",
+    "id": "92a5f925-e773-4eb0-9d3a-319525aa20b7",
+    "content": "When does agent reasoning go off the rails",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/questions/guardrails-for-llm-agent-reasoning",
+    "source_count": 1
+  },
+  {
+    "id": "514c78f4-685d-4747-ba77-17f4ad46b6b8",
+    "content": "what guardrails do you put in place?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -14927,8 +15851,19 @@
     "source_count": 1
   },
   {
-    "id": "936c0ccc-dd8f-422c-aeb9-4aa3ac2d33e8",
-    "content": "Describe a scenario where an agentic workflow failed due to tool-calling errors, and explain how you resolved or mitigated it.",
+    "id": "0d138a8e-4695-4013-9964-42c0fd8c6314",
+    "content": "Describe a scenario where an agentic workflow failed due to tool-calling errors",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Hippocratic Ai",
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://dataford.io/interview-guides/hippocratic-ai/agentic-ai-engineer",
+    "source_count": 1
+  },
+  {
+    "id": "77ce4f5e-6064-4dd9-89b1-9c2359e30ab5",
+    "content": "explain how you resolved or mitigated it.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Hippocratic Ai",
@@ -15686,8 +16621,19 @@
     "source_count": 1
   },
   {
-    "id": "38eb61f0-f782-41e5-b045-2bff1fe230f9",
-    "content": "What is an AI hallucination, and how do you reduce it?",
+    "id": "1893a2c1-dd2c-4e75-9c6a-8bf8615571f5",
+    "content": "What is an AI hallucination",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.tredence.com/blog/top-20-ai-machine-learning-interview-questions-2026",
+    "source_count": 1
+  },
+  {
+    "id": "ba81efa1-6204-4191-82dd-a4f62b084c60",
+    "content": "how do you reduce it?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -15862,8 +16808,19 @@
     "source_count": 1
   },
   {
-    "id": "89727b46-3251-42b6-84d9-8bc034dd1ee3",
-    "content": "When you’re sitting one of these assessments, here’s what the scoring is actually based on, and what each criterion means for how you should prepare:",
+    "id": "287eb215-3839-4880-8afe-e0bb9834c083",
+    "content": "When you’re sitting one of these assessments, here’s what the scoring is actually based on",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://www.interviewquery.com/p/how-to-prepare-for-prompt-engineering-interviews",
+    "source_count": 1
+  },
+  {
+    "id": "64d198f0-17eb-43f6-b7ab-f2124c4375f0",
+    "content": "what each criterion means for how you should prepare:",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -15983,8 +16940,19 @@
     "source_count": 1
   },
   {
-    "id": "75e3dacc-45da-4cbe-a8bb-d666aed0d7ac",
-    "content": "Do you know what Spark is? Do you have any experience using it?",
+    "id": "5e9e34dc-6abd-4f8a-8edf-b89621d80a50",
+    "content": "Do you know what Spark is?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://leetcode.com/discuss/interview-question/3687009/top-50-machine-learning-interview-questions-basic-to-high-level-questions-with-answers",
+    "source_count": 1
+  },
+  {
+    "id": "22e536f4-bd72-4c41-becb-67858912e364",
+    "content": "Do you have any experience using it?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -16049,8 +17017,19 @@
     "source_count": 1
   },
   {
-    "id": "52d0d305-f104-4678-9fb8-37cfa33061b1",
-    "content": "Explainability and Interpretability: How to understand and explain model predictions.",
+    "id": "a45f783a-5d96-40e4-93a0-166ebb81209d",
+    "content": "Explainability and Interpretability: How to understand",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://interviewkickstart.com/blogs/interview-questions/senior-machine-learning-engineer-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "0201af64-d694-4c6d-8f69-a2d54da61d30",
+    "content": "explain model predictions.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -16368,8 +17347,19 @@
     "source_count": 1
   },
   {
-    "id": "11080a3c-d7e2-4f57-9e70-bf505549dbe6",
-    "content": "Tell me about a tough product decision you made and how you backed it up.",
+    "id": "ed806d40-ea16-4690-9c1f-e13a79217ac0",
+    "content": "Tell me about a tough product decision you made",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://tryexponent.com/guides/mistral-ai-product-manager-pm-interview-guide/questions",
+    "source_count": 1
+  },
+  {
+    "id": "6ef14392-13b9-48b6-840d-17a89404a5a0",
+    "content": "how you backed it up.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -16423,8 +17413,8 @@
     "source_count": 1
   },
   {
-    "id": "c42e76e8-f7f4-4612-baf8-74fa980c8a94",
-    "content": "Tell me about an AI-powered feature you launched where the model had significant technical limitations. How did you design the CX to manage user expectations and maintain trust?",
+    "id": "24e7522c-ce5a-43e7-a8ae-9208e048f659",
+    "content": "Tell me about an AI-powered feature you launched where the model had significant technical limitations.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -16434,8 +17424,30 @@
     "source_count": 1
   },
   {
-    "id": "3df965fc-549b-4a7e-8372-7552069651b2",
-    "content": "Tell me a time when you had to work with models that were producing inconsistent predictions. How did you work with the scientists to address them?",
+    "id": "9b20883c-e014-46de-9360-9e53610ee5c3",
+    "content": "How did you design the CX to manage user expectations and maintain trust?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://igotanoffer.com/en/advice/ai-product-manager-interview#questions",
+    "source_count": 1
+  },
+  {
+    "id": "2b5aa8c5-b845-448c-aafd-f77908099b44",
+    "content": "Tell me a time when you had to work with models that were producing inconsistent predictions.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "General",
+    "source": "web",
+    "source_url": "https://igotanoffer.com/en/advice/ai-product-manager-interview#questions",
+    "source_count": 1
+  },
+  {
+    "id": "4ae0a639-5be3-4e15-b6a5-b65b386ebd70",
+    "content": "How did you work with the scientists to address them?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -16456,8 +17468,30 @@
     "source_count": 1
   },
   {
-    "id": "07de976c-0626-4657-ba79-779781f527c3",
-    "content": "Given our company's goal to increase customer engagement by 30%, what would you do? Where would you deploy an AI solution, and how would you prove it was a better approach than a non-AI solution?",
+    "id": "de5001e0-6786-477e-b65a-6ea49c1ee784",
+    "content": "Given our company's goal to increase customer engagement by 30%, what would you do?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://igotanoffer.com/en/advice/ai-product-manager-interview",
+    "source_count": 1
+  },
+  {
+    "id": "5bcdf6c5-9116-4f30-9ea5-2bfd52f7e842",
+    "content": "Where would you deploy an AI solution",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "web",
+    "source_url": "https://igotanoffer.com/en/advice/ai-product-manager-interview",
+    "source_count": 1
+  },
+  {
+    "id": "474faaf2-6fb7-43d3-b2f6-887d05fee14f",
+    "content": "how would you prove it was a better approach than a non-AI solution?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -16698,8 +17732,19 @@
     "source_count": 1
   },
   {
-    "id": "6067d3ae-5feb-4ddd-8110-918f4d9e355e",
-    "content": "What is product management and what inspires you to become a product manager?",
+    "id": "9506eec1-faaf-4405-ae28-dda3fd282e79",
+    "content": "What is product management",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Product",
+    "role": "GenAI Product Manager",
+    "source": "web",
+    "source_url": "https://www.igmguru.com/blog/product-manager-interview-questions",
+    "source_count": 1
+  },
+  {
+    "id": "312aad91-d9c4-4074-9405-09392dc84693",
+    "content": "what inspires you to become a product manager?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Product",
@@ -16753,8 +17798,8 @@
     "source_count": 1
   },
   {
-    "id": "39d6a7b6-5169-4a1a-921b-67b5854c52f0",
-    "content": "What are user journeys and why are they important?",
+    "id": "c20f8884-b2e2-4683-93cf-50f99d705fcf",
+    "content": "What are user journeys",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Product",
@@ -16863,8 +17908,8 @@
     "source_count": 1
   },
   {
-    "id": "b6987fc6-1b75-437c-a81a-59762f4ce3ce",
-    "content": "What is prompt engineering, and how is it used in AI-based development?",
+    "id": "c4d4d45a-b2d5-47be-85b6-fc2c09b9d9d3",
+    "content": "how is it used in AI-based development?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "GVCC",
@@ -17028,8 +18073,30 @@
     "source_count": 1
   },
   {
-    "id": "cc705e10-3a8a-4241-9806-884585a0135c",
-    "content": "What are the basics of Generative AI? Explain its key concepts, applications, and how it differs from traditional AI.",
+    "id": "1fde1b76-7773-4bc3-8e75-ed3601e7a11f",
+    "content": "What are the basics of Generative AI?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Innoira",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "551c7a87-db18-4089-bc2a-3ec324abd7bb",
+    "content": "Explain its key concepts, applications",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Innoira",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "7f66b8fe-665d-472a-b17b-2281fe83476d",
+    "content": "how it differs from traditional AI.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Innoira",
@@ -17072,8 +18139,8 @@
     "source_count": 1
   },
   {
-    "id": "65bcd0db-912d-441f-ad24-829891a7d199",
-    "content": "Describe a project or use case where you implemented or worked with LLMs or RAG. What challenges did you face?",
+    "id": "4120f32a-e89e-40d9-9e18-1606be323c98",
+    "content": "Describe a project or use case where you implemented or worked with LLMs or RAG.",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "DiligenceVault",
@@ -17171,8 +18238,8 @@
     "source_count": 1
   },
   {
-    "id": "e22db7b0-cd0e-4b38-a04a-b3b556cb8add",
-    "content": "What are Key, Query, and Value (KQV) in the attention mechanism, and how do they work?",
+    "id": "38bde0f4-132a-4eac-ad0b-21b1b3ea08cd",
+    "content": "What are Key, Query, and Value (KQV) in the attention mechanism",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "TARDID",
@@ -17215,8 +18282,8 @@
     "source_count": 1
   },
   {
-    "id": "5ccfcb94-634d-4892-bd1a-5fb6585e07d5",
-    "content": "What is Hallucination in AI models, and how can it be reduced?",
+    "id": "7e2d3e61-2a12-44a3-bc34-b73a0e9c628e",
+    "content": "What is Hallucination in AI models",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "TARDID",
@@ -17226,8 +18293,19 @@
     "source_count": 1
   },
   {
-    "id": "9d6a1dad-451f-4a6a-94c2-d9991fc975cf",
-    "content": "What is prompt engineering in the context of AI/ML? How would you write effective prompts for training or interacting with large language models?",
+    "id": "68a11db0-28d9-4197-a54a-410e3f609d95",
+    "content": "how can it be reduced?",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "TARDID",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "4bbbf77d-6c83-4c49-8983-5a584689aabc",
+    "content": "What is prompt engineering in the context of AI/ML?",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "BluePond.AI",
@@ -17237,8 +18315,30 @@
     "source_count": 1
   },
   {
-    "id": "2d7c6254-d568-4c9f-9471-1ed61dc20183",
-    "content": "Describe the process of training a large language model (LLM). What are the key steps and considerations involved?",
+    "id": "8c31bfb8-0d38-4df6-977a-b5e5af6f46a4",
+    "content": "How would you write effective prompts for training or interacting with large language models?",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "BluePond.AI",
+    "role": "Prompt Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "1e4e724f-1268-4e52-a7c5-3ae853a36ffb",
+    "content": "Describe the process of training a large language model (LLM).",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "BluePond.AI",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "1ee8d1f3-d09c-498e-ad0a-5c9960bf83a5",
+    "content": "What are the key steps and considerations involved?",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "BluePond.AI",
@@ -17281,8 +18381,19 @@
     "source_count": 2
   },
   {
-    "id": "dc081277-4298-41f2-b4c7-8f28ee814b55",
-    "content": "How do large language models (LLMs) work, and what are their key use cases?",
+    "id": "a0a4633a-6616-49dc-b68d-c43245005ade",
+    "content": "How do large language models (LLMs) work",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "Foxo.club",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 7
+  },
+  {
+    "id": "f143c545-2fc8-4388-ae62-9cc4b3b2610a",
+    "content": "what are their key use cases?",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "Foxo.club",
@@ -17303,8 +18414,19 @@
     "source_count": 1
   },
   {
-    "id": "0f478ca9-b09e-4651-91dc-7c7281fe9536",
-    "content": "How did you utilize Large Language Models (LLM) and Retrieval-Augmented Generation (RAG) in your projects? Explain the architecture and specific use cases.",
+    "id": "1f665fd1-103d-4627-b385-568b47b4a29f",
+    "content": "How did you utilize Large Language Models (LLM) and Retrieval-Augmented Generation (RAG) in your projects?",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "Qualitia",
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "15c89789-5151-42c3-bd8d-5ff11d5cf21a",
+    "content": "Explain the architecture and specific use cases.",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "Qualitia",
@@ -17556,8 +18678,19 @@
     "source_count": 1
   },
   {
-    "id": "6f3cf861-36a0-4c25-802f-b5f57e82334f",
-    "content": "How does the context window work in your project, and what happens if the context exceeds the window size?",
+    "id": "1a0a18fa-984e-4f94-8986-69ee94deb942",
+    "content": "How does the context window work in your project",
+    "topic": "Gen AI",
+    "difficulty": "Easy",
+    "company": "DOMS",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "27799891-d04e-41b4-a781-bd7ebd630095",
+    "content": "what happens if the context exceeds the window size?",
     "topic": "Gen AI",
     "difficulty": "Easy",
     "company": "DOMS",
@@ -17611,8 +18744,19 @@
     "source_count": 1
   },
   {
-    "id": "2741dd60-e06c-439e-9afa-7f7c846ade0e",
-    "content": "Can you prepare on what are LLMs, how you used LLMs in your projects, whether you have worked on LLMs before, what kinds of LLMs you have worked with, and how you included them in your project or workflows?",
+    "id": "aa5f2678-2d0e-4549-b433-8c26eed6b15c",
+    "content": "Can you prepare on what are LLMs, how you used LLMs in your projects, whether you have worked on LLMs before, what kinds of LLMs you have worked with",
+    "topic": "Gen AI",
+    "difficulty": "Easy",
+    "company": "Enmovil",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "86cbad3a-7583-4662-bb3f-bc6e0552b9c5",
+    "content": "how you included them in your project or workflows?",
     "topic": "Gen AI",
     "difficulty": "Easy",
     "company": "Enmovil",
@@ -17743,8 +18887,19 @@
     "source_count": 1
   },
   {
-    "id": "5d955d6f-7b09-4c36-8cf2-c3d9cfe8c040",
-    "content": "How do large language models (LLMs) process prompts? Do they understand natural language like English, or is something else happening underneath the hood?",
+    "id": "8254c5f6-d3d3-4778-b5c9-fc6598ad444a",
+    "content": "How do large language models (LLMs) process prompts?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Clink",
+    "role": "Prompt Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "4d5f543d-dad7-4739-9ed3-4f2afaa7c751",
+    "content": "Do they understand natural language like English, or is something else happening underneath the hood?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Clink",
@@ -17787,8 +18942,19 @@
     "source_count": 1
   },
   {
-    "id": "9ab8739b-c6ce-44f6-bb1b-8f59b356f6bb",
-    "content": "What is the output of the code where a variable is assigned an object value, and why does it result in an error?",
+    "id": "060991bd-99d7-4a8a-90b8-50ee7e39111f",
+    "content": "What is the output of the code where a variable is assigned an object value",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Task Harmony",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "3bd09184-8a07-4f2e-9c65-4ce53513cfb8",
+    "content": "why does it result in an error?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Task Harmony",
@@ -17853,8 +19019,8 @@
     "source_count": 1
   },
   {
-    "id": "7a6edb95-c3fd-4bf6-be31-f1fad2f5d8d6",
-    "content": "Can you tell me any disadvantages of RAG? Have you observed any disadvantages while building applications with RAG?",
+    "id": "d17962db-6dab-4636-9034-2159066f4a8c",
+    "content": "Can you tell me any disadvantages of RAG?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "NextBill",
@@ -17864,8 +19030,30 @@
     "source_count": 1
   },
   {
-    "id": "cf3853f2-1fbc-405a-af19-60d27c8d9d39",
-    "content": "Have you observed any instances where your LLM hallucinated within the RAG framework? Can you identify situations where LLM will definitely hallucinate?",
+    "id": "be916a76-6ff1-4312-a7bb-0aba2ed0234a",
+    "content": "Have you observed any disadvantages while building applications with RAG?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "NextBill",
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "e82707fb-7cca-46eb-97d9-cd5306fed90b",
+    "content": "Have you observed any instances where your LLM hallucinated within the RAG framework?",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "NextBill",
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "c5207087-6a49-4184-9b9f-1ddfbc2fc4de",
+    "content": "Can you identify situations where LLM will definitely hallucinate?",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "NextBill",
@@ -17941,8 +19129,30 @@
     "source_count": 1
   },
   {
-    "id": "d92954b2-b352-4cf9-b4df-d39420f2db2c",
-    "content": "What are the types of memory in LLMs, and how can you create memory? Which types are easier or more difficult to implement?",
+    "id": "f3d333ae-587d-4ffe-ad26-9d72bd2a2bab",
+    "content": "What are the types of memory in LLMs",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "NextBill",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "fb2bc0be-f6d7-45e2-9a1c-f0eb5dd0675a",
+    "content": "how can you create memory?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "NextBill",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "fef98bd5-0227-4fe4-9703-d69f066a347b",
+    "content": "Which types are easier or more difficult to implement?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "NextBill",
@@ -17996,8 +19206,19 @@
     "source_count": 1
   },
   {
-    "id": "fac3ec69-63db-4280-a8c1-7cf2e93a5ca1",
-    "content": "Describe the process of fine-tuning a machine learning model. What techniques or strategies do you use?",
+    "id": "dbac9adb-0227-4068-8ffc-10e1171ef96e",
+    "content": "Describe the process of fine-tuning a machine learning model.",
+    "topic": "Gen AI",
+    "difficulty": "Hard",
+    "company": "Teeoff",
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "a7014d3e-494e-4edb-9c4e-88ce9fa70388",
+    "content": "What techniques or strategies do you use?",
     "topic": "Gen AI",
     "difficulty": "Hard",
     "company": "Teeoff",
@@ -18359,8 +19580,19 @@
     "source_count": 1
   },
   {
-    "id": "5bf9e9f1-7003-456b-8899-94f49cb884ee",
-    "content": "Did you set temperature or define a prompt for the LLM model? Can you explain how you passed input and received output?",
+    "id": "d1f45ef4-1ee9-494b-94d4-4e3c9fdf8cc9",
+    "content": "Did you set temperature or define a prompt for the LLM model?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Gocricit",
+    "role": "Prompt Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "840efa1b-96b2-46b1-9360-60a4c7f46575",
+    "content": "Can you explain how you passed input and received output?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Gocricit",
@@ -18700,8 +19932,19 @@
     "source_count": 1
   },
   {
-    "id": "0ce7f8bc-3bbf-440f-8fee-a5b4774bdd6e",
-    "content": "Do you think that you are chat GPT or you are Google? Do you think yourself that somebody should put an input from in you and you will give a long paragraph according to the situation?",
+    "id": "4bd49994-5e53-433f-9439-474931475974",
+    "content": "Do you think that you are chat GPT or you are Google?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Phenom Cloud",
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "b90edc26-00bc-4d20-8189-14a5ab9230d9",
+    "content": "Do you think yourself that somebody should put an input from in you and you will give a long paragraph according to the situation?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Phenom Cloud",
@@ -18766,8 +20009,19 @@
     "source_count": 1
   },
   {
-    "id": "ebd77f80-bcf4-42f7-b410-0a12684287b6",
-    "content": "Why are you learning prompt engineering and cloud practices alongside full-stack development? Isn't this mixing domains?",
+    "id": "dd29b37e-50b7-4a5b-8cd2-4a15cf0e40a1",
+    "content": "Why are you learning prompt engineering and cloud practices alongside full-stack development?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Vasundharaa Geo",
+    "role": "Prompt Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "c457b24f-cee8-481f-bebc-d050b6b6b451",
+    "content": "Isn't this mixing domains?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Vasundharaa Geo",
@@ -18898,8 +20152,19 @@
     "source_count": 1
   },
   {
-    "id": "450beb66-b49a-4996-8ddd-0c76b17089ab",
-    "content": "How did you structure your prompt for the Google Gemini API, and how did you handle prompt engineering and API limits like the context window?",
+    "id": "51eb042b-8fac-4a6c-9d98-25109a52803c",
+    "content": "How did you structure your prompt for the Google Gemini API",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "Web3today",
+    "role": "Prompt Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "f89be683-ea9a-4537-bc22-2785ff2f0c07",
+    "content": "how did you handle prompt engineering and API limits like the context window?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Web3today",
@@ -18997,8 +20262,8 @@
     "source_count": 1
   },
   {
-    "id": "d81aeb5d-5da2-4fc0-ba2d-e4159b5d55cc",
-    "content": "How did you secure the Google Generative AI API in your Sanchari Yatra app? Did you expose it in the frontend?",
+    "id": "8388a87f-d926-4ae6-8195-17c39ff5ab43",
+    "content": "How did you secure the Google Generative AI API in your Sanchari Yatra app?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "JadeCaps",
@@ -19008,8 +20273,30 @@
     "source_count": 1
   },
   {
-    "id": "08aa3d1a-d91d-4350-afb2-67d8d3375a06",
-    "content": "What is the fine-tuning process in AI/ML models? Explain how fine-tuning is done to improve model performance.",
+    "id": "6632f926-1cf7-457e-bd67-fcab5fec1ddc",
+    "content": "Did you expose it in the frontend?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "JadeCaps",
+    "role": "General",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "37765014-ac1d-4d75-bb3d-e670393640b4",
+    "content": "What is the fine-tuning process in AI/ML models?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "O9",
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "8146e912-da06-4c52-8077-44eb9f369ef2",
+    "content": "Explain how fine-tuning is done to improve model performance.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "O9",
@@ -19314,5 +20601,71 @@
     "source": "curriculum",
     "source_url": "",
     "source_count": 2
+  },
+  {
+    "id": "dc25163e-ff3d-4898-8eaf-da1154e0fe74",
+    "content": "What is few-shot prompting?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "BluePond.AI",
+    "role": "Prompt Engineer",
+    "source": "curriculum",
+    "source_url": "",
+    "source_count": 5
+  },
+  {
+    "id": "acc1e07d-b3cd-4a22-9a8c-80da783e777e",
+    "content": "What is chain-of-thought prompting?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": "BluePond.AI",
+    "role": "Prompt Engineer",
+    "source": "curriculum",
+    "source_url": "",
+    "source_count": 5
+  },
+  {
+    "id": "cbcba8dc-5367-471e-a5dd-6850402041c9",
+    "content": "What are embeddings.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "2edcdbbe-190f-4d1d-9ac2-fd7c3e8bfb2b",
+    "content": "Name of the embeddings.",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "8ef8a1a4-3652-41ff-91f3-bc44198b1896",
+    "content": "How you use it in RAG ?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
+  },
+  {
+    "id": "d014d8c9-4601-4f17-a175-ad8144a887f3",
+    "content": "What are the main components of the Langchain?",
+    "topic": "Gen AI",
+    "difficulty": "Medium",
+    "company": null,
+    "role": "ML/AI Engineer",
+    "source": "nxtmock",
+    "source_url": "",
+    "source_count": 1
   }
 ]

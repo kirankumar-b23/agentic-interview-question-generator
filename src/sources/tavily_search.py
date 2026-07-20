@@ -390,8 +390,9 @@ def _records_from_results(results, allow: set, seen: set) -> List[Record]:
 
 
 # Job-title / role frames so queries surface role-specific interview questions (the session's target
-# profiles), not just bare concept queries. Kept small so total Tavily calls stay bounded.
-_ROLE_SUFFIXES = ["GenAI Engineer", "Machine Learning Engineer", "Prompt Engineer", "Data Scientist"]
+# profiles), not just bare concept queries. Sourced from config TARGET_ROLES so adding a role updates
+# both the queries here and the selection bonus. Kept modest (applied to the first term only).
+_ROLE_SUFFIXES = list(config.DEFAULT_TARGET_ROLES.get("query_titles", []))
 
 
 class TavilyConnector:

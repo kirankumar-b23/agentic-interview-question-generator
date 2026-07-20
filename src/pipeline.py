@@ -22,6 +22,50 @@ MAX_REVISION_ROUNDS = 2
 
 EmitFn = Callable[[str, str, str, str], None]   # (run_id, step_id, status, detail)
 
+_TOPIC_PROFILE_CACHE = None   # {topic: [profile texts]} — built once from course_structure + session_outcomes
+
+
+def _load_topic_profiles() -> dict:
+    """Per-course-topic semantic profile texts (interview_topics + learning_outcomes of the topic's
+    sessions, from the curated session_outcomes.json; falls back to the session name). Cached; {} on error."""
+    global _TOPIC_PROFILE_CACHE
+    if _TOPIC_PROFILE_CACHE is not None:
+        return _TOPIC_PROFILE_CACHE
+    import json
+    from src.config import DATA_DIR
+    prof: dict[str, list[str]] = {}
+    try:
+        cs = json.loads((DATA_DIR / "course_structure.json").read_text(encoding="utf-8"))
+        so_path = DATA_DIR / "reading_materials" / "session_outcomes.json"
+        so = json.loads(so_path.read_text(encoding="utf-8")) if so_path.exists() else {}
+        for topic, sessions in cs.items():
+            texts: list[str] = []
+            for s in sessions:
+                ov = so.get(s) or {}
+                texts += [t for t in (ov.get("interview_topics", []) + ov.get("learning_outcomes", []))
+                          if isinstance(t, str) and t.strip()]
+                if not ov:
+                    texts.append(s)   # fallback: the session name itself
+            if texts:
+                prof[topic] = texts
+    except Exception:  # noqa: BLE001 — pre-gate must never break the pipeline
+        prof = {}
+    _TOPIC_PROFILE_CACHE = prof
+    return prof
+
+
+def _topic_profiles(session_names) -> tuple[set, list]:
+    """(current topics for this run, profile texts of all OTHER topics). Empty → caller skips the gate."""
+    from src.data_loader import get_topic_for_session
+    prof = _load_topic_profiles()
+    if not prof:
+        return set(), []
+    cur = {t for t in (get_topic_for_session(s) for s in (session_names or [])) if t and t in prof}
+    if not cur:
+        return set(), []
+    other = [t for topic, texts in prof.items() if topic not in cur for t in texts]
+    return cur, other
+
 
 def _current_model() -> str:
     """The model this run is using (for per-run cost estimation)."""
@@ -36,6 +80,14 @@ class AgentPipeline:
         """Stages 1–3: Understanding → Retrieval → Validation (the 'picked' set)."""
         UnderstandingAgent().run(state, emit)
         RetrievalAgent().run(state, emit)
+        # Suppress previously-rejected questions (per session) BEFORE validation/selection — so a
+        # rejected question never resurfaces on re-generation and doesn't take a slot. Matched by
+        # normalized content (question_ids regenerate each run).
+        self._drop_rejected(state, emit)
+        # Cheap SEMANTIC pre-gate: drop clearly cross-topic candidates (embedding-distant from the session
+        # profile) BEFORE the expensive LLM relevance scoring — cuts noise + LLM cost. Skips if embeddings
+        # unavailable.
+        self._prefilter_semantic(state, emit)
         ValidationAgent().run(state, emit)
         # Guarantee relevance filtering ran — the validation agent is prompt-advised, not code-forced,
         # so if it never scored anything (no question carries a relevance_score) we run it directly.
@@ -45,6 +97,78 @@ class AgentPipeline:
             emit("validate_relevance", "running", "Enforcing relevance validation (agent skipped it)...")
             tool_validate_relevance(state)
             emit("validate_relevance", "done", f"{len(state.questions)} question(s) after relevance filter.")
+        # Always dedup (semantic) — the agent is only prompt-advised to, and with retrieval uncapped the
+        # pool is large and redundant. Idempotent, so running it again is harmless.
+        if len(state.questions) > 1:
+            from src.tools import tool_deduplicate_questions
+            before = len(state.questions)
+            tool_deduplicate_questions(state)
+            emit("deduplicate_questions", "done",
+                 f"Deduplicated: {before} → {len(state.questions)} distinct question(s).")
+
+    def _drop_rejected(self, state, emit):
+        """Remove questions whose normalized content was previously rejected for this session."""
+        ctx = state.session_context
+        if not ctx or not state.questions:
+            return
+        from src import memory
+        rejected = memory.get_rejected_norms(ctx.session_name)
+        if not rejected:
+            return
+        drop = [qid for qid, q in state.questions.items()
+                if memory.normalize_content(q.content) in rejected]
+        for qid in drop:
+            q = state.questions.pop(qid, None)
+            if q is not None:
+                state.excluded.add(qid)
+                state.removed.append({
+                    "content": q.content, "reason": "Previously rejected for this session",
+                    "stage": "suppressed", "difficulty": q.difficulty, "company": q.attribution,
+                })
+        if drop:
+            emit("suppress_rejected", "done", f"Suppressed {len(drop)} previously-rejected question(s).")
+
+    def _prefilter_semantic(self, state, emit):
+        """COMPARATIVE topic pre-gate: drop a candidate that belongs to a DIFFERENT course topic than this
+        run's (its nearest other-topic profile beats this run's by a margin), or is totally unrelated.
+        No-op if embeddings unavailable, the run's topic can't be resolved, or no other-topic profiles."""
+        ctx = state.session_context
+        if not ctx or len(state.questions) <= 1:
+            return
+        from src import embeddings
+        from src.config import SEMANTIC_TOPIC_MARGIN, SEMANTIC_PREFILTER_FLOOR
+
+        cur_profile = [p for p in (list(getattr(ctx, "interview_topics", None) or [])
+                                   + list(ctx.key_concepts or []) + list(ctx.learning_outcomes or []))
+                       if p and p.strip()]
+        cur_topics, other_texts = _topic_profiles(state.config.session_names)
+        if not cur_profile or not cur_topics or not other_texts:
+            return  # can't resolve topics reliably → let the LLM judge filter
+
+        items = list(state.questions.items())
+        contents = [q.content for _, q in items]
+        cur_sim = embeddings.cosine_matrix(contents, cur_profile)
+        oth_sim = embeddings.cosine_matrix(contents, other_texts)
+        if cur_sim is None or oth_sim is None:            # embeddings unavailable → skip
+            return
+
+        drop = []
+        for i, (qid, _) in enumerate(items):
+            cur = max(cur_sim[i])
+            oth = max(oth_sim[i])
+            # Belongs to another topic (beats this topic by a margin) OR unrelated to everything.
+            if oth > cur + SEMANTIC_TOPIC_MARGIN or max(cur, oth) < SEMANTIC_PREFILTER_FLOOR:
+                drop.append(qid)
+        for qid in drop:
+            q = state.questions.pop(qid, None)
+            if q is not None:
+                state.removed.append({
+                    "content": q.content, "reason": "Belongs to a different topic (semantic pre-filter)",
+                    "stage": "off_topic_prefilter", "difficulty": q.difficulty, "company": q.attribution,
+                })
+        if drop:
+            emit("prefilter", "done",
+                 f"Pre-filtered {len(drop)} off-topic candidate(s); {len(state.questions)} remain for scoring.")
 
     def _evaluate_and_gate(self, state, emit) -> int:
         """Stage 4 + quality-gate loop. Returns revision rounds used."""

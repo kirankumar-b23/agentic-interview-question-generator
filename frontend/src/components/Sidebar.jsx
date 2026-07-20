@@ -181,10 +181,11 @@ export default function Sidebar() {
       {/* Generate area */}
       <div className="sidebar-generate-area">
         <div className="sidebar-maxq-label">
-          Max questions: <strong>{maxQuestions}</strong>
+          Target count: <strong>{maxQuestions}</strong>
+          <span className="sidebar-maxq-hint"> (all relevant questions are kept)</span>
         </div>
         <input
-          type="range" min={5} max={15} value={maxQuestions}
+          type="range" min={5} max={40} value={maxQuestions}
           onChange={e => setMaxQuestions(+e.target.value)}
           className="sidebar-range"
         />

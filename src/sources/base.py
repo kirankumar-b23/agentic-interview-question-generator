@@ -79,11 +79,19 @@ def looks_like_question(t: str) -> bool:
     return t.lower().startswith(_Q_STARTS)
 
 
+# New-question stems: words that, right after a coordinating "and", start a genuinely SEPARATE ask
+# ("… and difference between …", "… and how does …", "… and explain …"). Used to split a compound only
+# at a real second-question boundary — NOT inside enumerations/comparisons ("Compare X and Y",
+# "pros and cons", "advantages and disadvantages", "read and write") where "and" isn't followed by one.
+_QUESTION_STEM = (r"(?:the\s+)?(?:difference|differences|what|whats|how|why|when|explain|describe|"
+                  r"compare|list|define|discuss|name|give)\b")
+
 # Connectives that join two separate asks into one harvested line.
 _CLAUSE_SPLIT = re.compile(
     r"(?<=[.?!])\s+"                                    # sentence boundary
     r"|\s*,?\s*(?:and then|then|after that|followed by|"
-    r"as well as|and also|also,|;)\s+",                # conjunction boundary
+    r"as well as|and also|also,|;)\s+"                 # multi-word conjunction boundary
+    r"|\s*,?\s+and\s+(?=" + _QUESTION_STEM + r")",     # bare "and" only before a new-question stem
     re.IGNORECASE,
 )
 

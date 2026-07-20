@@ -20,6 +20,35 @@ SCOPES = [
 
 TOKEN_PATH = PROJECT_ROOT / "token.json"
 
+# Standard NxtMock unit overview card (LearningResources.Content), verbatim from the unit template.
+# {INTERVIEW_ID} is substituted with this run's interview_id so the "Start Test" button deep-links correctly.
+_OVERVIEW_CARD = """## **Overview**
+* **Test Name:** NxtMock
+* **Duration:** 30 minutes
+* **Attempts:** 5 total (only 1 attempt active at a time)
+* **Mode:** **Proctored** (webcam & screen monitored)
+
+---
+
+##  **System Setup**
+
+Before starting, ensure:
+
+1. **Stable Internet:** Minimum 2 Mbps connection.
+2. **Device:** Laptop or desktop (avoid mobile/tablet).
+3. **Browser:** Latest version of **Google Chrome**.
+4. **Webcam & Mic:** Must be **ON** and functional throughout.
+5. **Do not open new tabs, switch windows, or use incognito mode**—this triggers a violation warning.
+
+---
+
+<a href="https://nxtinterview-beta.earlywave.in/interview/{INTERVIEW_ID}" target="_blank">
+  <button style="padding:10px 20px; font-size:16px; background-color:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
+    Start Test
+  </button>
+</a>
+"""
+
 
 def _get_gspread_client() -> gspread.Client:
     """Authenticate with Google Sheets API using OAuth (client ID + secret from .env)."""
@@ -147,6 +176,46 @@ def write_to_sheets(
         [cat, q_count, cat, None, None, None, None, None, None, None, question_ids_str],
     ]
     ws_imc.update(range_name="A1", values=imc_rows)
+
+    # --- Unit-import scaffolding: ResourcesData / Units / LearningResourceSet / LearningResources ---
+    # These wire the exported sheet up as a full importable LMS "unit" (the newer NxtMock unit format).
+    # All entities are cross-linked by consistently-generated UUIDs, mirroring the unit template.
+    unit_id = str(uuid.uuid4())            # unit_id == UNIT resource_id == learning-resource-set id
+    common_unit_id = str(uuid.uuid4())
+    child_resource_id = str(uuid.uuid4())  # child resource referenced in the dependency graph
+    lr_uuid = str(uuid.uuid4())            # the LearningResources row referenced by the set
+
+    ws_rd = spreadsheet.add_worksheet(title="ResourcesData", rows=4, cols=10)
+    ws_rd.update(range_name="A1", values=[
+        ["resource_id", "resource_type", "dependent_resource_count", "dependent_resources",
+         "dependent_reason_display_text", "parent_resource_count", "child_order", "parent_resources",
+         "auto_unlock", "is_primary"],
+        [unit_id, "UNIT", 0, "", "", 1, "", "", True, ""],
+        ["", "", "", "", "", "", 20, child_resource_id, "", True],
+    ])
+
+    ws_units = spreadsheet.add_worksheet(title="Units", rows=2, cols=5)
+    ws_units.update(range_name="A1", values=[
+        ["unit_id", "common_unit_id", "unit_type", "duration_in_sec", "unit_tags"],
+        [unit_id, common_unit_id, "LEARNING_SET", "", "MOCK_TEST_EVALUATION"],
+    ])
+
+    ws_lrs = spreadsheet.add_worksheet(title="LearningResourceSet", rows=3, cols=5)
+    ws_lrs.update(range_name="A1", values=[
+        ["learning resource set id", "learning resource set name", "learning resources count",
+         "learning resource ids", "order"],
+        [unit_id, "NxtMock", 1, "", ""],
+        ["", "", "", lr_uuid, 1],
+    ])
+
+    ws_lr = spreadsheet.add_worksheet(title="LearningResources", rows=2, cols=15)
+    ws_lr.update(range_name="A1", values=[
+        ["learning_resource_uuid", "Title", "Content", "content_format", "content_language",
+         "multimedia_count", "multimedia_format", "total_duration", "multimedia_url", "thumbnail_url",
+         "highlights_count", "\nduration in sec", "content", "\ntitle", "learning_resource_type"],
+        [lr_uuid, "NxtMock", _OVERVIEW_CARD.replace("{INTERVIEW_ID}", interview_id), "MARKDOWN",
+         "ENGLISH", 0, "", "", "", "", 0, "", "", "", "DEFAULT"],
+    ])
 
     # --- Tab 4: CodeSnippet (only if snippets exist) ---
     if output.code_snippets:

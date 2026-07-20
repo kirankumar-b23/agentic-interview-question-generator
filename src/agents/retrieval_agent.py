@@ -35,13 +35,34 @@ class RetrievalAgent(BaseAgent):
         """LLM loop (bank first, then web, then GitHub per the prompt) fills a wide pool;
         a later stage scores relevance and trims to max. The curated bank goes first so it
         is never starved by web results."""
-        from src.tools import tool_search_web_questions
+        from src.tools import tool_search_web_questions, tool_search_question_bank
         from src.agent import _summarize_result
+        from src.config import BANK_POOL_CAP
 
         # LLM loop: bank → web → github, gathering up to the candidate pool.
         super().run(state, emit)
 
-        # Safety net: guarantee company-attributed web questions were fetched even if the
+        # Safety net A: deterministically FILL the bank pool by searching each distinct concept/topic,
+        # so the (now much larger) BANK_POOL_CAP actually fills regardless of how many searches the LLM
+        # issued. The whole pool is relevance-scored later, so a wide bank pull only helps recall.
+        ctx = state.session_context
+        if ctx:
+            terms = []
+            seen = set()
+            for t in (list(ctx.interview_topics or []) + list(ctx.key_concepts or [])
+                      + list(ctx.scope_in or []) + list(ctx.learning_outcomes or [])):
+                tl = (t or "").lower().strip()
+                if tl and tl not in seen:
+                    seen.add(tl)
+                    terms.append(t)
+            for term in terms:
+                if state.added_by_source.get("bank", 0) >= BANK_POOL_CAP:
+                    break
+                r = tool_search_question_bank(state, term, limit=25)
+                state.tool_log.append({"agent": "retrieval", "tool": "search_question_bank",
+                                       "args_keys": ["query"], "has_error": "error" in r})
+
+        # Safety net B: guarantee company-attributed web questions were fetched even if the
         # LLM skipped that step (bank has already had first pick of the pool).
         outcomes = (state.session_context.learning_outcomes
                     if state.session_context else [])

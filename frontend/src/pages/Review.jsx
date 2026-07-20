@@ -137,9 +137,21 @@ export default function Review() {
   }
 
   async function handleReject() {
+    // Send the per-question decisions so the backend keeps ACCEPTED questions, suppresses the
+    // REJECTED ones (persisted per session), and refills the freed slots with new distinct questions.
+    const acceptedIds = []
+    const rejectedFeedback = {}
+    const allIds = [
+      ...(result.output?.question_details || []).map(q => q.question_id),
+      ...(result.output?.coding_questions || []).map(q => q.id),
+    ]
+    for (const id of allIds) {
+      if (decisions[id]?.status === 'rejected') rejectedFeedback[id] = decisions[id]?.reason || ''
+      else acceptedIds.push(id)
+    }
     setSubmitting(true)
     try {
-      const { run_id } = await api.approve(runId, [], {}, 'reject')
+      const { run_id } = await api.approve(runId, acceptedIds, rejectedFeedback, 'reject')
       navigate(`/progress/${run_id}`)
     } catch (e) {
       setError(e.message)
@@ -263,8 +275,13 @@ export default function Review() {
             </button>
           ) : (
             <>
-              <button className="btn btn-reject-all" disabled={submitting} onClick={handleReject}>
-                ↺ Reject &amp; Regenerate
+              <button className="btn btn-reject-all"
+                      disabled={submitting || rejectedCount === 0}
+                      title={rejectedCount === 0 ? 'Mark one or more questions as rejected first' : ''}
+                      onClick={handleReject}>
+                {rejectedCount > 0
+                  ? `↺ Replace ${rejectedCount} rejected & regenerate`
+                  : '↺ Replace rejected & regenerate'}
               </button>
               <button className="btn btn-primary" disabled={submitting} onClick={handleApprove}>
                 {submitting ? 'Exporting…' : `↑ Export to Sheets (${approvedCount})`}

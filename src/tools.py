@@ -300,21 +300,24 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
     if max_to_add <= 0:
         return {"found": 0, "warning": f"Bank quota full ({BANK_POOL_CAP}). Use web/github or submit."}
 
-    actual_limit = min(limit, max_to_add, 8)
+    # Per-call cap raised 8→25 so a single search pulls a much wider slice into the pool
+    # (the whole pool is relevance-scored later; we want the judge to see more candidates).
+    actual_limit = min(limit, max_to_add, 25)
     exclude_ids = set(state.questions.keys())
 
     results = retriever.search(
         query=query, difficulty=difficulty,
-        limit=actual_limit + 5,  # fetch extra for filtering
+        limit=actual_limit + 10,  # fetch extra for filtering
         exclude_ids=exclude_ids,
     )
 
     # Session-aware post-retrieval relevance filter
     scope_keywords: set[str] = set()
     if state.session_context:
+        _it = getattr(state.session_context, "interview_topics", None) or []
         for term in (state.session_context.learning_outcomes +
                      state.session_context.key_concepts +
-                     state.session_context.scope_in):
+                     state.session_context.scope_in + list(_it)):
             scope_keywords.update(
                 w.lower() for w in term.split()
                 if len(w) >= 4 and w.lower() not in {
@@ -542,15 +545,30 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
 
     questions = list(state.questions.values())
     texts = [q.content for q in questions]
-    vectorizer = TfidfVectorizer(stop_words="english", max_features=5000)
-    tfidf_matrix = vectorizer.fit_transform(texts)
-    sim_matrix = cosine_similarity(tfidf_matrix)
 
-    source_priority = {"interview_db": 0, "web": 1, "generated": 2}
+    # SEMANTIC dedup (embeddings) catches REWORDED near-duplicates that TF-IDF misses
+    # ("What are LLMs?" ≈ "What are Large Language Models in AI?"). Fall back to TF-IDF if unavailable.
+    from src import embeddings
+    from src.config import DEDUP_SEMANTIC_THRESHOLD
+    sim_matrix = embeddings.cosine_matrix(texts)
+    if sim_matrix is not None:
+        dup_threshold = DEDUP_SEMANTIC_THRESHOLD
+    else:
+        vectorizer = TfidfVectorizer(stop_words="english", max_features=5000)
+        sim_matrix = cosine_similarity(vectorizer.fit_transform(texts))
+        dup_threshold = DEDUP_THRESHOLD
+
+    # Keep the BEST representative of a duplicate cluster: highest relevance, then a REAL company
+    # (over a source-site/NIAT label), then a sensible source order (curated/seed > web > generated).
+    source_priority = {"seed": 0, "nxtmock": 0, "interview_db": 0, "curriculum": 1, "web": 2, "generated": 3}
+
+    def _real_company(q):
+        c = q.asked_in_company
+        return bool(c) and str(c).strip().upper() != "NIAT"
 
     def _keep_rank(q):
-        # Higher relevance wins; tie-break by source priority (lower = better).
         return (-(q.relevance_score if q.relevance_score is not None else 0.0),
+                0 if _real_company(q) else 1,
                 source_priority.get(q.source, 9))
 
     to_remove = set()
@@ -560,8 +578,8 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
         for j in range(i + 1, len(questions)):
             if j in to_remove:
                 continue
-            if sim_matrix[i][j] > DEDUP_THRESHOLD:
-                # Drop the weaker of the pair (keep higher relevance / better source).
+            if sim_matrix[i][j] > dup_threshold:
+                # Drop the weaker of the pair (keep higher relevance / real company / better source).
                 worse = j if _keep_rank(questions[i]) <= _keep_rank(questions[j]) else i
                 to_remove.add(worse)
 
@@ -740,7 +758,8 @@ def _topic_keywords(ctx) -> set:
     kws: set = set()
     if not ctx:
         return kws
-    for term in (ctx.scope_in + ctx.key_concepts + ctx.learning_outcomes):
+    interview_topics = getattr(ctx, "interview_topics", None) or []
+    for term in (ctx.scope_in + ctx.key_concepts + ctx.learning_outcomes + list(interview_topics)):
         for w in term.lower().split():
             if len(w) >= 4 and w not in _QUERY_STOPWORDS:
                 kws.add(w)
@@ -901,8 +920,8 @@ def tool_remove_question(state: AgentState, question_id: str, reason: str = "") 
     return {"removed": False, "error": f"Question {question_id} not found"}
 
 
-def _select_final(questions: list, k: int, outcomes: list) -> list:
-    """Pick k questions balancing relevance, diversity, outcome coverage, and difficulty mix.
+def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None = None) -> list:
+    """Order/pick k questions balancing relevance, diversity, outcome coverage, difficulty, and role.
 
     Greedy per-step score for candidate c given the already-selected set S:
         λ·relevance(c) − (1−λ)·max_{s∈S} sim(c,s)
@@ -913,7 +932,8 @@ def _select_final(questions: list, k: int, outcomes: list) -> list:
     coverage and difficulty nudges so the final set spans the session's outcomes and levels.
     """
     from src.config import (MMR_LAMBDA, SELECT_COVERAGE_BONUS, SELECT_DIFFICULTY_BONUS,
-                            SELECT_SESSION_BONUS, SELECT_ATTRIBUTION_BONUS)
+                            SELECT_SESSION_BONUS, SELECT_ATTRIBUTION_BONUS, SELECT_ROLE_BONUS)
+    role_tags = role_tags or set()
 
     def _rel(q):
         return q.relevance_score if q.relevance_score is not None else 0.0
@@ -922,10 +942,11 @@ def _select_final(questions: list, k: int, outcomes: list) -> list:
         c = q.asked_in_company
         return bool(c) and str(c).strip().upper() != "NIAT"
 
-    if k <= 0:
+    if not questions or k <= 0:
         return []
-    if len(questions) <= k:
-        return sorted(questions, key=lambda q: -_rel(q))
+    # Always run the MMR ordering (even when keeping ALL — k == len) so the role/coverage/difficulty
+    # bonuses shape the ORDER, not just a flat relevance sort. k is clamped to the pool size.
+    k = min(k, len(questions))
 
     texts = [q.content for q in questions]
     rel = [_rel(q) for q in questions]
@@ -994,7 +1015,10 @@ def _select_final(questions: list, k: int, outcomes: list) -> list:
                 attr_need = SELECT_ATTRIBUTION_BONUS if unattr_have < (k - attr_target) else 0.0
             else:
                 attr_need = 0.0
-            score = MMR_LAMBDA * rel[c] - (1 - MMR_LAMBDA) * div + cov_new + need + sess_need + attr_need
+            # Role ranking bonus: a question tagged for a TARGET role ranks above generic ("General").
+            role_need = SELECT_ROLE_BONUS if (role_tags and questions[c].role in role_tags) else 0.0
+            score = (MMR_LAMBDA * rel[c] - (1 - MMR_LAMBDA) * div
+                     + cov_new + need + sess_need + attr_need + role_need)
             if score > best_score:
                 best, best_score = c, score
         selected.append(best)
@@ -1041,9 +1065,17 @@ def tool_submit_question_set(state: AgentState) -> dict:
     for qid in state.excluded:
         pool.pop(qid, None)
     outcomes = state.session_context.learning_outcomes if state.session_context else []
-    keep_theory = max(0, state.config.max_questions - len(state.coding_questions))
+    # SELECTION LEVEL: after the wide pool is relevance-filtered + de-duplicated, trim to the REQUESTED
+    # count (the UI 'Target count' slider → config.max_questions) as a CEILING. _select_final ranks by
+    # MMR (relevance − redundancy) + coverage/difficulty/session/attribution/role bonuses and keeps the
+    # best N. A thin session with fewer than N survivors returns all of them (never padded) since
+    # _select_final clamps k to the pool size.
+    from src.config import FINAL_SET_CAP, target_roles
+    target = min(getattr(state.config, "max_questions", 12) or 12, FINAL_SET_CAP)
+    keep_theory = max(0, target - len(state.coding_questions))
+    role_tags = target_roles(getattr(state.config, "category", None)).get("bonus_tags", set())
 
-    selected = _select_final(list(pool.values()), keep_theory, outcomes)
+    selected = _select_final(list(pool.values()), keep_theory, outcomes, role_tags=role_tags)
     selected_ids = {q.question_id for q in selected}
 
     # New selected set; everything else in the pool goes to the reserve (recoverable),

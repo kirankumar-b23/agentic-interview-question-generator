@@ -7,6 +7,10 @@ credentials.json
 token.json
 memory.db
 *.db
+# Runtime-accumulated reviewer feedback (data, not source — like memory.db)
+eval/feedback_examples.json
+# Debugging screenshots dropped in the repo root
+/*.png
 *.egg-info/
 dist/
 build/

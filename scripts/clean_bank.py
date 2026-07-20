@@ -16,17 +16,38 @@ from __future__ import annotations
 import json
 import re
 import sys
+import uuid
 from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.config import GENAI_BANK_JSON              # noqa: E402
-from src.sources.base import domain                 # noqa: E402
+from src.sources.base import domain, split_into_clauses  # noqa: E402
 from src.sources.tavily_search import _valid_company  # noqa: E402
 from src.quality import is_quality_question, strip_artifacts  # noqa: E402
 
 _LOW_TRUST = {"reddit.com", "quora.com", "medium.com", "dev.to"}
+
+
+def _presplit(bank: list) -> tuple[list, int]:
+    """Expand a compound question row ("X and difference between Y") into one ATOMIC row per clause,
+    preserving all fields (company/difficulty/role/source/attribution). Only splits when EVERY resulting
+    clause is a well-formed standalone question — otherwise the row is left intact (no fragment pollution).
+    Returns (expanded_rows, num_rows_split)."""
+    out, split_n = [], 0
+    for q in bank:
+        clauses = split_into_clauses(strip_artifacts(q.get("content", "")))
+        if len(clauses) > 1 and all(is_quality_question(c) for c in clauses):
+            split_n += 1
+            for c in clauses:
+                r = dict(q)
+                r["content"] = c
+                r["id"] = str(uuid.uuid4())
+                out.append(r)
+        else:
+            out.append(q)
+    return out, split_n
 
 
 def _dom(url: str) -> str:
@@ -44,6 +65,9 @@ def main() -> int:
         return 1
     bank = json.loads(GENAI_BANK_JSON.read_text(encoding="utf-8"))
     start = len(bank)
+
+    # Pre-split compound questions into atomic rows BEFORE cleaning/dedup.
+    bank, split_n = _presplit(bank)
 
     dropped_domain = dropped_form = reblanked = 0
     kept: dict[str, dict] = {}   # norm-key → record (company-bearing preferred)
@@ -85,6 +109,7 @@ def main() -> int:
 
     withco = sum(1 for q in cleaned_bank if q.get("company"))
     print(f"cleaned bank: {start} → {len(cleaned_bank)}")
+    print(f"  compound rows pre-split:    {split_n}")
     print(f"  dropped (low-trust domain): {dropped_domain}")
     print(f"  dropped (form-quality):     {dropped_form}")
     print(f"  dropped (duplicates):       {dup_removed}")

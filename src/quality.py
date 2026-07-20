@@ -21,10 +21,17 @@ _BACKSLASH = re.compile(r"\\+")
 _WS = re.compile(r"\s+")
 
 # Mid-thought openers → the line is a fragment lifted out of context, not a standalone question.
+# Conservative: only openers that rarely begin a real standalone question (NOT when/if/given/while — those
+# begin many legitimate questions like "When should you fine-tune?").
 _FRAGMENT_STARTS = {
     "also", "and", "but", "so", "or", "then", "plus", "additionally", "moreover",
-    "however", "thus", "hence", "therefore", "besides", "yet", "because", "although",
+    "however", "thus", "hence", "therefore", "besides", "yet", "because", "although", "with",
 }
+
+# Listicle/heading openers → a document heading ("List of Key LLM Parameters", "Types of ..."), not a
+# question. Applied ONLY when the text does NOT end with "?" (so "Key differences …?" is exempt).
+_HEADING_STARTS = ("list of ", "types of ", "examples of ", "overview of ", "introduction to ",
+                   "top ", "key ", "benefits of ", "advantages of ", "pros and cons")
 
 # Boilerplate / meta / logistics / CTA — never a real interview question even if it ends in "?".
 _REJECT_PATTERNS = [
@@ -85,7 +92,10 @@ def is_quality_question(text: str) -> bool:
     words = t.split()
     if len(words) < _MIN_WORDS:
         return False
-    if words[0].strip(",.").lower() in _FRAGMENT_STARTS:   # "Also, how diverse…" → mid-thought scrap
+    if words[0].strip(",.").lower() in _FRAGMENT_STARTS:   # "Also, how diverse…" / "With a clear…" → scrap
+        return False
+    # Listicle/heading opener without a question mark → doc heading, not a question.
+    if not t.endswith("?") and t.lower().startswith(_HEADING_STARTS):
         return False
     # Short lines must open like a question/task; a short noun phrase ("The code quality?") is a scrap.
     if len(words) < _SHORT_WORDS and not t.lower().startswith(_SHORT_OK_STARTS):

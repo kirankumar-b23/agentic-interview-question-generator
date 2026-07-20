@@ -3,6 +3,7 @@
 import sqlite3
 import json
 import pathlib
+import re
 from src.config import MEMORY_DB
 
 _RULES_FILE = pathlib.Path(__file__).parent.parent / "data" / "learned_rules.md"
@@ -82,6 +83,16 @@ def init_db():
             content      TEXT NOT NULL,
             source       TEXT,
             created_at   TEXT DEFAULT (datetime('now'))
+        );
+
+        -- Human-rejected questions, keyed by NORMALIZED content (question_ids regenerate per run, so
+        -- identity must be content). Session-scoped: a rejection sticks for that session on future runs.
+        CREATE TABLE IF NOT EXISTS rejected_questions (
+            session_name TEXT NOT NULL,
+            content_norm TEXT NOT NULL,
+            content      TEXT,
+            created_at   TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (session_name, content_norm)
         );
     """)
     conn.commit()
@@ -352,6 +363,83 @@ def get_bank_questions(session_name: str) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# --- Rejected-question suppression (per session, keyed by normalized content) ---
+
+def normalize_content(text: str) -> str:
+    """Normalization used for rejected-question identity (lowercase, punctuation-stripped, collapsed)."""
+    return " ".join(re.sub(r"[^\w\s]", " ", (text or "").lower()).split())
+
+
+def record_rejections(session_name: str, contents: list[str]) -> int:
+    """Persist rejected question texts (by normalized content) so they never resurface for this session."""
+    conn = get_connection()
+    n = 0
+    for c in contents:
+        norm = normalize_content(c)
+        if not norm:
+            continue
+        conn.execute(
+            "INSERT OR IGNORE INTO rejected_questions (session_name, content_norm, content) VALUES (?, ?, ?)",
+            (session_name, norm, c),
+        )
+        n += 1
+    conn.commit()
+    conn.close()
+    return n
+
+
+def get_rejected_norms(session_name: str) -> set[str]:
+    """Normalized contents previously rejected for this session (for suppression on re-run)."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT content_norm FROM rejected_questions WHERE session_name = ?",
+        (session_name,)
+    ).fetchall()
+    conn.close()
+    return {r["content_norm"] for r in rows}
+
+
+# --- Reviewer-decision feedback → question_feedback table + eval/feedback_examples.json ---
+
+_FEEDBACK_EXAMPLES = pathlib.Path(__file__).parent.parent / "eval" / "feedback_examples.json"
+
+
+def record_feedback(run_id: str, session_name: str, question_id: str, content: str, decision: str) -> None:
+    """Persist one reviewer decision ('good' accepted / 'bad' rejected): fills the question_feedback table
+    (provenance) AND appends to eval/feedback_examples.json so the eval harness reflects real choices."""
+    if not content or decision not in ("good", "bad"):
+        return
+    try:
+        conn = get_connection()
+        conn.execute(
+            "INSERT OR REPLACE INTO question_feedback (question_id, run_id, feedback) VALUES (?, ?, ?)",
+            (question_id or "", run_id or "", decision),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        data = []
+        if _FEEDBACK_EXAMPLES.exists():
+            data = json.loads(_FEEDBACK_EXAMPLES.read_text(encoding="utf-8")) or []
+        data.append({"session": session_name, "question": content, "decision": decision})
+        _FEEDBACK_EXAMPLES.parent.mkdir(parents=True, exist_ok=True)
+        _FEEDBACK_EXAMPLES.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def get_feedback_examples() -> list[dict]:
+    """Reviewer-decision examples ({session, question, decision}) for the eval harness. [] if none."""
+    try:
+        if _FEEDBACK_EXAMPLES.exists():
+            return json.loads(_FEEDBACK_EXAMPLES.read_text(encoding="utf-8")) or []
+    except Exception:  # noqa: BLE001
+        pass
+    return []
 
 
 # Initialize on import
