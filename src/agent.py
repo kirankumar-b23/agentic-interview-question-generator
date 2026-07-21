@@ -53,6 +53,11 @@ class AgentState:
     # Per-session reading-material text (multi-session topics) — used to attribute each
     # question to the session it best matches, so final selection represents every session.
     session_profiles: dict = field(default_factory=dict)   # session_name -> profile text
+    # Web-search health for this run (surfaced in the report/UI so a bank-only fallback is visible):
+    # not_run | ok | empty | no_key | quota | auth | rate | full | error
+    web_status: str = "not_run"
+    web_error: str | None = None   # human-readable Tavily failure detail, if any
+    web_search_disabled: bool = False   # set when the pre-flight Tavily health check fails (skip web calls)
     # Pipeline-level state (set by UnderstandingAgent, read by RetrievalAgent)
     suggested_queries: list[str] = field(default_factory=list)
     # Quality gate revision instructions (set by pipeline, read by EvaluationAgent)

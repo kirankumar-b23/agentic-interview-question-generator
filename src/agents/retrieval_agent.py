@@ -38,6 +38,19 @@ class RetrievalAgent(BaseAgent):
         from src.tools import tool_search_web_questions, tool_search_question_bank
         from src.agent import _summarize_result
         from src.config import BANK_POOL_CAP
+        from src.sources.tavily_search import TavilyConnector
+
+        # Proactively CHECK the Tavily API is calling correctly BEFORE any web search relies on it.
+        ok, status, detail = TavilyConnector().health_check()
+        state.web_status = status
+        if ok:
+            emit("tavily_health", "done", f"Tavily API check: OK — {detail}")
+        else:
+            # Terminal failure (no key / quota / auth / rate) — disable web search for this run so we
+            # don't burn calls that will fail; the bank-only fallback is surfaced in the report banner.
+            state.web_search_disabled = True
+            state.web_error = detail
+            emit("tavily_health", "error", f"Tavily API check FAILED ({status}): {detail} — running bank-only.")
 
         # LLM loop: bank → web → github, gathering up to the candidate pool.
         super().run(state, emit)

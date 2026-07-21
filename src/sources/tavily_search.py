@@ -371,6 +371,10 @@ def _records_from_results(results, allow: set, seen: set) -> List[Record]:
         dom = domain(url)
         if not url or not _on_allowlist(dom, allow):
             continue
+        # Education/tutorial platforms: accept ONLY interview-question pages, not course content
+        # (/topics/, /blog/, /article/…). A genuine interview page has "interview" in the URL path.
+        if dom in config.EDU_PLATFORM_DOMAINS and "interview" not in url.lower():
+            continue
         text = r.get("raw_content") or r.get("content") or ""
         title = r.get("title", "") or ""
         # hellointerview embeds the company in body copy ("... question from Meta"), not the URL.
@@ -397,6 +401,30 @@ _ROLE_SUFFIXES = list(config.DEFAULT_TARGET_ROLES.get("query_titles", []))
 
 class TavilyConnector:
     name = "tavily"
+
+    def health_check(self) -> tuple:
+        """Proactively verify the Tavily API is CALLING CORRECTLY before a full search relies on it.
+        Returns (ok: bool, status: str, detail: str). status ∈ ok|no_key|quota|auth|rate|error.
+        One lightweight probe call (max_results=1)."""
+        if not config.TAVILY_API_KEY:
+            return (False, "no_key", "TAVILY_API_KEY not set")
+        errors: list = []
+        try:
+            client = _client()
+            resp = client.search(query="generative AI interview questions", max_results=1,
+                                  search_depth="basic")
+            results = resp.get("results") if isinstance(resp, dict) else None
+            if results is None:
+                return (False, "error", "Tavily returned an unexpected response shape")
+            return (True, "ok", f"{len(results)} result(s)")
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"{type(e).__name__}: {e}")
+            joined = " ".join(errors).lower()
+            status = ("quota" if any(p in joined for p in ("usage limit", "exceeds your plan", "forbidden"))
+                      else "auth" if any(p in joined for p in ("unauthorized", "invalid api key", "401"))
+                      else "rate" if ("rate limit" in joined or "429" in joined)
+                      else "error")
+            return (False, status, _summarize_tavily_error(errors))
 
     def fetch(self, outcomes: List[str]) -> tuple:
         """Return (records, search_call_count, error).

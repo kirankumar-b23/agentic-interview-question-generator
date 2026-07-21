@@ -131,10 +131,10 @@ def write_to_sheets(
     qd_rows = [qd_headers]
     for q in output.question_details:
         qd_rows.append([
-            q.question_id, q.category, strip_question_prefix(q.content), cat,
-            q.sub_topic or "", (q.difficulty or "").upper(),
-            q.language or "", cat, q.tool or "",
-            q.attribution,
+            q.question_id, "Gen_AI", strip_question_prefix(q.content), "Gen_AI",
+            q.sub_topic or "", "",                       # difficulty intentionally blank
+            q.language or "", "Gen_AI", q.tool or "",
+            (q.attribution or "").upper(),               # asked_in_company in ALL CAPS
         ])
 
     if qd_rows:
@@ -159,7 +159,7 @@ def write_to_sheets(
         ["time_gap", 0],
         ["video_enabled", True],
         ["is_proctoring_enabled", True],
-        ["category", "TESTING_CATEGORY"],
+        ["category", "NIAT_CATEGORY"],
         ["Tags", f"NIAT_{cat}"],
         ["visibility", "should_show_report"],
         [None, True],
@@ -182,7 +182,6 @@ def write_to_sheets(
     # All entities are cross-linked by consistently-generated UUIDs, mirroring the unit template.
     unit_id = str(uuid.uuid4())            # unit_id == UNIT resource_id == learning-resource-set id
     common_unit_id = str(uuid.uuid4())
-    child_resource_id = str(uuid.uuid4())  # child resource referenced in the dependency graph
     lr_uuid = str(uuid.uuid4())            # the LearningResources row referenced by the set
 
     ws_rd = spreadsheet.add_worksheet(title="ResourcesData", rows=4, cols=10)
@@ -191,7 +190,8 @@ def write_to_sheets(
          "dependent_reason_display_text", "parent_resource_count", "child_order", "parent_resources",
          "auto_unlock", "is_primary"],
         [unit_id, "UNIT", 0, "", "", 1, "", "", True, ""],
-        ["", "", "", "", "", "", 20, child_resource_id, "", True],
+        # parent_resources left as a fill-in placeholder (real parent/unit ID assigned at import time).
+        ["", "", "", "", "", "", 20, "PARENT_ID", "", True],
     ])
 
     ws_units = spreadsheet.add_worksheet(title="Units", rows=2, cols=5)

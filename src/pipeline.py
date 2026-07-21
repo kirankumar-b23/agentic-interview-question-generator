@@ -92,9 +92,12 @@ class AgentPipeline:
         # Guarantee relevance filtering ran — the validation agent is prompt-advised, not code-forced,
         # so if it never scored anything (no question carries a relevance_score) we run it directly.
         # Without this, an agent that skips validate_relevance lets the whole raw pool through unfiltered.
-        if state.questions and not any(q.relevance_score is not None for q in state.questions.values()):
+        # Run if ANY question is still unscored (not all-or-nothing) — a partial agent scoring must not
+        # let the remaining unscored candidates leak through unfiltered. tool_validate_relevance scores
+        # the whole set, so a full re-score here is correct and idempotent.
+        if state.questions and any(q.relevance_score is None for q in state.questions.values()):
             from src.tools import tool_validate_relevance
-            emit("validate_relevance", "running", "Enforcing relevance validation (agent skipped it)...")
+            emit("validate_relevance", "running", "Enforcing relevance validation (unscored candidates present)...")
             tool_validate_relevance(state)
             emit("validate_relevance", "done", f"{len(state.questions)} question(s) after relevance filter.")
         # Always dedup (semantic) — the agent is only prompt-advised to, and with retrieval uncapped the
@@ -136,7 +139,7 @@ class AgentPipeline:
         if not ctx or len(state.questions) <= 1:
             return
         from src import embeddings
-        from src.config import SEMANTIC_TOPIC_MARGIN, SEMANTIC_PREFILTER_FLOOR
+        from src.config import SEMANTIC_TOPIC_MARGIN, SEMANTIC_PREFILTER_FLOOR, SEMANTIC_CUR_KEEP
 
         cur_profile = [p for p in (list(getattr(ctx, "interview_topics", None) or [])
                                    + list(ctx.key_concepts or []) + list(ctx.learning_outcomes or []))
@@ -156,7 +159,12 @@ class AgentPipeline:
         for i, (qid, _) in enumerate(items):
             cur = max(cur_sim[i])
             oth = max(oth_sim[i])
-            # Belongs to another topic (beats this topic by a margin) OR unrelated to everything.
+            # Never drop a candidate that STRONGLY matches this session's topic — guards against the
+            # max-over-many-other-topics inflation bias (oth is a max over far more texts than cur).
+            if cur >= SEMANTIC_CUR_KEEP:
+                continue
+            # Otherwise: drop if it clearly belongs to another topic (beats this one by a margin),
+            # or is unrelated to everything.
             if oth > cur + SEMANTIC_TOPIC_MARGIN or max(cur, oth) < SEMANTIC_PREFILTER_FLOOR:
                 drop.append(qid)
         for qid in drop:
@@ -325,7 +333,10 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     # gave the gate zero incentive to exceed MIN — the "always 5" symptom). A full set scores 1.0; a
     # smaller set gets proportional credit. This never pushes toward off-topic padding: the relevance
     # floor upstream caps supply, and the gate/eval agent are told not to pad below the floor.
-    target = max(MIN_QUESTIONS, min(getattr(state.config, "max_questions", MAX_QUESTIONS) or MAX_QUESTIONS, MAX_QUESTIONS))
+    # Target = the SAME requested-count ceiling submit uses (min(max_questions or 12, FINAL_SET_CAP)),
+    # so the scored size-target matches the delivered count.
+    from src.config import FINAL_SET_CAP
+    target = max(MIN_QUESTIONS, min(getattr(state.config, "max_questions", None) or 12, FINAL_SET_CAP))
     size_score = 1.0 if total_q >= target else round(max(0.0, total_q / target), 3)
     diversity_score = min(1.0, len(sources) / 2)
     diff_target = {"Easy": 0.3, "Medium": 0.5, "Hard": 0.2}
@@ -358,6 +369,16 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
                      "for this session.")
     if coverage_score < 0.6:
         notes.append("Some learning outcomes are not covered by the available questions.")
+    # Web-search health: if web retrieval was unavailable/failed, this set is BANK-ONLY — say so loudly.
+    _web_note = {
+        "quota": "⚠ Web search hit its usage limit — this set is bank-only (no fresh web questions).",
+        "auth": "⚠ Web search unauthorized (bad/expired Tavily key) — this set is bank-only.",
+        "rate": "⚠ Web search was rate-limited — this set is bank-only.",
+        "no_key": "⚠ No Tavily key configured — web search skipped; this set is bank-only.",
+        "error": "⚠ Web search failed — this set is bank-only.",
+    }.get(getattr(state, "web_status", "not_run"))
+    if _web_note:
+        notes.insert(0, _web_note)
 
     return QualityReport(
         composite_score=composite,
@@ -371,6 +392,8 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
         pass_fail="pass" if passed else "fail",
         critique=notes,
         loops_used=revision_round,
+        web_status=getattr(state, "web_status", "not_run"),
+        web_error=getattr(state, "web_error", None),
     )
 
 

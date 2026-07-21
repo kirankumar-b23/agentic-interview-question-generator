@@ -3,24 +3,43 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import PipelineStepper from '../components/PipelineStepper.jsx'
 
+const WEB_STATUS_WARN = {
+  quota: 'Web search hit its usage limit — this set is bank-only (no fresh web questions).',
+  auth: 'Web search unauthorized (bad/expired Tavily key) — this set is bank-only.',
+  rate: 'Web search was rate-limited — this set is bank-only.',
+  no_key: 'No Tavily key configured — web search skipped; this set is bank-only.',
+  error: 'Web search failed — this set is bank-only.',
+}
+
 function QualityBar({ report }) {
   if (!report) return null
   const score = Math.round(report.composite_score * 100)
   const isPassing = report.pass_fail === 'pass'
+  const webWarn = WEB_STATUS_WARN[report.web_status]
   return (
-    <div className={`quality-bar ${isPassing ? 'qb-pass' : 'qb-fail'}`}>
-      <span className="qb-badge">{isPassing ? '✅ Pass' : '⚠️ Below threshold'}</span>
-      <span className="qb-score">Score: {score}/100</span>
-      <div className="qb-metrics">
-        {Object.entries(report.metric_scores || {}).map(([k, v]) => (
-          <span key={k} className="qb-metric">
-            {k.replace(/_/g, ' ')}: {Math.round(v * 100)}
-          </span>
-        ))}
-      </div>
-      {report.loops_used > 0 && (
-        <span className="qb-loops">{report.loops_used} revision round(s)</span>
+    <div>
+      {webWarn && (
+        <div className="web-warning-banner" style={{
+          background: '#fff4e5', border: '1px solid #ffb74d', color: '#8a5200',
+          padding: '8px 12px', borderRadius: 6, marginBottom: 8, fontSize: 13,
+        }}>
+          ⚠ {webWarn}{report.web_error ? ` (${report.web_error})` : ''}
+        </div>
       )}
+      <div className={`quality-bar ${isPassing ? 'qb-pass' : 'qb-fail'}`}>
+        <span className="qb-badge">{isPassing ? '✅ Pass' : '⚠️ Below threshold'}</span>
+        <span className="qb-score">Score: {score}/100</span>
+        <div className="qb-metrics">
+          {Object.entries(report.metric_scores || {}).map(([k, v]) => (
+            <span key={k} className="qb-metric">
+              {k.replace(/_/g, ' ')}: {Math.round(v * 100)}
+            </span>
+          ))}
+        </div>
+        {report.loops_used > 0 && (
+          <span className="qb-loops">{report.loops_used} revision round(s)</span>
+        )}
+      </div>
     </div>
   )
 }

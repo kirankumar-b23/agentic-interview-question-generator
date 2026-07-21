@@ -293,8 +293,11 @@ def _from_llm(
 
     result = chat_completion_json(
         system_prompt=LLM_SYSTEM_PROMPT,
-        user_prompt=f"## Session: {combined_name}\n\n## Reading Material\n{rm_content[:8000]}\n\n## KP Catalog\n{kp_list}",
-        max_tokens=2048,
+        # Feed the FULL per-session reading material (RM is pre-capped at 12k/session upstream).
+        # The old 8000-char cut truncated the lesson's tail, so deep sub-topics taught later
+        # (e.g. VAE/GAN/sampling for image-gen) never reached the outcome/interview_topic extractor.
+        user_prompt=f"## Session: {combined_name}\n\n## Reading Material\n{rm_content[:14000]}\n\n## KP Catalog\n{kp_list}",
+        max_tokens=3000,
     )
 
     matched_kps = []

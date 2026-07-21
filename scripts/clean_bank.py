@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.config import GENAI_BANK_JSON              # noqa: E402
+from src.config import GENAI_BANK_JSON, EDU_PLATFORM_DOMAINS  # noqa: E402
 from src.sources.base import domain, split_into_clauses  # noqa: E402
 from src.sources.tavily_search import _valid_company  # noqa: E402
 from src.quality import is_quality_question, strip_artifacts  # noqa: E402
@@ -69,14 +69,20 @@ def main() -> int:
     # Pre-split compound questions into atomic rows BEFORE cleaning/dedup.
     bank, split_n = _presplit(bank)
 
-    dropped_domain = dropped_form = reblanked = 0
+    dropped_domain = dropped_form = reblanked = dropped_edu = 0
     kept: dict[str, dict] = {}   # norm-key → record (company-bearing preferred)
     dup_removed = 0
 
     for q in bank:
+        url = q.get("source_url") or ""
+        d = _dom(url)
         # 1. low-trust domain
-        if _dom(q.get("source_url")) in _LOW_TRUST:
+        if d in _LOW_TRUST:
             dropped_domain += 1
+            continue
+        # 1b. education-platform CLASS content — keep only interview-question pages (URL has "interview").
+        if d in EDU_PLATFORM_DOMAINS and "interview" not in url.lower():
+            dropped_edu += 1
             continue
         # 2. strip artifacts
         content = strip_artifacts(q.get("content", ""))
@@ -111,6 +117,7 @@ def main() -> int:
     print(f"cleaned bank: {start} → {len(cleaned_bank)}")
     print(f"  compound rows pre-split:    {split_n}")
     print(f"  dropped (low-trust domain): {dropped_domain}")
+    print(f"  dropped (edu class-content): {dropped_edu}")
     print(f"  dropped (form-quality):     {dropped_form}")
     print(f"  dropped (duplicates):       {dup_removed}")
     print(f"  companies re-blanked:       {reblanked}")

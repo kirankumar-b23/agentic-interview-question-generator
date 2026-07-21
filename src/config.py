@@ -88,6 +88,10 @@ RELEVANCE_FLOOR = float(os.getenv("RELEVANCE_FLOOR", "0.35"))
 # dropping genuinely on-topic or shared ones. TF-IDF/embeddings-unavailable or unknown topic → skip (no-op).
 SEMANTIC_TOPIC_MARGIN = float(os.getenv("SEMANTIC_TOPIC_MARGIN", "0.06"))
 SEMANTIC_PREFILTER_FLOOR = float(os.getenv("SEMANTIC_PREFILTER_FLOOR", "0.12"))  # also drop totally-unrelated
+# A candidate that STRONGLY matches THIS session's topic (cur similarity ≥ this) is never dropped by the
+# topic pre-gate, even if some other topic's pooled max is higher. Guards against the max-over-many-topics
+# inflation bias that could otherwise over-drop genuinely on-topic questions.
+SEMANTIC_CUR_KEEP = float(os.getenv("SEMANTIC_CUR_KEEP", "0.60"))
 # Final selection: greedy MMR with coverage + difficulty bonuses.
 #   score = λ·relevance − (1−λ)·redundancy + COVERAGE_BONUS·(covers a new outcome)
 #                                           + DIFFICULTY_BONUS·(fills an under-filled difficulty bucket)
@@ -187,6 +191,19 @@ INTERVIEW_GITHUB_REPOS = [
     "rbhatia46/Data-Science-Interview-Resources",
     "Sroy20/machine-learning-interview-questions",
 ]
+
+# Education / tutorial platforms: their non-interview pages (/topics/, /blog/, /article/, /tutorials/) are
+# COURSE content, not interview questions — the Tavily extractor otherwise pulls lesson section-headings
+# ("What is a Vector Database?") as questions. For these domains we accept ONLY pages whose URL path
+# contains "interview".
+EDU_PLATFORM_DOMAINS = {
+    "scaler.com", "analyticsvidhya.com", "projectpro.io", "edureka.co", "datacamp.com",
+    "towardsdatascience.com", "towardsai.net", "pub.towardsai.net", "igmguru.com", "educative.io",
+    "kdnuggets.com", "simplilearn.com", "intellipaat.com", "365datascience.com",
+    "machinelearningmastery.com", "mlstack.cafe", "novelvista.com", "tredence.com",
+    "generativeaimasters.in", "vinsys.com",
+    "geeksforgeeks.org",   # now gated too (was exempt) — only its interview-question pages, not tutorials
+}
 
 INTERVIEW_SOURCE_ALLOWLIST = {
     "tryexponent.com", "datalemur.com", "stratascratch.com", "prachub.com",

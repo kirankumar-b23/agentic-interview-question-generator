@@ -9,9 +9,9 @@
 6. deduplicate_questions — TF-IDF dedup
 7. check_difficulty_balance — Easy/Medium/Hard distribution
 8. check_outcome_coverage — which outcomes are covered
-9. generate_expected_answers — LLM generates answer outlines
+9. generate_expected_answers — BLOCKED (answers no longer produced; always returns blocked)
 10. generate_interview_questions — BLOCKED (real questions only; always returns blocked)
-11. generate_coding_questions — LLM generates coding problems (code-heavy sessions only)
+11. generate_coding_questions — BLOCKED (no generation; only retrieved coding questions are used)
 12. remove_question — drop a specific question
 13. submit_question_set — finalize and end the run
 """
@@ -161,7 +161,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "generate_coding_questions",
-            "description": "Generate coding interview problems. Only for code-heavy or mixed sessions.",
+            "description": "DISABLED — coding questions are not generated; only real retrieved ones are used. Do not call.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -395,7 +395,10 @@ def tool_validate_relevance(state: AgentState) -> dict:
     # it lets keyword overlap masquerade as relevance). Include a bounded excerpt of each
     # selected session's RM, split evenly to keep total cost in check.
     names = state.config.session_names or [state.session_context.session_name]
-    per_cap = max(1200, 4000 // max(1, len(names)))
+    # Feed the judge (near-)full reading material: 1–2 sessions → the whole RM each; 3+ → ~10k each.
+    # The old 4000//n cut showed the judge ~11% of a 12k RM for a 3-session run, so it never saw the
+    # concept a genuinely on-topic question tested and scored it low. The RM is the source of truth.
+    per_cap = min(12000, max(6000, 30000 // max(1, len(names))))
     rm_parts = []
     for name in names:
         content = state.data_store.get_session_content(name)
@@ -407,7 +410,16 @@ def tool_validate_relevance(state: AgentState) -> dict:
 
 Session: {state.session_context.session_name}
 
-Learning Outcomes:
+## What this session actually teaches — THE READING MATERIAL BELOW IS THE SOURCE OF TRUTH
+{rm_block}
+
+The Learning Outcomes / Key Concepts below are only a SHORT SUMMARY of the reading material — they do
+NOT list every sub-topic. A question is ON-TOPIC if its subject is taught ANYWHERE in the reading
+material above (or is one of the Interview Topics), EVEN IF no learning outcome names it word-for-word.
+Do NOT down-score a question just because it isn't in the outcomes list — judge against the reading
+material itself.
+
+Learning Outcomes (summary only):
 {outcomes_str}
 
 Key Concepts: {concepts_str}
@@ -415,12 +427,9 @@ Interview Topics (transferable concepts this session prepares a candidate for �
 these IS on-topic, even if it doesn't name the specific tool/product used in the session): {topics_str}
 Out of Scope (score these ≤0.2): {scope_out_str}
 
-## What this session actually teaches (reading material — judge against THIS, not just keywords)
-{rm_block}
-
 Give EACH question a relevance score from 0.0 to 1.0 for how well it tests a concept the session teaches
-(a concept from the reading material OR one of the Interview Topics above):
-- 0.8–1.0 — directly tests a technical concept explained in the reading material / interview topics above.
+(any concept present in the reading material above OR one of the Interview Topics):
+- 0.8–1.0 — directly tests a technical concept explained anywhere in the reading material / interview topics.
 - 0.4–0.7 — genuinely about the session's subject matter but broad or only partially on-topic.
 - 0.0–0.2 — NOT testing this session's subject matter. Score LOW even if a keyword overlaps and even
   if it came from a real company. This INCLUDES:
@@ -454,7 +463,7 @@ Respond in JSON only:
     _valid_diff = {"easy": "Easy", "medium": "Medium", "hard": "Hard"}
     for start in range(0, len(items), RELEVANCE_BATCH_SIZE):
         batch = items[start:start + RELEVANCE_BATCH_SIZE]
-        numbered = [{"n": i + 1, "q": q.content[:220]} for i, (_, q) in enumerate(batch)]
+        numbered = [{"n": i + 1, "q": q.content[:600]} for i, (_, q) in enumerate(batch)]
         result = chat_completion_json(
             system_prompt=system_prompt,
             user_prompt=f"Score these {len(numbered)} questions:\n{json.dumps(numbered)}",
@@ -484,11 +493,11 @@ Respond in JSON only:
     THRESHOLD = RELEVANCE_THRESHOLD
     min_keep = max(1, state.config.min_questions)
 
-    # Apply scores + LLM difficulty tags. A question the model OMITTED (present in a partially-scored
-    # batch) is treated as BELOW threshold (default just under the floor) so unscored items don't leak
-    # in at 0.5 — the previous default. A question in a fully-FAILED batch keeps a neutral THRESHOLD
-    # score so a transient API failure doesn't wipe the pool.
-    default_unscored = round(RELEVANCE_FLOOR - 0.05, 3)   # below the floor → not eligible for backfill
+    # Apply scores + LLM difficulty tags. A question the model OMITTED — whether from a fully-FAILED
+    # batch or a partially-scored one — was NEVER actually judged, so we must not treat "no score" as
+    # "irrelevant". Both cases get a neutral THRESHOLD score (kept / backfill-eligible) rather than
+    # being silently dropped below the floor; dedup and final selection trim any genuine excess later.
+    default_unscored = THRESHOLD
     scored = []  # (q_id, score)
     for q_id, q in items:
         if q_id in score_by_qid:
@@ -582,6 +591,11 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
                 # Drop the weaker of the pair (keep higher relevance / real company / better source).
                 worse = j if _keep_rank(questions[i]) <= _keep_rank(questions[j]) else i
                 to_remove.add(worse)
+                # If the OUTER pivot i is the one being removed, stop comparing against it — a
+                # question that is itself being deleted must not keep acting as the dedup pivot
+                # (that would remove later j's as "duplicates of a deleted question").
+                if worse == i:
+                    break
 
     for idx in to_remove:
         q = state.questions.pop(questions[idx].question_id, None)
@@ -790,7 +804,12 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
     """Harvest real interview questions with company attribution from 65+ verified domains via Tavily."""
     from src import config as cfg
     if not cfg.TAVILY_API_KEY:
+        state.web_status = "no_key"
         return {"error": "TAVILY_API_KEY not set — skipping web search", "status": "skipped"}
+    # Pre-flight health check (in RetrievalAgent) failed with a terminal error → don't burn calls.
+    if getattr(state, "web_search_disabled", False):
+        return {"found": 0, "status": "skipped",
+                "warning": f"Web search skipped — Tavily API unavailable ({state.web_status})."}
 
     from src.sources.tavily_search import TavilyConnector
     from src.config import WEB_POOL_CAP
@@ -799,6 +818,8 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
     # Check the web quota BEFORE calling Tavily — don't burn API calls when web is full.
     capacity = WEB_POOL_CAP - state.added_by_source.get("web", 0)
     if capacity <= 0:
+        if state.web_status == "not_run":
+            state.web_status = "full"
         return {"found": 0, "warning": f"Web quota full ({WEB_POOL_CAP})."}
 
     # Query the session's substantive CONCEPTS. interview_topics come FIRST — these are the
@@ -825,6 +846,12 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
     # Surface a real failure (quota/auth/rate limit) instead of silently looking
     # like "no web questions found".
     if tavily_error and not records:
+        el = tavily_error.lower()
+        state.web_status = ("quota" if ("quota" in el or "usage limit" in el or "exceeds your plan" in el)
+                            else "auth" if ("unauthorized" in el or "invalid api key" in el or "401" in el)
+                            else "rate" if "rate limit" in el
+                            else "error")
+        state.web_error = tavily_error
         return {"found": 0, "added": 0, "status": "error", "error": tavily_error}
 
     # Prioritise attributed company questions and premium sources over Reddit noise
@@ -886,6 +913,11 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
 
     state.raw_fetched["web"] = state.raw_fetched.get("web", 0) + len(records)
     state.added_by_source["web"] = state.added_by_source.get("web", 0) + len(added)
+    # Web search succeeded this run (records returned) — mark ok once, never downgrade a prior ok.
+    if records:
+        state.web_status = "ok"
+    elif state.web_status in ("not_run", "full"):
+        state.web_status = "empty"
     total = len(state.questions) + len(state.coding_questions)
     state.pool_size = max(state.pool_size, total)
     return {

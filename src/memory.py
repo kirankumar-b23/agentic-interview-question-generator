@@ -63,10 +63,12 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS question_feedback (
-            question_id TEXT NOT NULL,
-            run_id      TEXT NOT NULL,
-            feedback    TEXT NOT NULL,
-            created_at  TEXT DEFAULT (datetime('now')),
+            question_id  TEXT NOT NULL,
+            run_id       TEXT NOT NULL,
+            feedback     TEXT NOT NULL,
+            session_name TEXT,
+            content      TEXT,
+            created_at   TEXT DEFAULT (datetime('now')),
             PRIMARY KEY (question_id, run_id)
         );
 
@@ -99,6 +101,8 @@ def init_db():
     # Migrate: add columns to existing databases
     for migration in [
         "ALTER TABLE run_history ADD COLUMN api_usage_json TEXT",
+        "ALTER TABLE question_feedback ADD COLUMN session_name TEXT",
+        "ALTER TABLE question_feedback ADD COLUMN content TEXT",
     ]:
         try:
             conn.execute(migration)
@@ -414,8 +418,9 @@ def record_feedback(run_id: str, session_name: str, question_id: str, content: s
     try:
         conn = get_connection()
         conn.execute(
-            "INSERT OR REPLACE INTO question_feedback (question_id, run_id, feedback) VALUES (?, ?, ?)",
-            (question_id or "", run_id or "", decision),
+            "INSERT OR REPLACE INTO question_feedback (question_id, run_id, feedback, session_name, content) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (question_id or "", run_id or "", decision, session_name or "", content or ""),
         )
         conn.commit()
         conn.close()

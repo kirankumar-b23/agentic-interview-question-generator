@@ -72,7 +72,12 @@ _Q_STARTS = ("what", "why", "how", "when", "where", "explain", "describe", "comp
 def looks_like_question(t: str) -> bool:
     """True if the string is a plausible interview question or task prompt."""
     t = (t or "").strip()
-    if not (15 <= len(t) <= 320):
+    # Floor is 10 (not 15) so short but valid acronym questions survive ("What is RAG?" = 12,
+    # "What is ML?" = 11). The ≥2-word guard keeps single-word scraps ("Seriously?", "OK?") out on
+    # the standalone paths (github/tavily line-split) that don't run the word-gated is_quality_question.
+    if not (10 <= len(t) <= 320):
+        return False
+    if len(t.split()) < 2:
         return False
     if t.endswith("?"):
         return True

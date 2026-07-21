@@ -14,8 +14,10 @@ import re
 
 from src.sources.base import looks_like_question, _Q_STARTS
 
-# Leading scrape markers: "Q:", "Q.", "Q1:", "Ans:", stray backslashes, bullet/hash noise.
-_LEAD_JUNK = re.compile(r"^\s*(?:[\\>#•\-*]+\s*)?(?:q(?:uestion)?\s*\d*\s*[.:)-]\s*|ans(?:wer)?\s*[.:)-]\s*)?",
+# Leading scrape markers: "Q:", "Q.", "Q1:", "Q1)", "Ans:", stray backslashes, bullet/hash noise.
+# The marker's separator must be followed by whitespace so a real term like "Q-learning" / "Q-value"
+# (hyphen followed by a letter, no space) is NOT mistaken for a "Q." scrape marker and truncated.
+_LEAD_JUNK = re.compile(r"^\s*(?:[\\>#•\-*]+\s*)?(?:q(?:uestion)?\s*\d*\s*[.:)-]\s+|ans(?:wer)?\s*[.:)-]\s+)?",
                         re.IGNORECASE)
 _BACKSLASH = re.compile(r"\\+")
 _WS = re.compile(r"\s+")
@@ -25,7 +27,7 @@ _WS = re.compile(r"\s+")
 # begin many legitimate questions like "When should you fine-tune?").
 _FRAGMENT_STARTS = {
     "also", "and", "but", "so", "or", "then", "plus", "additionally", "moreover",
-    "however", "thus", "hence", "therefore", "besides", "yet", "because", "although", "with",
+    "however", "thus", "hence", "therefore", "besides", "yet",
 }
 
 # Listicle/heading openers → a document heading ("List of Key LLM Parameters", "Types of ..."), not a
@@ -64,7 +66,13 @@ def strip_artifacts(text: str) -> str:
     s = _BACKSLASH.sub("", text)
     s = _LEAD_JUNK.sub("", s)
     s = s.strip(" \t`*_[]#>-")
-    return _WS.sub(" ", s).strip()
+    s = _WS.sub(" ", s).strip()
+    # A Title-cased wh-question often harvested as a page heading ("What Is Gradient Descent",
+    # "How Does Backpropagation Work") is a real interview question missing its mark — restore the
+    # "?" so the heading filter keeps it instead of discarding a genuine question.
+    if s and not s.endswith(("?", ".", "!", ":")) and s.lower().startswith(_WH_STARTS) and len(s.split()) >= 3:
+        s = s + "?"
+    return s
 
 
 def _looks_like_heading(t: str) -> bool:
@@ -92,7 +100,7 @@ def is_quality_question(text: str) -> bool:
     words = t.split()
     if len(words) < _MIN_WORDS:
         return False
-    if words[0].strip(",.").lower() in _FRAGMENT_STARTS:   # "Also, how diverse…" / "With a clear…" → scrap
+    if words[0].strip(",.").lower() in _FRAGMENT_STARTS:   # "Also, how diverse…" / "And what about…" → scrap
         return False
     # Listicle/heading opener without a question mark → doc heading, not a question.
     if not t.endswith("?") and t.lower().startswith(_HEADING_STARTS):

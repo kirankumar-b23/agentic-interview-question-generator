@@ -256,3 +256,7 @@ class QualityReport(BaseModel):
     critique: list[str] = Field(default_factory=list)
     loops_used: int = 0
     api_usage: dict = Field(default_factory=dict)
+    # Web-search (Tavily) health for this run, so a bank-only fallback is visible in the UI:
+    # ok | empty | no_key | quota | auth | rate | full | error | not_run
+    web_status: str = "not_run"
+    web_error: str | None = None

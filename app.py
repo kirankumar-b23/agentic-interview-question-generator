@@ -456,8 +456,12 @@ def api_approve(run_id: str):
 
         session_names = session_name.split(" + ")
         from src.llm_client import get_active_model
+        # Preserve course identity on regeneration (category drives branding; course_type steers session
+        # handling) — otherwise a non-GenAI course would re-run with default GEN_AI branding.
         config = GenerationConfig(session_names=session_names, max_questions=original_count,
-                                  model=get_active_model())
+                                  model=get_active_model(),
+                                  category=getattr(result, "category", "GEN_AI") or "GEN_AI",
+                                  course_type=getattr(result.context, "session_type", None) if result.context else None)
         try:
             conn = memory.get_connection()
             conn.execute("DELETE FROM session_resolutions WHERE session_name = ?", (session_name,))
@@ -588,4 +592,8 @@ if _has_react:
 
 
 if __name__ == "__main__":
+    # Web-search health at startup — a missing Tavily key means runs are silently bank-only.
+    from src.config import TAVILY_API_KEY as _tav
+    print(f"[startup] Tavily web search: {'ENABLED' if _tav else 'DISABLED (no TAVILY_API_KEY — runs will be BANK-ONLY)'}",
+          flush=True)
     app.run(debug=True, port=5000, threaded=True)
