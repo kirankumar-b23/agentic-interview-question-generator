@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
+import Icon from '../components/Icon.jsx'
 
 const PIPELINE = [
-  { icon: '🔍', label: 'Understand' },
-  { icon: '📚', label: 'Retrieve' },
-  { icon: '🎯', label: 'Validate' },
-  { icon: '⚖️', label: 'Evaluate' },
-  { icon: '🔬', label: 'Quality gate' },
-  { icon: '👤', label: 'Review' },
-  { icon: '📄', label: 'Export' },
+  { icon: 'understand', label: 'Understand' },
+  { icon: 'retrieve',   label: 'Retrieve' },
+  { icon: 'validate',   label: 'Validate' },
+  { icon: 'evaluate',   label: 'Evaluate' },
+  { icon: 'gate',     label: 'Quality gate' },
+  { icon: 'review',     label: 'Review' },
+  { icon: 'export',     label: 'Export' },
 ]
 
 export default function WelcomePage() {
@@ -66,10 +67,10 @@ export default function WelcomePage() {
           {PIPELINE.map((s, i) => (
             <div key={s.label} className="hp-wrap">
               <div className="hp-node">
-                <span className="hp-ico">{s.icon}</span>
+                <span className="hp-ico"><Icon name={s.icon} size={15} /></span>
                 <span className="hp-label">{s.label}</span>
               </div>
-              {i < PIPELINE.length - 1 && <span className="hp-arrow">→</span>}
+              {i < PIPELINE.length - 1 && <Icon name="chevronRight" size={12} className="hp-arrow" />}
             </div>
           ))}
         </section>
@@ -88,7 +89,12 @@ export default function WelcomePage() {
                 {c.builtin && <span className="course-badge">built-in</span>}
               </div>
             ))}
-            {courses.length === 0 && <p className="muted">No courses yet.</p>}
+            {courses.length === 0 && (
+              <div className="empty-state">
+                <Icon name="book" size={22} />
+                <p>No courses yet. Add one to start generating question sets.</p>
+              </div>
+            )}
           </div>
           <p className="muted" style={{ fontSize: '0.76rem', marginTop: '0.6rem' }}>
             Pick a course &amp; topic from the sidebar to generate. Add your own via “Add course”.

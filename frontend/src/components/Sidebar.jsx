@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { api } from '../lib/api.js'
+import Icon from './Icon.jsx'
 
 export default function Sidebar() {
   const navigate = useNavigate()
@@ -85,19 +86,22 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div className="sidebar-logo" onClick={() => navigate('/')}>
+      <button className="sidebar-logo" onClick={() => navigate('/')} aria-label="NxtMock home">
         <span className="sidebar-logo-main">NxtMock</span>
         <span className="sidebar-logo-sub">Interview Generator</span>
-      </div>
+      </button>
 
       {/* Course + Topic pickers */}
       <div className="sidebar-picker">
         <div className="sidebar-picker-head">
-          <span className="sidebar-section-label" style={{ padding: 0 }}>Course</span>
-          <span className="sidebar-view-all" onClick={() => navigate('/add')}>＋ Add</span>
+          <label className="sidebar-section-label" htmlFor="sb-course" style={{ padding: 0 }}>Course</label>
+          <button className="sidebar-view-all" onClick={() => navigate('/add')}>
+            <Icon name="plus" size={12} /> Add
+          </button>
         </div>
         <div className="sidebar-select-wrap">
           <select
+            id="sb-course"
             className="sidebar-topic-select"
             value={selectedCourse}
             onChange={e => setSelectedCourse(e.target.value)}
@@ -129,9 +133,10 @@ export default function Sidebar() {
 
         {selectMode === 'topic' ? (
           <>
-            <span className="sidebar-section-label">Topic</span>
+            <label className="sidebar-section-label" htmlFor="sb-topic">Topic</label>
             <div className="sidebar-select-wrap">
               <select
+                id="sb-topic"
                 className="sidebar-topic-select"
                 value={selectedTopic}
                 onChange={e => setSelectedTopic(e.target.value)}
@@ -161,9 +166,10 @@ export default function Sidebar() {
           </>
         ) : (
           <>
-            <span className="sidebar-section-label">Unit</span>
+            <label className="sidebar-section-label" htmlFor="sb-unit">Unit</label>
             <div className="sidebar-select-wrap">
               <select
+                id="sb-unit"
                 className="sidebar-topic-select"
                 value={selectedUnit}
                 onChange={e => setSelectedUnit(e.target.value)}
@@ -185,7 +191,8 @@ export default function Sidebar() {
           <span className="sidebar-maxq-hint"> (all relevant questions are kept)</span>
         </div>
         <input
-          type="range" min={5} max={40} value={maxQuestions}
+          id="sb-count" type="range" min={5} max={40} value={maxQuestions}
+          aria-valuetext={`${maxQuestions} questions`}
           onChange={e => setMaxQuestions(+e.target.value)}
           className="sidebar-range"
         />
@@ -212,21 +219,21 @@ export default function Sidebar() {
         <div className="sidebar-history-header">
           <span className="sidebar-history-label">Recent Runs</span>
           {history.length > 0 && (
-            <span className="sidebar-view-all" onClick={() => navigate('/history')}>View all</span>
+            <button className="sidebar-view-all" onClick={() => navigate('/history')}>View all</button>
           )}
         </div>
         {(() => {
           const successful = history.filter(r => (r.question_count || 0) > 0)
           if (successful.length === 0) return <div className="sidebar-empty-hist">No successful runs yet</div>
           return successful.slice(0, 6).map(run => (
-            <div
+            <button
               key={run.run_id}
               className="sidebar-run-item"
               onClick={() => navigate(`/review/${run.run_id}`)}
             >
               <span className="sidebar-run-name" title={run.session_name}>{run.topic || run.session_name}</span>
               <span className="sidebar-run-meta">{run.question_count}q · {run.run_id.slice(0, 7)}</span>
-            </div>
+            </button>
           ))
         })()}
       </div>
@@ -256,7 +263,7 @@ export default function Sidebar() {
             : 'Credits: —'}
         </div>
         <button className="theme-toggle" onClick={toggleTheme} title="Toggle light / dark theme">
-          <span className="tt-ico">{theme === 'dark' ? '☀️' : '🌙'}</span>
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={13} />
           {theme === 'dark' ? 'Light mode' : 'Dark mode'}
         </button>
       </div>

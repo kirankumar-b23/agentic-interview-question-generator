@@ -1,48 +1,9 @@
-import { Fragment, useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { api } from '../lib/api.js'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import Icon from '../components/Icon.jsx'
 import PipelineStepper from '../components/PipelineStepper.jsx'
-
-const WEB_STATUS_WARN = {
-  quota: 'Web search hit its usage limit — this set is bank-only (no fresh web questions).',
-  auth: 'Web search unauthorized (bad/expired Tavily key) — this set is bank-only.',
-  rate: 'Web search was rate-limited — this set is bank-only.',
-  no_key: 'No Tavily key configured — web search skipped; this set is bank-only.',
-  error: 'Web search failed — this set is bank-only.',
-}
-
-function QualityBar({ report }) {
-  if (!report) return null
-  const score = Math.round(report.composite_score * 100)
-  const isPassing = report.pass_fail === 'pass'
-  const webWarn = WEB_STATUS_WARN[report.web_status]
-  return (
-    <div>
-      {webWarn && (
-        <div className="web-warning-banner" style={{
-          background: '#fff4e5', border: '1px solid #ffb74d', color: '#8a5200',
-          padding: '8px 12px', borderRadius: 6, marginBottom: 8, fontSize: 13,
-        }}>
-          ⚠ {webWarn}{report.web_error ? ` (${report.web_error})` : ''}
-        </div>
-      )}
-      <div className={`quality-bar ${isPassing ? 'qb-pass' : 'qb-fail'}`}>
-        <span className="qb-badge">{isPassing ? '✅ Pass' : '⚠️ Below threshold'}</span>
-        <span className="qb-score">Score: {score}/100</span>
-        <div className="qb-metrics">
-          {Object.entries(report.metric_scores || {}).map(([k, v]) => (
-            <span key={k} className="qb-metric">
-              {k.replace(/_/g, ' ')}: {Math.round(v * 100)}
-            </span>
-          ))}
-        </div>
-        {report.loops_used > 0 && (
-          <span className="qb-loops">{report.loops_used} revision round(s)</span>
-        )}
-      </div>
-    </div>
-  )
-}
+import QualityPanel from '../components/QualityPanel.jsx'
+import { api } from '../lib/api.js'
 
 // One-click rejection reasons. These exist because the free-text reason box was effectively never
 // filled in — 68 rejections produced zero learned rules — so the system never learned anything from
@@ -61,49 +22,78 @@ const REJECT_REASONS = [
 function CompactQuestion({
   id, content, title, difficulty,
   company, role, topic, subTopic, language, source, sourceUrl,
-  snippet, decision, onDecide, index, fit, reason,
+  snippet, decision, onDecide, index, fit, reason, focused, onFocus,
 }) {
   const [open, setOpen] = useState(false)
+  const rowRef = useRef(null)
   const isCoding = !!title
   const diff = difficulty || 'Medium'
   const diffClass = diff === 'Easy' ? 'd-easy' : diff === 'Hard' ? 'd-hard' : 'd-medium'
 
+  // Keep the keyboard cursor in view as it moves through a long set.
+  useEffect(() => {
+    if (focused) rowRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [focused])
+
+  const cls = ['cq-row',
+    decision === 'accepted' ? 'cq-row-accepted' : decision === 'rejected' ? 'cq-row-rejected' : '',
+    focused ? 'cq-row-focused' : ''].filter(Boolean).join(' ')
+
   return (
-    <div className={`cq-row${decision === 'accepted' ? ' cq-row-accepted' : decision === 'rejected' ? ' cq-row-rejected' : ''}`}>
-      <div className="cq-main" onClick={() => setOpen(o => !o)}>
-        <span className="cq-num">Q{index + 1}</span>
-        <span className="cq-text">{isCoding ? title : content}</span>
+    <div className={cls} ref={rowRef} onMouseEnter={onFocus}>
+      {/* The disclosure is its own button rather than a click handler on the row: the row also holds
+          the accept/reject buttons, and nesting interactive elements is invalid and untabbable. */}
+      <div className="cq-main">
+        <button
+          type="button"
+          className="cq-disclose"
+          onClick={() => setOpen(o => !o)}
+          aria-expanded={open}
+          title={open ? 'Hide details' : 'Show details'}
+        >
+          <Icon name={open ? 'chevronDown' : 'chevronRight'} size={12} className="cq-caret" />
+          <span className="cq-num">Q{index + 1}</span>
+          <span className={`cq-text${open ? ' cq-text-full' : ''}`}>{isCoding ? title : content}</span>
+        </button>
         <div className="cq-tags">
           {company && <span className="cq-company" title={company}>{company}</span>}
           {typeof fit === 'number' && (
             <span
               className="cq-fit"
-              title="Session fit — cosine similarity to this session's learning outcomes and reading material"
+              title="Session fit — similarity to this session's learning outcomes and reading material"
             >{fit.toFixed(2)}</span>
           )}
           <span className={`cq-diff ${diffClass}`}>{diff}</span>
         </div>
-        <div className="cq-btns" onClick={e => e.stopPropagation()}>
+        <div className="cq-btns">
           <button
             className={`cq-btn cq-accept${decision === 'accepted' ? ' active' : ''}`}
             onClick={() => onDecide(id, 'accepted')}
-          >✓</button>
+            aria-pressed={decision === 'accepted'}
+            aria-label={`Accept question ${index + 1}`}
+            title="Accept (a)"
+          ><Icon name="check" size={13} /></button>
           <button
             className={`cq-btn cq-reject${decision === 'rejected' ? ' active' : ''}`}
             onClick={() => onDecide(id, 'rejected')}
-          >✕</button>
+            aria-pressed={decision === 'rejected'}
+            aria-label={`Reject question ${index + 1}`}
+            title="Reject (r)"
+          ><Icon name="x" size={13} /></button>
         </div>
       </div>
 
       {/* Why it was rejected. One click, and the pipeline learns a rule from it. */}
       {decision === 'rejected' && (
-        <div className="cq-reasons" onClick={e => e.stopPropagation()}>
+        <div className="cq-reasons">
           <span className="cq-reasons-label">Why?</span>
-          {REJECT_REASONS.map(r => (
+          {REJECT_REASONS.map((r, i) => (
             <button
               key={r.key}
               className={`cq-reason-chip${reason === r.key ? ' active' : ''}`}
               onClick={() => onDecide(id, 'rejected', r.key)}
+              aria-pressed={reason === r.key}
+              title={`${r.label} (${i + 1})`}
             >{r.label}</button>
           ))}
         </div>
@@ -111,21 +101,14 @@ function CompactQuestion({
 
       {open && (
         <div className="cq-detail">
-          {isCoding && content && (
-            <p style={{ fontSize: '0.82rem', color: '#c9d1d9', marginBottom: '0.5rem' }}>{content}</p>
-          )}
-          {snippet?.code_content && (
-            <pre className="q-code-pre">{snippet.code_content}</pre>
-          )}
+          {/* The row line-clamps to two lines, so expanding must show the full text. This used to be
+              gated on `isCoding`, which meant a theory question longer than two lines could never be
+              read in full anywhere in the UI. */}
+          {content && <p className="cq-detail-text">{content}</p>}
+          {snippet?.code_content && <pre className="q-code-pre">{snippet.code_content}</pre>}
           {sourceUrl && (
-            <a
-              href={sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="cq-resource-link"
-              onClick={e => e.stopPropagation()}
-            >
-              ↗ Verify source
+            <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="cq-resource-link">
+              <Icon name="external" size={12} /> Verify source
             </a>
           )}
           <div className="cq-meta-tags">
@@ -160,14 +143,56 @@ export default function Review() {
       .catch(e => { setError(e.message); setLoading(false) })
   }, [runId])
 
-  function onDecide(qid, status, reason) {
+  const onDecide = useCallback((qid, status, reason) => {
     setDecisions(cur => {
       // Re-clicking the same reason clears it, and switching to accepted drops any stale reason.
       if (status !== 'rejected') return { ...cur, [qid]: { status } }
       const prev = cur[qid]?.reason
       return { ...cur, [qid]: { status, reason: reason === prev ? undefined : (reason ?? prev) } }
     })
-  }
+  }, [])
+
+  // Rank by session fit (highest first) so the reviewer works top-down and can stop where fit falls
+  // off — the set size is deliberately uncapped, so ordering is what keeps review tractable.
+  // Questions with no fit score (embeddings unavailable) keep their original order, at the end.
+  const fitOf = (q) => (typeof q.session_fit === 'number' ? q.session_fit : -1)
+  const ranked = useMemo(
+    () => [...(result?.output?.question_details || [])].sort((a, b) => fitOf(b) - fitOf(a)),
+    [result],
+  )
+
+  // ── Keyboard triage ──
+  // An uncapped set can be 50+ questions; accept/reject was mouse-only, one click per row, with the
+  // buttons ~1000px apart from the text on a wide screen. j/k to move, a/r to decide, 1-7 to give a
+  // reason. This is the difference between a reviewable set and a chore.
+  const [cursor, setCursor] = useState(0)
+  const [showHelp, setShowHelp] = useState(false)
+
+  useEffect(() => {
+    function onKey(e) {
+      // Never hijack typing, and let real shortcuts through.
+      const tag = e.target?.tagName
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return
+      if (!ranked.length) return
+
+      const current = ranked[cursor]
+      const key = e.key
+
+      if (key === 'j' || key === 'ArrowDown') { setCursor(c => Math.min(c + 1, ranked.length - 1)); e.preventDefault() }
+      else if (key === 'k' || key === 'ArrowUp') { setCursor(c => Math.max(c - 1, 0)); e.preventDefault() }
+      else if (key === 'a' && current) { onDecide(current.question_id, 'accepted'); setCursor(c => Math.min(c + 1, ranked.length - 1)) }
+      else if (key === 'r' && current) { onDecide(current.question_id, 'rejected') }
+      else if (key === 'u' && current) { setDecisions(cur => { const n = { ...cur }; delete n[current.question_id]; return n }) }
+      else if (key === '?') setShowHelp(v => !v)
+      else if (key === 'Escape') setShowHelp(false)
+      else if (/^[1-7]$/.test(key) && current && decisions[current.question_id]?.status === 'rejected') {
+        onDecide(current.question_id, 'rejected', REJECT_REASONS[Number(key) - 1].key)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [ranked, cursor, decisions, onDecide])
 
   async function handleApprove() {
     const acceptedIds = []
@@ -238,9 +263,12 @@ export default function Review() {
           <span className="topbar-title">Review Questions</span>
         </div>
         <PipelineStepper completedUntil="gate" activeStage="review" />
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>← History</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}><Icon name="arrowLeft" size={13} /> History</button>
       </header>
-      <div className="page-content"><p className="muted loading">Loading results…</p></div>
+      <div className="page-content" aria-busy="true" aria-label="Loading results">
+        <div className="skeleton skeleton-panel" />
+        {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton skeleton-row" />)}
+      </div>
     </>
   )
 
@@ -248,7 +276,7 @@ export default function Review() {
     <>
       <header className="topbar">
         <div className="topbar-title-group"><span className="topbar-title">Review Questions</span></div>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>← History</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}><Icon name="arrowLeft" size={13} /> History</button>
       </header>
       <div className="page-content"><div className="alert alert-error">{error}</div></div>
     </>
@@ -256,12 +284,7 @@ export default function Review() {
 
   if (!result) return null
 
-  // Rank by session fit (highest first) so the reviewer works top-down and can stop where fit
-  // falls off — the set size is deliberately uncapped, so ordering is what keeps review tractable.
-  // Questions without a fit score (embeddings unavailable) keep their original order at the end.
-  const fitOf = q => (typeof q.session_fit === 'number' ? q.session_fit : -1)
-  const questions = [...(result.output?.question_details || [])]
-    .sort((a, b) => fitOf(b) - fitOf(a))
+  const questions = ranked
   const fitHigh = result.thresholds?.session_fit_high ?? 0.35
   // Index of the first question below the high-confidence bar → where the divider goes.
   const firstLowFit = questions.findIndex(q => fitOf(q) >= 0 && fitOf(q) < fitHigh)
@@ -278,7 +301,7 @@ export default function Review() {
         <header className="topbar">
           <div className="topbar-title-group"><span className="topbar-title">Export Complete</span></div>
           <PipelineStepper completedUntil="export" />
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>← History</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}><Icon name="arrowLeft" size={13} /> History</button>
         </header>
         <div className="page-content">
           <div className="done-banner">
@@ -293,7 +316,7 @@ export default function Review() {
             ) : sheetError ? (
               <>
                 <p>{approvedCount} question{approvedCount !== 1 ? 's' : ''} approved (saved locally).</p>
-                <p style={{ color: '#f85149', fontSize: '0.85rem' }}>Sheets export failed: {sheetError}</p>
+                <p className="alert alert-error">Sheets export failed: {sheetError}</p>
               </>
             ) : (
               <p>{approvedCount} question{approvedCount !== 1 ? 's' : ''} approved and saved.</p>
@@ -318,7 +341,7 @@ export default function Review() {
           <span className="topbar-sub" title={sessionName}>{displayName}{sessionType ? ` · ${sessionType}` : ''}</span>
         </div>
         <PipelineStepper completedUntil="gate" activeStage="review" />
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>← History</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}><Icon name="arrowLeft" size={13} /> History</button>
       </header>
 
       {/* Action banner */}
@@ -326,7 +349,7 @@ export default function Review() {
         <div className="ab-text">
           <span className="ab-title">
             {awaitingGate
-              ? '🧪 Testing preview — verify the picked questions (not yet quality-checked)'
+              ? 'Testing preview — verify the picked questions (not yet quality-checked)'
               : 'Action needed — Review before publishing to portal'}
           </span>
           <span className="ab-sub">
@@ -339,7 +362,8 @@ export default function Review() {
         <div className="ab-btns">
           {awaitingGate ? (
             <button className="btn btn-primary" disabled={submitting} onClick={handleProceed}>
-              {submitting ? 'Submitting…' : 'Proceed to Quality Gate ▸'}
+              {submitting ? 'Submitting…' : 'Proceed to quality gate'}
+              <Icon name="arrowRight" size={14} />
             </button>
           ) : (
             <>
@@ -347,23 +371,31 @@ export default function Review() {
                       disabled={submitting || rejectedCount === 0}
                       title={rejectedCount === 0 ? 'Mark one or more questions as rejected first' : ''}
                       onClick={handleReject}>
+                <Icon name="refresh" size={14} />
                 {rejectedCount > 0
-                  ? `↺ Replace ${rejectedCount} rejected & regenerate`
-                  : '↺ Replace rejected & regenerate'}
+                  ? `Replace ${rejectedCount} rejected & regenerate`
+                  : 'Replace rejected & regenerate'}
               </button>
-              <button className="btn btn-primary" disabled={submitting} onClick={handleApprove}>
-                {submitting ? 'Exporting…' : `↑ Export to Sheets (${approvedCount})`}
+              {/* Exporting with nothing accepted used to send an empty accepted_ids, which the
+                  server read as "no filter" and exported + banked every rejected question. */}
+              <button className="btn btn-primary"
+                      disabled={submitting || approvedCount === 0}
+                      title={approvedCount === 0
+                        ? 'Every question is rejected — accept at least one, or regenerate'
+                        : ''}
+                      onClick={handleApprove}>
+                <Icon name="export" size={14} />
+                {submitting ? 'Exporting…' : `Export to Sheets (${approvedCount})`}
               </button>
             </>
           )}
         </div>
       </div>
 
-      {error && <div className="alert alert-error" style={{ margin: '0 1.25rem' }}>{error}</div>}
+      {error && <div className="review-gutter"><div className="alert alert-error">{error}</div></div>}
 
-      {/* Quality bar */}
-      <div style={{ padding: '0.75rem 1.25rem 0' }}>
-        <QualityBar report={result.report} />
+      <div className="review-gutter">
+        <QualityPanel report={result.report} />
       </div>
 
       {/* Learning outcomes */}
@@ -383,12 +415,28 @@ export default function Review() {
       <div className={`q-sets-grid${codingQs.length === 0 ? ' single' : ''}`}>
         <div className="q-set-panel">
           <div className="q-set-head">
-            <span className="q-set-title">Theory Questions</span>
+            <span className="q-set-title">Theory questions</span>
             <span className="q-set-badge">{questions.length}</span>
+            <button className="kbd-hint" onClick={() => setShowHelp(v => !v)} aria-expanded={showHelp}>
+              <Icon name="keyboard" size={13} /> shortcuts
+            </button>
           </div>
+          {showHelp && (
+            <div className="kbd-help">
+              <div><kbd>j</kbd><kbd>k</kbd> move</div>
+              <div><kbd>a</kbd> accept</div>
+              <div><kbd>r</kbd> reject</div>
+              <div><kbd>1</kbd>–<kbd>7</kbd> reason (after reject)</div>
+              <div><kbd>u</kbd> undo</div>
+              <div><kbd>?</kbd> toggle this</div>
+            </div>
+          )}
           <div className="q-set-body">
             {questions.length === 0 ? (
-              <p className="muted" style={{ padding: '1rem' }}>No theory questions.</p>
+              <div className="empty-state">
+                <Icon name="info" size={22} />
+                <p>No theory questions survived validation for this session. The report above says why.</p>
+              </div>
             ) : (
               questions.map((q, i) => (
                 <Fragment key={q.question_id}>
@@ -412,6 +460,8 @@ export default function Review() {
                     reason={decisions[q.question_id]?.reason}
                     onDecide={onDecide}
                     index={i}
+                    focused={i === cursor}
+                    onFocus={() => setCursor(i)}
                   />
                 </Fragment>
               ))
@@ -457,7 +507,7 @@ export default function Review() {
       {result.removed?.length > 0 && (
         <details className="card rejected-card" style={{ margin: '0 1.35rem 1.6rem' }}>
           <summary className="rejected-summary">
-            🗑️ Rejected questions ({result.removed.length}) — why they were dropped
+            Rejected questions ({result.removed.length}) — why they were dropped
           </summary>
           <div className="rejected-list">
             {result.removed.map((r, i) => (
@@ -467,7 +517,7 @@ export default function Review() {
                   {r.difficulty && <span className="rej-diff">{r.difficulty}</span>}
                 </div>
                 <div className="rej-q">{r.content}</div>
-                {r.reason && <div className="rej-reason">↳ {r.reason}</div>}
+                {r.reason && <div className="rej-reason">{r.reason}</div>}
               </div>
             ))}
           </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
+import Icon from '../components/Icon.jsx'
 
 function formatDate(ts) {
   if (!ts) return '—'
@@ -16,14 +17,14 @@ function formatDate(ts) {
 }
 
 function ScoreBadge({ score }) {
-  if (score == null) return <span style={{ color: '#6b7280' }}>—</span>
+  if (score == null) return <span className="muted">—</span>
   const pct = Math.round(score * 100)
   const cls = pct >= 70 ? 'score-pass' : pct >= 50 ? 'score-mid' : 'score-fail'
   return <span className={`hist-score ${cls}`}>{pct}%</span>
 }
 
 function UsageCell({ usage }) {
-  if (!usage || !usage.llm_calls) return <span style={{ color: '#6b7280' }}>—</span>
+  if (!usage || !usage.llm_calls) return <span className="muted">—</span>
   const tokens = ((usage.prompt_tokens || 0) + (usage.completion_tokens || 0))
   const tokenStr = tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}K` : tokens
   return (
@@ -67,7 +68,7 @@ export default function History() {
             {approvedCount > 0 && ` · ${approvedCount} approved`}
           </span>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>← Home</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}><Icon name="arrowLeft" size={13} /> Home</button>
       </header>
 
       <div className="page-content">
@@ -88,10 +89,13 @@ export default function History() {
 
         <section className="card">
           {loading ? (
-            <p className="muted">Loading history…</p>
+            <div aria-busy="true" aria-label="Loading history">
+              {Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton skeleton-row" />)}
+            </div>
           ) : runs.length === 0 ? (
             <div className="hist-empty">
-              No runs yet — generate your first question set from the sidebar.
+              <Icon name="history" size={22} />
+              <span>No runs yet — generate your first question set from the sidebar.</span>
             </div>
           ) : (
             <div className="hist-table-wrap">
@@ -111,11 +115,7 @@ export default function History() {
                 </thead>
                 <tbody>
                   {runs.map(run => (
-                    <tr
-                      key={run.run_id}
-                      className="hist-row"
-                      onClick={() => navigate(`/review/${run.run_id}`)}
-                    >
+                    <tr key={run.run_id} className="hist-row">
                       <td className="hist-date">{formatDate(run.created_at)}</td>
                       <td className="hist-session" title={run.topic || ''}>{run.topic || '—'}</td>
                       <td className="hist-session" title={run.session_name}>{run.session_name}</td>
@@ -133,9 +133,10 @@ export default function History() {
                       <td>
                         <button
                           className="btn btn-ghost btn-sm"
-                          onClick={e => { e.stopPropagation(); navigate(`/review/${run.run_id}`) }}
+                          onClick={() => navigate(`/review/${run.run_id}`)}
+                          aria-label={`View run for ${run.session_name}`}
                         >
-                          View ▸
+                          View <Icon name="arrowRight" size={12} />
                         </button>
                       </td>
                     </tr>
