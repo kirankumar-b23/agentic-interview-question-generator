@@ -260,8 +260,10 @@ class AgentPipeline:
         keep = [t for t in scored if t[0] >= floor]
         # Guard against a mis-tuned floor starving the pool: the LLM relevance pass drops more
         # candidates still, so always leave it a workable pool. Restores the highest-fit rejects only.
+        floor_applied = True
         if len(keep) < _MIN_POOL_AFTER_FIT:
             keep = scored[:_MIN_POOL_AFTER_FIT]
+            floor_applied = False
         keep_ids = {qid for _, qid, _ in keep}
 
         for fit, qid, q in scored:
@@ -279,10 +281,17 @@ class AgentPipeline:
         for _, qid, q in keep:
             state.questions[qid] = q
 
+        # Report the rule that was ACTUALLY applied — saying "below fit X" when the pool guard
+        # overrode X described a filter that never ran.
+        basis = (f"below fit {floor:.2f}" if floor_applied
+                 else f"outside the top {_MIN_POOL_AFTER_FIT} (fit floor {floor:.2f} would have left "
+                      f"too few to score)")
         emit("session_fit", "done",
              f"Session-fit scored {len(scored)} candidate(s) against this session's outcomes + "
-             f"reading material; dropped {len(scored) - len(keep)} below fit {floor:.2f}, "
-             f"{len(state.questions)} remain (best {best_fit:.2f}).")
+             f"reading material; dropped {len(scored) - len(keep)} {basis}, "
+             f"{len(state.questions)} remain (best {best_fit:.2f}).",
+             kept=len(keep), dropped=len(scored) - len(keep), floor=round(floor, 3),
+             best_fit=round(best_fit, 3))
 
     def _prefilter_semantic(self, state, emit):
         """COMPARATIVE topic pre-gate: drop a candidate that belongs to a DIFFERENT course topic than this
@@ -487,18 +496,19 @@ class AgentPipeline:
         return result
 
 
-def _outcome_coverage(state: AgentState) -> float:
-    """Fraction of learning outcomes that at least one final question addresses
-    (TF-IDF cosine ≥ 0.10 between the question text and the outcome)."""
+def _outcome_coverage_detail(state: AgentState) -> tuple[list[str], list[str]]:
+    """(covered, missing) learning outcomes for the current set.
+
+    Semantic similarity (embeddings) when available, else TF-IDF. Shared with
+    `tools.tool_check_outcome_coverage` so the agent and the report cannot disagree about coverage.
+    """
     ctx = state.session_context
-    outcomes = ctx.learning_outcomes if ctx else []
+    outcomes = list(ctx.learning_outcomes) if ctx else []
     questions = [q.content for q in state.questions.values()]
-    if not outcomes:
-        return 1.0
-    if not questions:
-        return 0.0
+    questions += [q.content for q in state.coding_questions.values()]
+    if not outcomes or not questions:
+        return [], outcomes
     try:
-        # Semantic coverage (embeddings) when available, else TF-IDF.
         from src import embeddings
         from src.config import EMBED_COVERAGE_THRESHOLD
         qo = embeddings.cosine_matrix(outcomes, questions)   # [n_outcomes x n_questions]
@@ -510,10 +520,24 @@ def _outcome_coverage(state: AgentState) -> float:
             mat = vec.fit_transform(questions + outcomes)
             qo = cosine_similarity(mat[len(questions):], mat[:len(questions)])
             thresh = 0.10
-        covered = sum(1 for row in qo if row.max() >= thresh)
-        return covered / len(outcomes)
-    except Exception:
-        return 0.0
+        covered, missing = [], []
+        for i, outcome in enumerate(outcomes):
+            (covered if qo[i].max() >= thresh else missing).append(outcome)
+        return covered, missing
+    except Exception:  # noqa: BLE001 — scoring must never break a completed run
+        return [], outcomes
+
+
+def _outcome_coverage(state: AgentState) -> float:
+    """Fraction of learning outcomes at least one question in the final set addresses."""
+    ctx = state.session_context
+    outcomes = ctx.learning_outcomes if ctx else []
+    if not outcomes:
+        # Nothing to cover is vacuously covered — but only if there IS a set. A run that lost its
+        # session context and produced nothing used to report perfect coverage on zero questions.
+        return 1.0 if (state.questions or state.coding_questions) else 0.0
+    covered, _ = _outcome_coverage_detail(state)
+    return len(covered) / len(outcomes)
 
 
 def _human_agreement(state: AgentState):

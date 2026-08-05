@@ -57,12 +57,12 @@ Use `remove_question` for flagged IDs, then re-check and submit.
 ## Session: {session_label}  |  Type: {session_type}
 ## Candidate pool: {q_count}  |  Final target: {min_q}–{max_q}
 This is a WIDE, relevance-scored candidate pool. `submit_question_set` automatically keeps the
-top {max_q} by relevance score — you do NOT need to prune the pool down to the target yourself.
+best {max_q} — you do NOT need to prune the pool down to the target yourself.
 {revision_section}
 ## Workflow (in order)
 1. `check_difficulty_balance` — check Easy/Medium/Hard distribution (informational)
 2. `check_outcome_coverage` — check outcome coverage (informational)
-3. `submit_question_set` — LAST step; it trims to the top {max_q} by relevance and ends this agent's run
+3. `submit_question_set` — LAST step; it ranks the pool (relevance, minus redundancy, plus outcome-coverage / difficulty / per-session / attribution / role bonuses) and keeps the best {max_q}, then ends this agent's run
 
 Do NOT generate any questions — no coding questions and no expected answers are produced. Only real,
 retrieved questions are used; if the retrieval found no coding questions, the coding set stays empty.

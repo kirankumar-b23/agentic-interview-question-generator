@@ -190,12 +190,20 @@ class DataStore:
         return None
 
     def get_session_info(self, session_name: str) -> dict | None:
-        """Get structured session info from knowledge graph (KPs, outcomes, type)."""
+        """Structured session info from the knowledge graph (KPs, outcomes, type), or None.
+
+        Exact key first, then a NORMALIZED match — the same rule `get_session_content` uses. The old
+        substring match (`a in b or b in a`) is precisely what that method was hardened against: it
+        let "… | Part 1" inherit "… | Part 2"'s knowledge points, and any short custom session name
+        that happened to be a substring of a real one silently adopted the wrong session's outcomes.
+        Those outcomes then ground retrieval, the session-fit gate and the relevance judge, so a
+        near-miss produces a confident-looking set about the wrong subject.
+        """
         if session_name in self.sessions:
             return self.sessions[session_name]
-        lower = session_name.lower()
+        target = _normalize_session_key(session_name)
         for name, info in self.sessions.items():
-            if lower in name.lower() or name.lower() in lower:
+            if _normalize_session_key(name) == target:
                 return info
         return None
 

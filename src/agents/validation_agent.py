@@ -40,13 +40,15 @@ class ValidationAgent(BaseAgent):
 1. Call `validate_relevance` — removes questions that don't match session outcomes
 2. Call `deduplicate_questions` — removes near-identical questions
 
-Only call `remove_question` if you spot a specific question that clearly doesn't belong after those two passes.
+If you spot a specific question that clearly doesn't belong, call `remove_question` for it BEFORE
+`deduplicate_questions` — this agent's run ends as soon as dedup returns.
 
 ## Rules
 - Always call validate_relevance FIRST
-- Always call deduplicate_questions AFTER validate_relevance
-- If the set is already small (< 5 questions), do NOT remove anything extra
-- Your goal is to keep the BEST questions, not the most questions"""
+- Call deduplicate_questions LAST
+- Your goal is to keep the BEST questions, not the most questions. Note that validate_relevance is a
+  hard filter applied in code: if it leaves few questions, the pool was genuinely thin — that is the
+  correct outcome and nothing should be added to compensate."""
 
     def get_user_prompt(self, state: AgentState) -> str:
         q_count = len(state.questions) + len(state.coding_questions)

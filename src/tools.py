@@ -1,19 +1,16 @@
-"""Tool definitions + implementations for the agentic workflow.
+"""Tool definitions + implementations, split across the four agents.
 
-13 tools the agent calls autonomously via OpenRouter tool_use:
-1. understand_session — extract outcomes, KPs, session type (MUST be first)
-2. search_question_bank — TF-IDF search with session-aware relevance filtering
-3. search_github_questions — fetch questions from curated GitHub interview repos
-4. search_web_questions — Tavily web search (real, company-attributed questions)
-5. validate_relevance — LLM checks each question against session outcomes
-6. deduplicate_questions — TF-IDF dedup
-7. check_difficulty_balance — Easy/Medium/Hard distribution
-8. check_outcome_coverage — which outcomes are covered
-9. generate_expected_answers — BLOCKED (answers no longer produced; always returns blocked)
-10. generate_interview_questions — BLOCKED (real questions only; always returns blocked)
-11. generate_coding_questions — BLOCKED (no generation; only retrieved coding questions are used)
-12. remove_question — drop a specific question
-13. submit_question_set — finalize and end the run
+Each agent gets a focused subset (see src/agents/*.get_tool_schemas):
+  Understanding — understand_session (must run first; everything downstream needs its outcomes)
+  Retrieval     — search_question_bank, search_web_questions, and search_github_questions
+                  only when GITHUB_ENABLED=1 (off by default)
+  Validation    — validate_relevance, deduplicate_questions
+  Evaluation    — check_difficulty_balance, check_outcome_coverage, remove_question,
+                  submit_question_set
+
+The generate_* tools are permanently blocked (real, sourced questions only) and are in no agent's
+subset, so they are unreachable; they remain in TOOL_DISPATCH only so a stray call gets a clear
+refusal rather than an "unknown tool" error.
 """
 
 from __future__ import annotations
@@ -38,6 +35,7 @@ def _usage_cb(state: "AgentState"):
 
 from src.config import DEDUP_THRESHOLD, pool_target
 from src.question_bank import get_retriever
+from src.quality import is_quality_question, strip_artifacts
 from src.sources.base import split_into_clauses, looks_like_question
 
 if TYPE_CHECKING:
@@ -59,7 +57,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "search_question_bank",
-            "description": "Search the pre-indexed question bank (~2000+ questions). Uses TF-IDF similarity + session-aware relevance filtering. Use the suggested_search_queries from understand_session as queries. Do NOT invent generic terms.",
+            "description": "Search the pre-indexed question bank of real interview questions. Ranks by a hybrid of semantic similarity and keyword match, then applies session-aware filtering. Use the suggested_search_queries from understand_session verbatim — do NOT invent generic terms.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -103,7 +101,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "search_web_questions",
-            "description": "Search 65+ verified domains (Glassdoor, AmbitionBox, Exponent, GeeksforGeeks, LeetCode, etc.) for real interview questions with company attribution via Tavily. Requires TAVILY_API_KEY. Use when you need questions that came from actual company interviews.",
+            "description": "Search an allowlist of interview-question domains (Glassdoor, AmbitionBox, Exponent, GeeksforGeeks, LeetCode, and similar) for real questions with company attribution, via Tavily. Requires TAVILY_API_KEY. Use for questions that came from actual company interviews.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -129,7 +127,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "deduplicate_questions",
-            "description": "Remove near-duplicate questions (cosine similarity > 0.85).",
+            "description": "Remove near-duplicate questions, including rewordings (semantic similarity when embeddings are available, otherwise keyword similarity).",
             "parameters": {"type": "object", "properties": {}}
         }
     },
@@ -217,7 +215,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "submit_question_set",
-            "description": "Finalize and submit the question set for human review. THIS ENDS THE RUN. Only call when you have 5-15 relevant questions.",
+            "description": "Finalize and submit the question set for human review. THIS ENDS THE RUN. It ranks the validated pool and keeps the best ones up to the run's requested count, so submit once you have gathered and validated candidates — you do not need to prune to the target yourself. Call this even if the pool is smaller than requested.",
             "parameters": {"type": "object", "properties": {}}
         }
     },
@@ -310,6 +308,7 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
         limit=actual_limit + 10,  # fetch extra for filtering
         exclude_ids=exclude_ids,
     )
+    raw_hits = len(results)   # before any filtering — this is what the funnel reports
 
     # Session-aware post-retrieval relevance filter
     scope_keywords: set[str] = set()
@@ -338,7 +337,6 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
                 filtered.append(qd)
         results = filtered[:actual_limit]
 
-    from src.quality import is_quality_question, strip_artifacts
     added = []
     for qd in results:
         qd.content = strip_artifacts(qd.content)
@@ -359,7 +357,10 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
             "source": qd.source,
         })
 
-    state.raw_fetched["bank"] = state.raw_fetched.get("bank", 0) + len(added)
+    # raw_fetched is documented as RAW hit counts per source, so count what the retriever returned —
+    # not what survived filtering. Counting `added` here made the bank column non-comparable with the
+    # web/github columns and broke the funnel it exists to show.
+    state.raw_fetched["bank"] = state.raw_fetched.get("bank", 0) + raw_hits
     state.added_by_source["bank"] = state.added_by_source.get("bank", 0) + len(added)
     total = len(state.questions) + len(state.coding_questions)
     state.pool_size = max(state.pool_size, total)
@@ -730,23 +731,28 @@ def tool_check_difficulty_balance(state: AgentState) -> dict:
 
 
 def tool_check_outcome_coverage(state: AgentState) -> dict:
+    """Which learning outcomes the current set covers.
+
+    Uses the SAME measure as the quality report (`pipeline._outcome_coverage`). It used to test whether
+    any word longer than three characters from an outcome appeared anywhere in the CONCATENATED text of
+    every question — which reports near-100% coverage for almost any set, since one question mentioning
+    "model" satisfied every outcome containing that word. The agent was therefore told coverage was
+    fine while the report scored it low, and had no way to act on the difference.
+    """
     if not state.session_context:
         return {"error": "Call understand_session first"}
     outcomes = state.session_context.learning_outcomes
-    all_content = " ".join(q.content.lower() for q in state.questions.values())
-    all_content += " " + " ".join(q.content.lower() for q in state.coding_questions.values())
+    if not outcomes:
+        return {"total_outcomes": 0, "covered": 0, "missing_count": 0, "missing": [],
+                "coverage_pct": 1.0, "note": "This session has no resolved learning outcomes."}
 
-    covered, missing = [], []
-    for outcome in outcomes:
-        words = [w.lower() for w in outcome.split() if len(w) > 3]
-        if any(w in all_content for w in words):
-            covered.append(outcome)
-        else:
-            missing.append(outcome)
+    from src.pipeline import _outcome_coverage_detail
+    covered, missing = _outcome_coverage_detail(state)
     return {
         "total_outcomes": len(outcomes), "covered": len(covered),
         "missing_count": len(missing), "missing": missing,
-        "coverage_pct": round(len(covered) / max(len(outcomes), 1), 2),
+        "coverage_pct": round(len(covered) / len(outcomes), 2),
+        "measure": "semantic similarity to each outcome (same as the quality report)",
     }
 
 
@@ -797,12 +803,19 @@ def tool_search_github_questions(state: AgentState, outcomes: list) -> dict:
 
     topic_keywords = _topic_keywords(state.session_context)
     added = []
+    dropped_form = 0
     for rec in records[:capacity]:
-        content = rec.question_text
+        # FORM gate. This was the only harvest path that skipped it — the bank applies it at build
+        # time and the Tavily path applies it inline — so enabling GITHUB_ENABLED would have let page
+        # headings and fragments straight into the pool.
+        content = strip_artifacts(rec.question_text)
         if topic_keywords:                       # split compound Qs to the on-topic clause
             content = _trim_to_topic(content, topic_keywords)
             if not content:
                 continue
+        if not is_quality_question(content):
+            dropped_form += 1
+            continue
         q_id = str(uuid.uuid4())
         qd = QuestionDetail(
             question_id=q_id,
@@ -810,7 +823,9 @@ def tool_search_github_questions(state: AgentState, outcomes: list) -> dict:
             content=content,
             topic=rec.source_type.split(":")[-1] if ":" in rec.source_type else "Interview",
             difficulty="Medium",
-            source="web",
+            # Tagged "github", not "web": mislabelling it inflated the web source count and the
+            # diversity metric while hiding that GitHub contributed anything.
+            source="github",
             source_url=rec.source_url,
         )
         state.questions[q_id] = qd
@@ -828,6 +843,7 @@ def tool_search_github_questions(state: AgentState, outcomes: list) -> dict:
     return {
         "found": len(records),
         "added": len(added),
+        "dropped_malformed": dropped_form,
         "total_accumulated": total,
         "github_remaining": GITHUB_POOL_CAP - state.added_by_source.get("github", 0),
     }
@@ -856,22 +872,33 @@ def _topic_keywords(ctx) -> set:
 
 
 def _trim_to_topic(text: str, topic_keywords: set) -> str:
-    """Keep clauses from the start through the LAST on-topic clause; drop an
-    unrelated trailing clause. Return "" if no clause is on-topic (caller skips)."""
+    """Drop an unrelated TRAILING clause from a compound question. "" if nothing is on-topic.
+
+    This rewrites a real question's text, so it is deliberately conservative: it only ever removes
+    whole trailing clauses, never reorders or rephrases, and it bails out (returning the original)
+    if the result stops looking like a question. The re-join uses the ORIGINAL separator rather than
+    forcing ". ", which used to turn "X, and how does Y?" into "X. and how does Y?" — a silent
+    mutation of sourced content that then got exported as what the company asked.
+    """
     clauses = split_into_clauses(text)
-    if len(clauses) <= 1:                        # single ask → today's behaviour
+    if len(clauses) <= 1:                        # single ask → keep or drop, never rewrite
         low = text.lower()
         return text if any(k in low for k in topic_keywords) else ""
     last_hit = -1
     for i, c in enumerate(clauses):
-        cl = c.lower()
-        if any(k in cl for k in topic_keywords):
+        if any(k in c.lower() for k in topic_keywords):
             last_hit = i
     if last_hit < 0:
         return ""
-    if last_hit == len(clauses) - 1:             # every clause on-topic → keep whole
+    if last_hit == len(clauses) - 1:             # every clause on-topic → keep whole, unmodified
         return text
-    trimmed = ". ".join(clauses[:last_hit + 1]).strip()
+    # Cut the original string at the end of the last on-topic clause, so the surviving prefix is
+    # byte-identical to the source (punctuation and spacing included).
+    tail = clauses[last_hit]
+    cut = text.find(tail)
+    trimmed = text[:cut + len(tail)].strip() if cut >= 0 else ". ".join(clauses[:last_hit + 1]).strip()
+    if trimmed and not trimmed.endswith(("?", ".", "!")):
+        trimmed += "?" if "?" in text else "."
     return trimmed if looks_like_question(trimmed) else text
 
 

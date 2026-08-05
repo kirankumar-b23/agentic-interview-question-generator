@@ -61,18 +61,19 @@ LLM_TIMEOUT_SECONDS = float(os.getenv("LLM_TIMEOUT_SECONDS", "120"))
 
 # Question constraints
 MIN_QUESTIONS = 5
-# Upper bound only for the coding-slot math + UI slider — the FINAL set is NOT trimmed to this
-# (see tool_submit_question_set: every outcome-relevant question is kept). Raised so the legacy
-# app cap doesn't clip the now-uncapped deliverable.
+# Upper bound of the UI's "target count" slider. tool_submit_question_set DOES trim the final set to
+# the run's own `config.max_questions` (clamped by FINAL_SET_CAP) — an earlier comment here claimed
+# the set was never trimmed, which was true for one release and has not been since.
 MAX_QUESTIONS = 60
-# Candidates are gathered into a WIDE pool, scored for relevance across the whole pool, ranked,
-# and (now) ALL relevant ones are kept — no trim-to-max. Per-source caps stop any single source
-# monopolising the pool; they are raised so the relevance judge sees far more candidates.
+# Candidates are gathered into a WIDE pool and scored for relevance across the whole pool; selection
+# then ranks and keeps the best up to the requested count. Per-source caps stop any single source
+# monopolising the pool, and are generous so the relevance judge sees plenty of candidates.
 BANK_POOL_CAP = 150       # curated interview data
 WEB_POOL_CAP = 120        # fresh company-attributed questions (Tavily)
 GITHUB_POOL_CAP = 30      # curated GitHub repos (disabled by default)
-# Overall cost guard — total candidates that reach the (LLM-scored) relevance stage. Every candidate
-# costs an LLM call, so this caps spend even though per-source caps sum higher.
+# Overall cost guard — total candidates that reach the (LLM-scored) relevance stage.
+# NOTE: read via pool_target() by tool_submit_question_set's sibling helpers only; the per-source caps
+# above are what actually bound the pool today.
 CANDIDATE_POOL_TARGET = 300
 RELEVANCE_BATCH_SIZE = 25  # candidates scored per LLM call in validate_relevance (smaller → no JSON truncation)
 # Keep candidates scoring at/above this relevance; below → dropped (min-floor still applies).
@@ -111,8 +112,8 @@ SELECT_ROLE_BONUS = 0.12          # nudge questions for a TARGET job role above 
 # without overriding relevance. A ranking penalty, not a hard filter: a thin pool still fills.
 SELECT_REJECTED_PENALTY = float(os.getenv("SELECT_REJECTED_PENALTY", "0.5"))
 
-# The final set is NOT trimmed to a product cap (keep every outcome-relevant question); this is only a
-# high safety guard against a pathological pool so review/export never explode.
+# Hard ceiling on the delivered set, whatever the UI asked for — a safety guard against a
+# pathological pool so review and export never explode.
 FINAL_SET_CAP = 200
 
 # Target job roles per course category. `query_titles` seed role-framed Tavily searches; `bonus_tags`
@@ -182,7 +183,9 @@ DEDUP_THRESHOLD = 0.85            # TF-IDF cosine (fallback path / cross-run ded
 DEDUP_SEMANTIC_THRESHOLD = float(os.getenv("DEDUP_SEMANTIC_THRESHOLD", "0.82"))
 QUALITY_PASS_THRESHOLD = 0.75
 MAX_EVAL_RETRIES = 2
-MAX_TOOL_CALLS = int(os.getenv("MAX_TOOL_CALLS", "20"))
+# Per-agent tool-call budgets live on each agent class (BaseAgent.max_tool_calls), which is what
+# actually applies. A module-level MAX_TOOL_CALLS used to sit here reading an env var that nothing
+# consumed, so setting it appeared to work and did nothing.
 
 # Live question harvesting (tools 12 & 13 — search_github_questions / search_web_questions)
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
