@@ -378,6 +378,15 @@ ul { list-style: none; }
 .d-medium { color: var(--medium); border-color: rgba(227,179,65,.45); background: rgba(227,179,65,.08); }
 .d-hard { color: var(--hard); border-color: rgba(242,112,91,.45); background: rgba(242,112,91,.08); }
 .cq-company { font-size: 0.56rem; padding: 0.12rem 0.4rem; background: var(--accent-soft); color: var(--accent-bright); border: 1px solid rgba(77,141,246,.28); border-radius: var(--r-pill); white-space: nowrap; max-width: 92px; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); letter-spacing: .02em; }
+/* Session-fit score badge + the divider marking where fit drops below the high-confidence bar. */
+.cq-fit { font-size: 0.56rem; padding: 0.12rem 0.36rem; background: rgba(148,163,184,.1); color: var(--text-dim); border: 1px solid rgba(148,163,184,.28); border-radius: var(--r-pill); white-space: nowrap; font-family: var(--font-mono); letter-spacing: .02em; }
+.cq-tier-divider { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; font-size: 0.6rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--medium); background: rgba(227,179,65,.06); border-top: 1px dashed rgba(227,179,65,.4); border-bottom: 1px dashed rgba(227,179,65,.4); }
+/* One-click rejection-reason chips, revealed under a question once it is rejected. */
+.cq-reasons { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem; padding: 0.35rem 0.6rem 0.45rem; border-top: 1px dashed rgba(148,163,184,.2); }
+.cq-reasons-label { font-size: 0.6rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); margin-right: 0.2rem; }
+.cq-reason-chip { font-size: 0.6rem; padding: 0.15rem 0.45rem; border-radius: var(--r-pill); border: 1px solid rgba(148,163,184,.3); background: transparent; color: var(--text-dim); cursor: pointer; transition: all var(--t); }
+.cq-reason-chip:hover { border-color: rgba(242,112,91,.5); color: var(--hard); }
+.cq-reason-chip.active { border-color: var(--hard); background: rgba(242,112,91,.14); color: var(--hard); font-weight: 600; }
 .cq-btns { display: flex; gap: 0.22rem; flex-shrink: 0; }
 .cq-btn { font-size: 0.66rem; padding: 0.14rem 0.42rem; border-radius: var(--r-sm); border: 1px solid; cursor: pointer; font-weight: 700; background: transparent; line-height: 1.4; transition: all var(--t); }
 .cq-accept { border-color: rgba(67,201,138,.5); color: var(--ok); }

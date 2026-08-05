@@ -63,7 +63,7 @@ See **`docs/architecture.html`** (open in a browser) for an interactive diagram.
 ## Project structure
 
 ```
-app.py                     # Flask JSON API + serves the React build
+main.py                    # FastAPI JSON API + serves the React build (uvicorn)
 docs/architecture.html     # Standalone architecture visualization
 src/
   pipeline.py              # AgentPipeline — orchestrates the 4 agents + quality gate
@@ -130,8 +130,11 @@ python3 scripts/build_session_reading_material.py
 
 ### 4. Run
 ```bash
-python3 app.py       # → http://127.0.0.1:5000
+uvicorn main:app --port 5000              # → http://127.0.0.1:5000
+uvicorn main:app --port 5000 --reload     # development (auto-restart on edit)
+python3 main.py                           # equivalent to the first form
 ```
+Interactive API docs are served at `/docs`.
 On the first export, a browser OAuth flow authorizes Google Sheets and caches `token.json`
 (or run `python3 scripts/auth_sheets.py` beforehand).
 

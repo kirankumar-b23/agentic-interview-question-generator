@@ -9,5 +9,9 @@
       "Bash(python3 -)",
       "Bash(python3 -c ' *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "composio"
+  ],
+  "enableAllProjectMcpServers": true
 }

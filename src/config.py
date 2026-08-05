@@ -101,6 +101,12 @@ SELECT_DIFFICULTY_BONUS = 0.10    # nudge toward the Easy/Medium/Hard target mix
 SELECT_SESSION_BONUS = 0.12       # nudge so each session (multi-session topic) is represented
 SELECT_ATTRIBUTION_BONUS = 0.12   # nudge so the set mixes real-company + source-labeled questions
 SELECT_ROLE_BONUS = 0.12          # nudge questions for a TARGET job role above generic ("General") ones
+# Demote candidates that look more like a REJECTED question than an ACCEPTED one. Exact repeats are
+# dropped outright upstream (normalized-string match); this catches REWORDINGS, which otherwise come
+# back every run and get rejected again. Scaled by the RELATIVE margin (see tools._feedback_penalty),
+# which is typically 0.0–0.3, so the effective demotion is up to ~0.15 — enough to reorder near-ties
+# without overriding relevance. A ranking penalty, not a hard filter: a thin pool still fills.
+SELECT_REJECTED_PENALTY = float(os.getenv("SELECT_REJECTED_PENALTY", "0.5"))
 
 # The final set is NOT trimmed to a product cap (keep every outcome-relevant question); this is only a
 # high safety guard against a pathological pool so review/export never explode.
@@ -126,6 +132,39 @@ def target_roles(category: str | None) -> dict:
 # Falls back to TF-IDF automatically if the model/library is unavailable.
 EMBEDDINGS_ENABLED = os.getenv("EMBEDDINGS_ENABLED", "1") == "1"
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+# Disk cache for corpus embedding matrices (keyed by corpus digest + model), so the one-off encode
+# of ~1.5k bank questions isn't repaid on every process start.
+EMBED_CACHE_DIR = PROJECT_ROOT / ".cache" / "embeddings"
+# HYBRID bank retrieval: score = w·embedding_cosine + (1−w)·tfidf_cosine.
+# Semantic-dominant because pure TF-IDF matched words not meaning (an F5-TTS query returned RAG
+# questions); TF-IDF keeps a real minority weight because exact tool names ("n8n", "LoRA", "F5-TTS")
+# are exactly where lexical matching beats a small embedding model.
+HYBRID_EMBED_WEIGHT = float(os.getenv("HYBRID_EMBED_WEIGHT", "0.6"))
+# Floor on the hybrid score. Unlike TF-IDF (0 for no shared words), embedding cosine is non-trivial
+# even for unrelated text, so a real floor is needed to stop the long tail entering the pool.
+HYBRID_MIN_SCORE = float(os.getenv("HYBRID_MIN_SCORE", "0.12"))
+# Session-grounded pre-gate (replaces relying on pooled COURSE-TOPIC profiles alone). A candidate is
+# scored against THIS session's own profile — curated learning outcomes + interview topics + reading
+# material. Below the floor it is dropped before the (expensive) LLM relevance pass.
+SESSION_FIT_FLOOR = float(os.getenv("SESSION_FIT_FLOOR", "0.18"))
+# …and a RELATIVE floor, as a fraction of the best fit found for THIS session. An absolute floor alone
+# is mis-calibrated because the achievable fit depends on how well the banks happen to cover a session:
+# measured over the GenAI bank, "Introduction to AI Agents" peaks at 0.86 while "Mastering Image
+# Generation with Stable Diffusion" peaks at 0.66, so a floor of 0.18 keeps 85% of candidates for the
+# first and 68% for the second — i.e. it barely filters either. Scaling to the session's own ceiling
+# keeps a comparable proportion of the best candidates whatever the coverage. The absolute floor above
+# still applies, so a session where nothing fits is not rescued by having a low ceiling.
+SESSION_FIT_RELATIVE = float(os.getenv("SESSION_FIT_RELATIVE", "0.5"))
+# Review tiering: candidates at/above this session_fit are surfaced as "high confidence" in the UI.
+SESSION_FIT_HIGH = float(os.getenv("SESSION_FIT_HIGH", "0.35"))
+# How much of the session profile is reading material (vs curated outcomes). The reading material is
+# long and dilutes short outcome statements, so outcomes are embedded separately and we take the MAX
+# similarity over profile texts; this cap just bounds how many RM chunks join the profile.
+SESSION_PROFILE_RM_CHUNKS = int(os.getenv("SESSION_PROFILE_RM_CHUNKS", "12"))
+# Reading-material chunks are instructional prose, not statements of interview intent — a setup
+# walkthrough about copying an auth token matches generic auth questions. Discount them so an
+# RM-only match has to be distinctly stronger than a curated-outcome match to keep a candidate.
+SESSION_PROFILE_RM_WEIGHT = float(os.getenv("SESSION_PROFILE_RM_WEIGHT", "0.85"))
 EMBED_COVERAGE_THRESHOLD = float(os.getenv("EMBED_COVERAGE_THRESHOLD", "0.30"))  # cosine ≥ ⇒ outcome covered
 DEFAULT_DIFFICULTY_DISTRIBUTION = {"easy": 0.3, "medium": 0.5, "hard": 0.2}
 

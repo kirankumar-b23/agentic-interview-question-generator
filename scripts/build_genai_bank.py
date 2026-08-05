@@ -158,6 +158,29 @@ def _dedup_with_corroboration(records: list) -> list:
     return items
 
 
+def _apply_form_gate(bank: list[dict]) -> tuple[list[dict], int]:
+    """Strip scrape artifacts and drop rows that aren't well-formed standalone questions.
+
+    Re-validates the company on harvested (`web`) rows too, so a site-brand fragment ("Tech" from
+    techinterviewhandbook.org) is blanked to an honest source label instead of being presented as an
+    employer. Curated seed/xlsx names are trusted as-is. Returns (kept_rows, dropped_count).
+    """
+    from src.quality import is_quality_question, strip_artifacts
+    from src.sources.tavily_search import _valid_company
+
+    kept, dropped = [], 0
+    for q in bank:
+        content = strip_artifacts(q.get("content", ""))
+        if not is_quality_question(content):
+            dropped += 1
+            continue
+        q["content"] = content
+        if q.get("source") == "web" and q.get("company"):
+            q["company"] = _valid_company(q["company"])
+        kept.append(q)
+    return kept, dropped
+
+
 def main() -> int:
     if not TAVILY_API_KEY:
         print("ERROR: TAVILY_API_KEY not set — cannot harvest.")
@@ -208,12 +231,21 @@ def main() -> int:
     # Corroboration-first ordering: seed, then multi-source, then the rest.
     bank = seed + sorted(harvested, key=lambda q: q["source_count"], reverse=True)
 
+    # FORM gate at build time. The Tavily extractor's own filters let page furniture through —
+    # blog titles ("Is GPT Image 2 the Best Image Generation Model?"), SEO tails ("… | Dataford
+    # Interview Questions"), pronoun fragments ("how does it affect generation?") — which then had
+    # to be swept up afterwards by scripts/clean_bank.py. Gating here means a rebuild cannot
+    # reintroduce them. Same functions the runtime and the cleaner use, so the rules stay in sync.
+    bank, form_dropped = _apply_form_gate(bank)
+
     GENAI_BANK_JSON.write_text(json.dumps(bank, indent=2, ensure_ascii=False), encoding="utf-8")
     from collections import Counter
     roles = Counter(q["role"] for q in bank)
     corrob = sum(1 for q in bank if q["source_count"] >= 2)
-    print(f"\nWrote {len(bank)} company-attributed GenAI questions → {GENAI_BANK_JSON}")
+    print(f"\nWrote {len(bank)} GenAI questions → {GENAI_BANK_JSON}")
     print(f"  seed: {len(seed)} | harvested: {len(harvested)} | corroborated (≥2 sources): {corrob}")
+    print(f"  dropped by form gate: {form_dropped}")
+    print(f"  with real company: {sum(1 for q in bank if q.get('company'))} / {len(bank)}")
     print(f"  roles: {dict(roles)}")
     return 0
 

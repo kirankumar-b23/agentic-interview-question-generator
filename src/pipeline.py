@@ -19,6 +19,10 @@ from src.config import MIN_QUESTIONS, MAX_QUESTIONS
 from src.agents import UnderstandingAgent, RetrievalAgent, ValidationAgent, EvaluationAgent
 
 MAX_REVISION_ROUNDS = 2
+# Floor on the candidate pool the session-fit gate may leave behind. The LLM relevance pass drops
+# more candidates still, so the gate must never hand it a starved pool even if SESSION_FIT_FLOOR is
+# mis-tuned for an unusual session. Only the highest-fit rejects are restored.
+_MIN_POOL_AFTER_FIT = 30
 
 EmitFn = Callable[[str, str, str, str], None]   # (run_id, step_id, status, detail)
 
@@ -54,6 +58,74 @@ def _load_topic_profiles() -> dict:
     return prof
 
 
+def _session_profile(session_names, ctx) -> tuple[list[str], list[str]]:
+    """Semantic profile for THIS run's session(s) — the grounding the pre-gate was missing.
+
+    Returns `(curated_texts, reading_material_chunks)` so the caller can weight them differently:
+
+      * curated_texts — per-session `learning_outcomes` + `interview_topics` from
+        session_outcomes.json (hand-checked, covers all 53 sessions), plus whatever the
+        Understanding agent resolved for this run. This is the session's *intent*.
+      * reading_material_chunks — slices of the session's OWN reading material, so wording the
+        outcomes never mention (tools, APIs, model names taught in the lesson) still matches. This
+        is instructional prose, so it is noisier: a setup walkthrough about copying an auth token
+        will match generic auth questions. Hence the caller discounts it.
+
+    Both are LISTS of short texts, not one blob: the caller takes the MAX similarity, so long
+    reading material cannot dilute a short, precise outcome statement.
+    """
+    import json
+    from src.config import DATA_DIR, SESSION_PROFILE_RM_CHUNKS
+
+    texts: list[str] = []
+    rm_texts: list[str] = []
+
+    # 1. Curated per-session outcomes (NOT the pooled course-topic profile).
+    try:
+        so_path = DATA_DIR / "reading_materials" / "session_outcomes.json"
+        so = json.loads(so_path.read_text(encoding="utf-8")) if so_path.exists() else {}
+    except Exception:  # noqa: BLE001 — profile building must never break the pipeline
+        so = {}
+    for name in (session_names or []):
+        ov = so.get(name) or {}
+        texts += [t for t in (list(ov.get("learning_outcomes", []))
+                              + list(ov.get("interview_topics", [])))
+                  if isinstance(t, str) and t.strip()]
+
+    # 2. Whatever the Understanding agent resolved for this run.
+    if ctx is not None:
+        texts += [t for t in (list(getattr(ctx, "interview_topics", None) or [])
+                              + list(getattr(ctx, "learning_outcomes", None) or [])
+                              + list(getattr(ctx, "key_concepts", None) or []))
+                  if isinstance(t, str) and t.strip()]
+
+    # 3. Reading-material chunks — paragraph-ish slices of THIS session's content only.
+    try:
+        from src.data_loader import get_data_store
+        store = get_data_store()
+        for name in (session_names or []):
+            content = store.get_session_content(name)
+            if not content:
+                continue
+            chunks = [c.strip() for c in content.split("\n\n") if len(c.strip()) > 120]
+            step = max(1, len(chunks) // SESSION_PROFILE_RM_CHUNKS) if chunks else 1
+            rm_texts += [c[:800] for c in chunks[::step][:SESSION_PROFILE_RM_CHUNKS]]
+    except Exception:  # noqa: BLE001
+        pass
+
+    def _dedup(seq: list[str]) -> list[str]:
+        """Preserve order, drop repeats (identical outcomes recur across combined sessions)."""
+        seen, out = set(), []
+        for t in seq:
+            k = t.strip().lower()
+            if k and k not in seen:
+                seen.add(k)
+                out.append(t.strip())
+        return out
+
+    return _dedup(texts), _dedup(rm_texts)
+
+
 def _topic_profiles(session_names) -> tuple[set, list]:
     """(current topics for this run, profile texts of all OTHER topics). Empty → caller skips the gate."""
     from src.data_loader import get_topic_for_session
@@ -84,6 +156,10 @@ class AgentPipeline:
         # rejected question never resurfaces on re-generation and doesn't take a slot. Matched by
         # normalized content (question_ids regenerate each run).
         self._drop_rejected(state, emit)
+        # SESSION-grounded scoring first: score every candidate against THIS session's own outcomes +
+        # reading material, drop the unrelated tail, and rank the pool best-first. This is the check
+        # that was missing — the cross-topic gate below never filtered WITHIN a course topic.
+        self._score_session_fit(state, emit)
         # Cheap SEMANTIC pre-gate: drop clearly cross-topic candidates (embedding-distant from the session
         # profile) BEFORE the expensive LLM relevance scoring — cuts noise + LLM cost. Skips if embeddings
         # unavailable.
@@ -130,6 +206,78 @@ class AgentPipeline:
                 })
         if drop:
             emit("suppress_rejected", "done", f"Suppressed {len(drop)} previously-rejected question(s).")
+
+    def _score_session_fit(self, state, emit):
+        """SESSION-grounded scoring + gate.
+
+        The cross-topic pre-gate below only removes candidates belonging to a DIFFERENT course
+        topic — inside a topic it removes nothing, so an image-generation session happily kept any
+        GenAI question. This stage scores every candidate against THIS session's own profile
+        (curated learning outcomes + interview topics + its reading material), stores the score on
+        the question as `session_fit`, drops the clearly-unrelated tail, and re-orders the pool
+        best-first so the batched LLM relevance pass sees the strongest candidates first.
+
+        Fail-open: no-op when embeddings are unavailable or no profile can be built.
+        """
+        ctx = state.session_context
+        if not ctx or not state.questions:
+            return
+        from src import embeddings
+        from src.config import (SESSION_FIT_FLOOR, SESSION_FIT_RELATIVE,
+                                SESSION_PROFILE_RM_WEIGHT)
+
+        curated, rm_chunks = _session_profile(state.config.session_names, ctx)
+        if not curated and not rm_chunks:
+            return
+
+        items = list(state.questions.items())
+        contents = [q.content for _, q in items]
+        cur_sim = embeddings.cosine_matrix(contents, curated) if curated else None
+        rm_sim = embeddings.cosine_matrix(contents, rm_chunks) if rm_chunks else None
+        if cur_sim is None and rm_sim is None:   # embeddings unavailable → leave the pool untouched
+            return
+
+        scored = []
+        for i, (qid, q) in enumerate(items):
+            # Curated intent counts at full weight; reading-material prose is discounted, so an
+            # RM-only match must be distinctly stronger to keep a candidate.
+            best_curated = float(max(cur_sim[i])) if cur_sim is not None else 0.0
+            best_rm = float(max(rm_sim[i])) * SESSION_PROFILE_RM_WEIGHT if rm_sim is not None else 0.0
+            fit = max(best_curated, best_rm)
+            q.session_fit = round(fit, 4)
+            scored.append((fit, qid, q))
+        scored.sort(key=lambda t: t[0], reverse=True)
+
+        # Floor is the stricter of an absolute bar and a fraction of THIS session's best fit, so the
+        # gate filters comparably whether the banks cover the session well or barely at all.
+        best_fit = scored[0][0] if scored else 0.0
+        floor = max(SESSION_FIT_FLOOR, SESSION_FIT_RELATIVE * best_fit)
+        keep = [t for t in scored if t[0] >= floor]
+        # Guard against a mis-tuned floor starving the pool: the LLM relevance pass drops more
+        # candidates still, so always leave it a workable pool. Restores the highest-fit rejects only.
+        if len(keep) < _MIN_POOL_AFTER_FIT:
+            keep = scored[:_MIN_POOL_AFTER_FIT]
+        keep_ids = {qid for _, qid, _ in keep}
+
+        for fit, qid, q in scored:
+            if qid in keep_ids:
+                continue
+            state.questions.pop(qid, None)
+            state.removed.append({
+                "content": q.content,
+                "reason": f"Not grounded in this session's outcomes/reading material (fit {fit:.2f})",
+                "stage": "session_fit", "difficulty": q.difficulty, "company": q.attribution,
+            })
+
+        # Re-insert best-first so relevance batching and any downstream truncation favour good fits.
+        state.questions.clear()
+        for _, qid, q in keep:
+            state.questions[qid] = q
+
+        emit("session_fit", "done",
+             f"Session-fit scored {len(scored)} candidate(s) against this session's outcomes + "
+             f"reading material; dropped {len(scored) - len(keep)} below fit {floor:.2f}, "
+             f"{len(state.questions)} remain (best {best_fit:.2f}).")
 
     def _prefilter_semantic(self, state, emit):
         """COMPARATIVE topic pre-gate: drop a candidate that belongs to a DIFFERENT course topic than this
@@ -318,15 +466,42 @@ def _outcome_coverage(state: AgentState) -> float:
         return 0.0
 
 
+def _human_agreement(state: AgentState):
+    """Agreement between this question set and the reviewer's own past decisions, or None.
+
+    Uses ALL recorded labels: the reviewer looking at this run wants the best available estimate.
+    (The eval harness deliberately holds labels out instead — see eval/run_eval.py — because there
+    the point is to measure the system rather than to inform the person reviewing it.)
+    """
+    try:
+        from src import memory
+        from src.human_agreement import predict_accept
+        contents = [q.content for q in state.questions.values()]
+        session = state.session_context.session_name if state.session_context else None
+        return predict_accept(contents, memory.get_feedback_examples(), session=session)
+    except Exception:  # noqa: BLE001 — reporting must never break a completed run
+        return None
+
+
 def _build_quality_report(state: AgentState, revision_round: int) -> QualityReport:
     total_q = state.total_questions
     diff = state.difficulty_counts
     sources = state.source_counts
 
-    # The two metrics that actually matter for an interview set:
+    # SELF-reported relevance: the mean of the LLM score that SELECTED these questions. Reported for
+    # transparency but deliberately NOT part of the composite or the pass decision — a selector
+    # cannot be its own judge, and treating it as quality is why runs scored 0.9 while reviewers
+    # rejected most of the set (corr(composite, approved) was 0.16 over 36 runs).
     rels = [q.relevance_score for q in state.questions.values() if q.relevance_score is not None]
-    relevance_score = round(sum(rels) / len(rels), 3) if rels else 0.5
+    self_relevance = round(sum(rels) / len(rels), 3) if rels else None
     coverage_score = round(_outcome_coverage(state), 3)
+    # Mean grounding in THIS session's outcomes + reading material (set by the session-fit gate).
+    # Independent of any LLM judgement — it compares questions to the curriculum, not to itself.
+    fits = [q.session_fit for q in state.questions.values() if q.session_fit is not None]
+    grounding_score = round(sum(fits) / len(fits), 3) if fits else None
+    # Agreement with the reviewer's OWN past accept/reject decisions — the only signal here that does
+    # not originate from the selector. None when there aren't enough labels or embeddings are off.
+    agreement = _human_agreement(state)
 
     # Secondary hygiene metrics.
     # size_score rewards reaching the REQUESTED target (was: flat 1.0 for any count in [MIN,MAX], which
@@ -345,16 +520,29 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
         if total_q > 0 else 0
     )
 
-    # Relevance + coverage dominate; size/diversity/difficulty are hygiene.
-    composite = round(0.40 * relevance_score + 0.25 * coverage_score
-                      + 0.15 * size_score + 0.10 * diversity_score + 0.10 * diff_score, 3)
+    # Composite is built ONLY from signals independent of the selector:
+    #   coverage    — questions vs the session's learning outcomes (embedding cosine)
+    #   grounding   — questions vs the session's outcomes + reading material (session_fit)
+    #   agreement   — questions vs the reviewer's own past accept/reject decisions
+    #   size        — did we reach the requested count
+    # `self_relevance` and `difficulty_balance` are reported but excluded: the first is the
+    # selector grading itself; the second scores against difficulty labels that are ~95% "Medium"
+    # in the GenAI bank, so it measures label noise rather than question difficulty.
+    # Weights are renormalised over whatever is actually available, so a missing signal neither
+    # inflates nor deflates the score.
+    parts = [(0.35, coverage_score), (0.20, grounding_score), (0.15, size_score)]
+    if agreement is not None:
+        parts.append((0.30, agreement.predicted_accept_rate))
+    live = [(w, v) for w, v in parts if v is not None]
+    total_w = sum(w for w, _ in live)
+    composite = round(sum(w * v for w, v in live) / total_w, 3) if total_w else 0.0
     if total_q < MIN_QUESTIONS:
         composite = min(composite, 0.4)
 
-    # Honest pass/fail: a set only "passes" if it is genuinely relevant AND covers the
-    # session AND meets the size floor — not merely diverse/balanced.
-    passed = (relevance_score >= 0.6 and coverage_score >= 0.6
-              and total_q >= MIN_QUESTIONS and composite >= 0.6)
+    # Honest pass/fail: covers the session, is grounded in it, meets the size floor, and — when we
+    # have enough reviewer labels to judge — would mostly survive review.
+    passed = (coverage_score >= 0.6 and total_q >= MIN_QUESTIONS and composite >= 0.6
+              and (agreement is None or agreement.predicted_accept_rate >= 0.6))
 
     # Honest, non-fabricated notes so a reviewer sees WHY a set is weak.
     notes: list[str] = []
@@ -364,11 +552,19 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     elif total_q < target:
         notes.append(f"{total_q} question(s) — fewer than the requested {target}; the on-topic real "
                      f"questions available for this session were limited (kept on-topic over padding).")
-    if relevance_score < 0.6:
-        notes.append("Low mean relevance — the available real questions are only loosely on-topic "
-                     "for this session.")
     if coverage_score < 0.6:
         notes.append("Some learning outcomes are not covered by the available questions.")
+    if grounding_score is not None and grounding_score < 0.30:
+        notes.append(f"Weak grounding (mean session fit {grounding_score:.2f}) — these questions are "
+                     f"only loosely tied to this session's outcomes and reading material.")
+    if agreement is not None:
+        notes.append(f"Predicted reviewer acceptance {agreement.predicted_accept_rate:.0%}, estimated "
+                     f"from {agreement.label_count} past accept/reject decision(s)"
+                     + (f"; {agreement.repeats_rejected} question(s) closely repeat something already "
+                        f"rejected." if agreement.repeats_rejected else "."))
+    else:
+        notes.append("Predicted reviewer acceptance unavailable — not enough past review decisions "
+                     "(needs both accepted and rejected examples) to estimate it.")
     # Web-search health: if web retrieval was unavailable/failed, this set is BANK-ONLY — say so loudly.
     _web_note = {
         "quota": "⚠ Web search hit its usage limit — this set is bank-only (no fresh web questions).",
@@ -383,9 +579,13 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     return QualityReport(
         composite_score=composite,
         metric_scores={
-            "relevance": round(relevance_score, 2),
+            # Scored into the composite (all independent of the selector):
             "outcome_coverage": coverage_score,
+            "session_grounding": grounding_score if grounding_score is not None else 0.0,
+            "predicted_accept": (agreement.predicted_accept_rate if agreement else 0.0),
             "set_size": round(size_score, 2),
+            # Reported for transparency, NOT scored — see the composite comment above.
+            "self_relevance": round(self_relevance, 2) if self_relevance is not None else 0.0,
             "source_diversity": round(diversity_score, 2),
             "difficulty_balance": round(diff_score, 2),
         },

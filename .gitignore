@@ -1,6 +1,10 @@
 __pycache__/
 *.pyc
 *.pyo
+# Derived embedding matrices (rebuilt from data/ on demand, keyed by corpus digest)
+.cache/
+# Pre-clean safety copies written by scripts/clean_bank.py
+*.json.bak
 .env
 .env.*
 credentials.json

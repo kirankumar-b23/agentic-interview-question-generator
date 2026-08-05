@@ -148,6 +148,13 @@ class QuestionDetail(BaseModel):
     expected_answer: str | None = None
     relevance_score: float | None = None    # 0.0–1.0 relevance to session (set by validate_relevance)
     session: str | None = None               # which selected session this question best matches
+    # Hybrid semantic+lexical score from the bank retriever (set by QuestionBankRetriever.search).
+    # Recall-stage signal only — NOT a relevance judgement.
+    retrieval_score: float | None = None
+    # Cosine similarity to THIS session's own profile (learning outcomes + interview topics +
+    # reading material), set by the session-grounded pre-gate. Used to rank candidates before the
+    # LLM relevance pass and to tier the review UI. None when embeddings are unavailable.
+    session_fit: float | None = None
 
     @field_validator("expected_answer", mode="before")
     @classmethod

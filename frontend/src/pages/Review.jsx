@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import PipelineStepper from '../components/PipelineStepper.jsx'
@@ -44,10 +44,24 @@ function QualityBar({ report }) {
   )
 }
 
+// One-click rejection reasons. These exist because the free-text reason box was effectively never
+// filled in — 68 rejections produced zero learned rules — so the system never learned anything from
+// being told "no". Each `key` maps to a canonical rule server-side (see app.py REJECTION_RULES), so
+// picking a chip is enough to teach the pipeline; no typing and no LLM call required.
+const REJECT_REASONS = [
+  { key: 'off_topic',    label: 'Off-topic' },
+  { key: 'too_generic',  label: 'Too generic' },
+  { key: 'not_grounded', label: 'Not in this session' },
+  { key: 'experience',   label: 'Asks about experience' },
+  { key: 'not_question', label: 'Not a real question' },
+  { key: 'duplicate',    label: 'Duplicate' },
+  { key: 'wrong_level',  label: 'Wrong difficulty' },
+]
+
 function CompactQuestion({
   id, content, title, difficulty,
   company, role, topic, subTopic, language, source, sourceUrl,
-  snippet, decision, onDecide, index,
+  snippet, decision, onDecide, index, fit, reason,
 }) {
   const [open, setOpen] = useState(false)
   const isCoding = !!title
@@ -61,6 +75,12 @@ function CompactQuestion({
         <span className="cq-text">{isCoding ? title : content}</span>
         <div className="cq-tags">
           {company && <span className="cq-company" title={company}>{company}</span>}
+          {typeof fit === 'number' && (
+            <span
+              className="cq-fit"
+              title="Session fit — cosine similarity to this session's learning outcomes and reading material"
+            >{fit.toFixed(2)}</span>
+          )}
           <span className={`cq-diff ${diffClass}`}>{diff}</span>
         </div>
         <div className="cq-btns" onClick={e => e.stopPropagation()}>
@@ -74,6 +94,20 @@ function CompactQuestion({
           >✕</button>
         </div>
       </div>
+
+      {/* Why it was rejected. One click, and the pipeline learns a rule from it. */}
+      {decision === 'rejected' && (
+        <div className="cq-reasons" onClick={e => e.stopPropagation()}>
+          <span className="cq-reasons-label">Why?</span>
+          {REJECT_REASONS.map(r => (
+            <button
+              key={r.key}
+              className={`cq-reason-chip${reason === r.key ? ' active' : ''}`}
+              onClick={() => onDecide(id, 'rejected', r.key)}
+            >{r.label}</button>
+          ))}
+        </div>
+      )}
 
       {open && (
         <div className="cq-detail">
@@ -126,8 +160,13 @@ export default function Review() {
       .catch(e => { setError(e.message); setLoading(false) })
   }, [runId])
 
-  function onDecide(qid, status) {
-    setDecisions(cur => ({ ...cur, [qid]: { status } }))
+  function onDecide(qid, status, reason) {
+    setDecisions(cur => {
+      // Re-clicking the same reason clears it, and switching to accepted drops any stale reason.
+      if (status !== 'rejected') return { ...cur, [qid]: { status } }
+      const prev = cur[qid]?.reason
+      return { ...cur, [qid]: { status, reason: reason === prev ? undefined : (reason ?? prev) } }
+    })
   }
 
   async function handleApprove() {
@@ -140,7 +179,9 @@ export default function Review() {
     for (const id of allIds) {
       const d = decisions[id]
       if (!d || d.status === 'accepted') acceptedIds.push(id)
-      else rejectedFeedback[id] = ''
+      // Send the reason on approve too — a question dropped from an otherwise-approved set is just
+      // as informative as one from a fully rejected set, and used to be discarded here.
+      else rejectedFeedback[id] = d.reason || ''
     }
     setSubmitting(true)
     try {
@@ -215,7 +256,15 @@ export default function Review() {
 
   if (!result) return null
 
-  const questions = result.output?.question_details || []
+  // Rank by session fit (highest first) so the reviewer works top-down and can stop where fit
+  // falls off — the set size is deliberately uncapped, so ordering is what keeps review tractable.
+  // Questions without a fit score (embeddings unavailable) keep their original order at the end.
+  const fitOf = q => (typeof q.session_fit === 'number' ? q.session_fit : -1)
+  const questions = [...(result.output?.question_details || [])]
+    .sort((a, b) => fitOf(b) - fitOf(a))
+  const fitHigh = result.thresholds?.session_fit_high ?? 0.35
+  // Index of the first question below the high-confidence bar → where the divider goes.
+  const firstLowFit = questions.findIndex(q => fitOf(q) >= 0 && fitOf(q) < fitHigh)
   const codingQs = result.output?.coding_questions || []
   const snippets = result.output?.code_snippets || []
   const snippetMap = Object.fromEntries(snippets.map(s => [s.code_id, s]))
@@ -342,21 +391,29 @@ export default function Review() {
               <p className="muted" style={{ padding: '1rem' }}>No theory questions.</p>
             ) : (
               questions.map((q, i) => (
-                <CompactQuestion
-                  key={q.question_id}
-                  id={q.question_id}
-                  content={q.question || q.content}
-                  difficulty={q.difficulty_level || q.difficulty}
-                  company={q.attribution || q.asked_in_company}
-                  role={q.role}
-                  topic={q.topic}
-                  subTopic={q.sub_topic}
-                  source={q.source}
-                  sourceUrl={q.source_url}
-                  decision={decisions[q.question_id]?.status}
-                  onDecide={onDecide}
-                  index={i}
-                />
+                <Fragment key={q.question_id}>
+                  {i === firstLowFit && firstLowFit > 0 && (
+                    <div className="cq-tier-divider">
+                      Below fit {fitHigh.toFixed(2)} — weaker match to this session, review closely
+                    </div>
+                  )}
+                  <CompactQuestion
+                    id={q.question_id}
+                    content={q.question || q.content}
+                    difficulty={q.difficulty_level || q.difficulty}
+                    company={q.attribution || q.asked_in_company}
+                    role={q.role}
+                    topic={q.topic}
+                    subTopic={q.sub_topic}
+                    source={q.source}
+                    sourceUrl={q.source_url}
+                    fit={typeof q.session_fit === 'number' ? q.session_fit : undefined}
+                    decision={decisions[q.question_id]?.status}
+                    reason={decisions[q.question_id]?.reason}
+                    onDecide={onDecide}
+                    index={i}
+                  />
+                </Fragment>
               ))
             )}
           </div>
@@ -385,6 +442,7 @@ export default function Review() {
                   sourceUrl={q.source_url}
                   snippet={snippetMap[q.code_id]}
                   decision={decisions[q.id]?.status}
+                  reason={decisions[q.id]?.reason}
                   onDecide={onDecide}
                   index={i}
                 />

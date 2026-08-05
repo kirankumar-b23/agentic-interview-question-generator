@@ -203,6 +203,10 @@ _WHOLE_REJECT = _MODEL_NAMES | _SOURCE_BRANDS | _NOT_COMPANY | _TOOL_FIELD_JUNK 
     # states / generic non-company words seen in extractions
     "offline", "online", "remote", "virtual", "hybrid", "unknown", "none", "other",
     "anonymous", "confidential", "startup", "employer", "freelance", "self", "n/a",
+    # Bare-word extraction artifacts observed in the built bank: "Tech" is the truncated
+    # techinterviewhandbook.org brand, the rest are page-topic words mistaken for an employer.
+    # Whole-string matches only, so real multi-word names ("RedFerns Tech") are unaffected.
+    "tech", "product", "classification", "ensemble",
 }
 
 

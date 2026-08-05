@@ -371,6 +371,59 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
     }
 
 
+def _feedback_examples_block(state: AgentState, per_side: int = 12) -> str:
+    """Prompt block of the reviewer's own past accept/reject decisions, or "" if there are none.
+
+    Prefers decisions made on THIS session (taste is session-specific) and tops up with decisions
+    from other sessions, so a brand-new session still gets calibration. Capped per side to bound
+    prompt cost, and balanced so the judge doesn't infer "reject everything" from a lopsided history
+    (the real log is 68 rejections to 24 acceptances).
+    """
+    try:
+        from src import memory as _memory
+        examples = _memory.get_feedback_examples()
+    except Exception:  # noqa: BLE001 — feedback is an enhancement, never a hard dependency
+        return ""
+    if not examples:
+        return ""
+
+    session = state.session_context.session_name if state.session_context else None
+
+    def pick(decision: str) -> list[str]:
+        same = [e["question"] for e in examples
+                if e.get("decision") == decision and (e.get("question") or "").strip()
+                and e.get("session") == session]
+        other = [e["question"] for e in examples
+                 if e.get("decision") == decision and (e.get("question") or "").strip()
+                 and e.get("session") != session]
+        seen, out = set(), []
+        for q in same + other:                      # this session's decisions first
+            k = q.strip().lower()
+            if k not in seen:
+                seen.add(k)
+                out.append(q.strip())
+        return out[:per_side]
+
+    accepted, rejected = pick("good"), pick("bad")
+    if not accepted and not rejected:
+        return ""
+    # Balance the two sides so neither dominates the judge's impression of the reviewer's bar.
+    n = min(per_side, max(len(accepted), len(rejected)))
+    accepted, rejected = accepted[:n], rejected[:n]
+
+    block = ("## Reviewer's past decisions on questions for this course — calibrate to this taste\n"
+             "These are real accept/reject decisions by the human who will review your output.\n")
+    if accepted:
+        block += ("\nACCEPTED (score these kinds generously — note they are often short and "
+                  "conceptual):\n" + "\n".join(f"- {q[:200]}" for q in accepted) + "\n")
+    if rejected:
+        block += ("\nREJECTED (score anything of this kind ≤0.3, including rewordings — they tend to "
+                  "be generic 'describe your experience' asks, cross-topic architecture questions, or "
+                  "questions not grounded in what this session teaches):\n"
+                  + "\n".join(f"- {q[:200]}" for q in rejected) + "\n")
+    return block + "\n"
+
+
 def tool_validate_relevance(state: AgentState) -> dict:
     """LLM evaluates each question's relevance to session outcomes."""
     if not state.session_context or not state.questions:
@@ -385,6 +438,11 @@ def tool_validate_relevance(state: AgentState) -> dict:
             + "\n".join(f"- {r}" for r in learned_rules[:20])
             + "\n\n"
         )
+    # Show the judge what THIS reviewer actually accepted and rejected. Distilled rules only exist
+    # when a reviewer typed a free-text reason (they rarely do — 68 rejections produced zero rules),
+    # so the accept/reject decisions themselves are the feedback signal that is actually available.
+    # Concrete examples calibrate the judge's taste in a way an abstract rule cannot.
+    rules_block += _feedback_examples_block(state)
 
     outcomes_str = "\n".join(f"- {o}" for o in state.session_context.learning_outcomes)
     concepts_str = ", ".join(state.session_context.key_concepts)
@@ -952,6 +1010,66 @@ def tool_remove_question(state: AgentState, question_id: str, reason: str = "") 
     return {"removed": False, "error": f"Question {question_id} not found"}
 
 
+# Minimum cosine similarity to a rejected question before the reword penalty applies at all.
+# Measured on the real label set: a genuine reword scores ≈1.0, while same-domain-but-different
+# questions (including reviewer-APPROVED ones) top out around 0.73 — so 0.75 separates them.
+REWORD_FLOOR = 0.75
+
+
+def _feedback_penalty(texts: list[str]) -> list[float]:
+    """How much more each text resembles a REJECTED question than an ACCEPTED one (0.0 = not at all).
+
+    This is a NARROW anti-reword mechanism, not a general model of the reviewer's taste, and the two
+    guards below are what keep it that way:
+
+      1. An absolute floor. A candidate must be at least `REWORD_FLOOR` similar to some rejected
+         question before any penalty applies. Without it the score punishes topics the reviewer
+         simply hasn't labelled yet: with a label set about agents and prompting, an unrelated
+         "How does a diffusion model add noise?" scored a LARGER penalty than an actual reworded
+         rejection, purely because nothing in the accepted set resembled it either.
+      2. A relative margin. Within one domain everything is broadly similar to everything — an
+         approved "What are the core components of an AI Agent?" sits at 0.73 cosine to a rejected
+         agent-architecture question. Subtracting the accepted side cancels that shared baseline:
+
+             penalty = max(0, sim_to_nearest_rejected − sim_to_nearest_accepted)
+
+    Broad taste calibration is handled elsewhere and more honestly — by showing the judge real
+    examples (`_feedback_examples_block`) and by reporting predicted acceptance in the quality report.
+
+    All of the reviewer's decisions count, not just this session's: rejections are overwhelmingly
+    about the KIND of question ("describe your experience building X") rather than the session.
+    Returns all-zeros when either side is missing or embeddings are unavailable.
+    """
+    zeros = [0.0] * len(texts)
+    if not texts:
+        return zeros
+    try:
+        from src import embeddings, memory as _memory
+        examples = _memory.get_feedback_examples()
+        rejected = [e["question"] for e in examples
+                    if e.get("decision") == "bad" and (e.get("question") or "").strip()]
+        accepted = [e["question"] for e in examples
+                    if e.get("decision") == "good" and (e.get("question") or "").strip()]
+        # Both sides are needed for the baseline to cancel; with only rejections every candidate
+        # would be penalised roughly equally, which is the same as no signal but costs quality.
+        if not rejected or not accepted:
+            return zeros
+        bad_sim = embeddings.cosine_matrix(texts, rejected)
+        good_sim = embeddings.cosine_matrix(texts, accepted)
+        if bad_sim is None or good_sim is None:
+            return zeros
+        out = []
+        for i in range(len(texts)):
+            nearest_bad = float(max(bad_sim[i]))
+            if nearest_bad < REWORD_FLOOR:      # not a reword of anything rejected → leave it alone
+                out.append(0.0)
+                continue
+            out.append(max(0.0, nearest_bad - float(max(good_sim[i]))))
+        return out
+    except Exception:  # noqa: BLE001 — selection must never fail on the feedback layer
+        return zeros
+
+
 def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None = None) -> list:
     """Order/pick k questions balancing relevance, diversity, outcome coverage, difficulty, and role.
 
@@ -964,7 +1082,8 @@ def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None
     coverage and difficulty nudges so the final set spans the session's outcomes and levels.
     """
     from src.config import (MMR_LAMBDA, SELECT_COVERAGE_BONUS, SELECT_DIFFICULTY_BONUS,
-                            SELECT_SESSION_BONUS, SELECT_ATTRIBUTION_BONUS, SELECT_ROLE_BONUS)
+                            SELECT_SESSION_BONUS, SELECT_ATTRIBUTION_BONUS, SELECT_ROLE_BONUS,
+                            SELECT_REJECTED_PENALTY)
     role_tags = role_tags or set()
 
     def _rel(q):
@@ -1002,6 +1121,12 @@ def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None
     if outcomes and qo is not None:
         for i in range(len(questions)):
             covers[i] = {j for j in range(len(outcomes)) if qo[i][j] >= cov_thresh}
+
+    # Penalty for looking more like a rejected question than an accepted one. Exact repeats are
+    # removed earlier by `_drop_rejected`, but that is a normalized-string match, so a REWORDING of a
+    # rejected question sails through and gets rejected all over again. A ranking penalty, not a hard
+    # drop, so a session with a thin pool still fills.
+    reject_penalty = _feedback_penalty(texts)
 
     # Difficulty target counts for k (Easy 30% / Medium 50% / Hard 20%).
     diff_target = {"Easy": round(k * 0.3), "Medium": round(k * 0.5), "Hard": round(k * 0.2)}
@@ -1050,7 +1175,8 @@ def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None
             # Role ranking bonus: a question tagged for a TARGET role ranks above generic ("General").
             role_need = SELECT_ROLE_BONUS if (role_tags and questions[c].role in role_tags) else 0.0
             score = (MMR_LAMBDA * rel[c] - (1 - MMR_LAMBDA) * div
-                     + cov_new + need + sess_need + attr_need + role_need)
+                     + cov_new + need + sess_need + attr_need + role_need
+                     - SELECT_REJECTED_PENALTY * reject_penalty[c])
             if score > best_score:
                 best, best_score = c, score
         selected.append(best)

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Agentic Interview Question Generator — a multi-agent pipeline that curates **real** interview questions for course sessions. It reads each session's reading material, resolves it to learning outcomes + Knowledge Points, retrieves real questions from a pre-indexed bank, GitHub interview repos, and Tavily web search, then validates, deduplicates, and assembles a question set. A human reviews before Google Sheets export.
 
-**Architecture**: A 4-agent pipeline (Understanding → Retrieval → Validation → Evaluation) followed by an LLM quality gate, driven via OpenRouter tool_use. A React SPA (served by Flask) shows live progress and a per-question review screen. **Question generation is disabled — only real, sourced questions are used.**
+**Architecture**: A 4-agent pipeline (Understanding → Retrieval → Validation → Evaluation) followed by an LLM quality gate, driven via OpenRouter tool_use. A React SPA (served by FastAPI/uvicorn) shows live progress and a per-question review screen. **Question generation is disabled — only real, sourced questions are used.**
 
 ## How It Works
 
@@ -26,7 +26,7 @@ Human reviews (React UI, per-question accept/reject) →
 ## Project Structure
 
 ```
-app.py                              # Flask: JSON API + serves React SPA (frontend/dist); legacy Jinja fallback
+main.py                             # FastAPI: JSON API + serves React SPA (frontend/dist). Run: uvicorn main:app --port 5000
 frontend/                           # React SPA (Vite). Pages: SessionSelector, AddCourse, Progress, Review, History
   src/components/Sidebar.jsx        # Course/topic/model/count controls + credit balance
   src/components/PipelineStepper.jsx# Live pipeline stage indicator
@@ -38,9 +38,14 @@ scripts/
   build_session_reading_material.py # Build data/reading_materials/session_map.json (per-session content)
   build_knowledge_graph.py          # Build data/knowledge_graph.json (KPs + prerequisite edges)
   build_eval_sets.py                # Build eval/eval_sets.json (good/bad validation examples)
+  build_genai_bank.py               # Harvest the GenAI bank (Tavily); applies the FORM gate before writing
+  clean_bank.py                     # Sweep an existing bank: --dry-run to report, --show N for reject samples
+  ingest_xlsx_questions.py          # Ingest real questions from data/raw/*.xlsx
+  audit_outcomes.py                 # Seed/edit data/reading_materials/session_outcomes.json (curated outcomes)
   auth_sheets.py                    # One-time Google Sheets OAuth → token.json
 data/
-  interview_questions.json          # 1,509 company-attributed interview questions
+  interview_questions.json          # 1,509 company-attributed questions — general SWE/Python, little GenAI
+  genai_question_bank.json          # 1,465 curated GenAI questions (build_genai_bank.py; swept by clean_bank.py)
   knowledge_graph.json              # KPs + sessions + prerequisite edges
   course_structure.json             # Topic → list of sessions (units); drives UI selection
   reading_materials/session_map.json# Canonical session name → that session's reading material
@@ -52,7 +57,11 @@ src/
   agent.py                          # AgentState, PipelineResult, _critique_question_set (quality gate)
   tools.py                          # Tool schemas + implementations (generation tool is blocked)
   session_understanding.py          # Per-session resolution + merge → SessionContext (RM-first, KG fallback)
-  question_bank.py                  # TF-IDF retriever over interview_questions.json
+  question_bank.py                  # Hybrid (embedding + TF-IDF) retriever; corpus vectors disk-cached in .cache/
+  embeddings.py                     # Local sentence-transformers (MiniLM); degrades to TF-IDF if absent
+  quality.py                        # FORM gate — is this a well-formed standalone question?
+  human_agreement.py                # Predicted reviewer acceptance from past accept/reject decisions
+  rejection_rules.py                # Rejection-reason key → canonical learned rule (matches Review.jsx)
   sources/tavily_search.py          # Tavily web search + URL-based company extraction
   sources/github_repo.py            # GitHub interview-repo fetch (REST API)
   orchestrator.py                   # SSE progress queue + run_pipeline wrapper
@@ -63,7 +72,10 @@ src/
   config.py                         # Model selection, paths, constraints, Tavily/GitHub source lists
   sheets_writer.py                  # Google Sheets export (OAuth)
 eval/
-  eval_sets.json                    # Good/bad questions for validation
+  eval_sets.json                    # 46 eval sessions + format rules
+  feedback_examples.json            # Reviewer accept/reject decisions (runtime data; gitignored)
+  run_eval.py                       # Scored harness. Primary metric = predicted reviewer acceptance
+tests/                              # pytest — no LLM or network required
 ```
 
 ## Question Sources (real only — no generation)
@@ -88,19 +100,50 @@ Attribution for output is computed by `attribution_label` (`src/models.py`) and 
 - **Knowledge graph**: networkx DAG for prerequisite ordering
 - **Data models**: Pydantic v2 (field validators + computed fields)
 - **Cache/History**: SQLite (session resolutions, run history, RLHF learned rules)
-- **Web**: Flask JSON API + React SPA (Vite, react-router); SSE for live progress
+- **Web**: FastAPI JSON API (uvicorn, Pydantic request models) + React SPA (Vite, react-router); SSE for live progress. Errors use `{"error": ...}`, not FastAPI's default `{"detail": ...}`, because the React client reads `body.error`.
 - **Output**: gspread + google-auth-oauthlib (Google Sheets via OAuth)
 - **Data prep**: pandas (CSV)
 
 ## Key Constraints
 
-- 5–15 questions per session
+- Minimum 5 questions; the final set is **NOT** capped (`MAX_QUESTIONS=60` bounds only the UI slider
+  and coding-slot maths; `FINAL_SET_CAP=200` is a safety guard). Every outcome-relevant question is
+  kept, and the review UI ranks by `session_fit` and tiers the list so a large set stays reviewable.
 - Max tool calls bounded per agent (cost control)
 - Question generation is DISABLED — only real, sourced questions
 - No live scraping (offline scraping removed entirely)
-- Retrieval order: interview bank first, then Tavily web, then GitHub
+- Retrieval order: interview bank first, then Tavily web. GitHub is **off by default**
+  (`GITHUB_ENABLED=0` — the repos are general ML/DS with no company attribution)
 - Coding questions only for code-heavy sessions
 - Human approval required before Google Sheets write
 - Reject → distils feedback into learned rules + re-generates with same sessions
 - Session understanding uses the per-session reading material first, knowledge graph as fallback
 - Quality gate critiques the final set; agent revises up to 2 rounds
+
+## Scoring & evaluation (read before touching metrics)
+
+The composite score is built **only** from signals independent of the selector:
+`outcome_coverage`, `session_grounding`, `predicted_accept`, `set_size`.
+
+`self_relevance` (the mean LLM relevance score used to *pick* the questions) and
+`difficulty_balance` (scored against GenAI-bank labels that are ~95% "Medium") are **reported but not
+scored**. They were 50% of the old composite, which is why runs scored 0.9 while reviewers rejected
+most of the set — measured `corr(composite, approved) = 0.16` across 36 real runs.
+
+Two retrieval/grounding layers matter and are easy to confuse:
+- `question_bank.py` ranks with a **hybrid** score (0.6·embedding + 0.4·TF-IDF). Pure TF-IDF returned
+  RAG questions for an F5-TTS query; pure embeddings miss exact tool names ("n8n", "LoRA").
+- `pipeline._score_session_fit` scores every candidate against **this session's own** outcomes +
+  reading material. The older `_prefilter_semantic` compares pooled *course-topic* profiles and so
+  never filtered anything *within* a topic.
+
+`src/human_agreement.py` estimates reviewer acceptance from `eval/feedback_examples.json`
+(1-NN over embeddings). It returns **None** when it cannot measure — callers must report "unknown",
+never substitute 0.0. `eval/run_eval.py` scores against **held-out** labels so the metric stays
+independent as the pipeline learns from the same feedback.
+
+## Tests
+
+`pytest tests/ -q` — 175 tests, no LLM/network needed. Includes data-integrity checks over the
+shipped `data/` files (missing reading material, bank form-garbage, implausible company attribution)
+and a check that `REJECT_REASONS` in `Review.jsx` matches `src/rejection_rules.py`.
