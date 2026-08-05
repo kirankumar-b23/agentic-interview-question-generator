@@ -41,11 +41,22 @@ from src import memory
 from src.agent import PipelineResult
 from src.data_loader import get_data_store
 from src.models import GenerationConfig
-from src.orchestrator import (cleanup_progress, finalize_pipeline, get_progress_queue, run_pipeline,
-                              run_preview_pipeline)
+from src.orchestrator import (cleanup_progress, finalize_pipeline, get_history, get_progress_queue,
+                              is_finished, prune_finished, run_pipeline, run_preview_pipeline)
 from src.rejection_rules import rule_for
 
 log = logging.getLogger("questor")
+
+# How often a quiet stream emits a heartbeat, and how long total silence is tolerated before the run
+# is declared stalled. The gap between two progress events is legitimately minutes for a tool that
+# makes a dozen sequential LLM calls, so the stall bound is generous.
+SSE_HEARTBEAT_SECONDS = 15.0
+SSE_STALL_SECONDS = float(os.getenv("SSE_STALL_SECONDS", "900"))
+
+# Caps on the in-memory run maps. Finished runs live in SQLite and are reloaded on demand, so these
+# only bound memory — they don't lose anything. Insertion order makes the oldest the first evicted.
+MAX_CACHED_RESULTS = int(os.getenv("MAX_CACHED_RESULTS", "50"))
+MAX_CACHED_PREVIEWS = int(os.getenv("MAX_CACHED_PREVIEWS", "10"))
 
 REACT_DIST = os.path.join(os.path.dirname(__file__), "frontend", "dist")
 _has_react = os.path.isdir(REACT_DIST)
@@ -125,10 +136,21 @@ class ImportCourseRequest(BaseModel):
 
 class ReviewRequest(BaseModel):
     """Reviewer decisions. `rejected_feedback` maps question_id → reason (a taxonomy key from
-    REJECT_REASONS in Review.jsx, or free text)."""
+    REJECT_REASONS in Review.jsx, or free text).
+
+    `decisions_sent` distinguishes "the client made explicit per-question decisions" from "the client
+    sent nothing" — WITHOUT it, an empty `accepted_ids` was ambiguous, and the export path read it as
+    "no filter requested" rather than "the reviewer accepted nothing". Rejecting every question and
+    clicking Export therefore exported and banked all of them.
+    """
     action: str = "approve"
     accepted_ids: list[str] = Field(default_factory=list)
     rejected_feedback: dict[str, str] = Field(default_factory=dict)
+    decisions_sent: bool = False
+
+    @property
+    def has_explicit_decisions(self) -> bool:
+        return self.decisions_sent or bool(self.accepted_ids) or bool(self.rejected_feedback)
 
 
 # ── Result helpers ───────────────────────────────────────────────────────────
@@ -191,10 +213,29 @@ def _load_result(run_id: str) -> PipelineResult | None:
 
 
 def _start(run_id: str, target) -> None:
-    """Run a pipeline phase on a daemon thread and track it for /api/result to await."""
+    """Run a pipeline phase on a daemon thread, tracking it so /api/status can report on it."""
+    _prune_run_state()
     t = threading.Thread(target=target, daemon=True)
     _running[run_id] = t
     t.start()
+
+
+def _prune_run_state() -> None:
+    """Bound the in-memory run maps.
+
+    These are module-level dicts that were never evicted, so a long-lived server accumulated every
+    PipelineResult (each holding a full question set) and every preview AgentState until restart.
+    Completed runs are persisted to SQLite and reloaded on demand by `_load_result`, so dropping the
+    oldest in-memory copies costs nothing but a database read.
+    """
+    for name, store, cap in (("results", _results, MAX_CACHED_RESULTS),
+                             ("previews", _preview_states, MAX_CACHED_PREVIEWS)):
+        while len(store) > cap:
+            store.pop(next(iter(store)), None)
+    for run_id, thread in [(r, t) for r, t in _running.items() if not t.is_alive()]:
+        if len(_running) <= MAX_CACHED_RESULTS:
+            break
+        _running.pop(run_id, None)
 
 
 # ── Metadata ─────────────────────────────────────────────────────────────────
@@ -349,10 +390,12 @@ def api_generate(body: GenerateRequest):
     )
     run_id = str(uuid.uuid4())
     get_progress_queue(run_id)
+    # Remember the choice for the picker's default only. The run itself takes its model from
+    # `config` (threaded through AgentState), so a second tab starting a different model cannot
+    # retarget this run's in-flight calls.
+    set_active_model(config.model)
 
     def _run():
-        from src.llm_client import set_active_model
-        set_active_model(config.model)
         if config.preview:  # TESTING: pause after picking, before the gate
             result, state = run_preview_pipeline(config, run_id=run_id)
             _results[run_id] = result
@@ -368,29 +411,60 @@ def api_generate(body: GenerateRequest):
 
 
 @app.get("/api/stream/{run_id}")
-def api_stream(run_id: str):
+def api_stream(run_id: str, after: int = -1):
     """Server-sent events for live pipeline progress.
 
     A plain (sync) generator on purpose: `queue.get(timeout=…)` blocks, and Starlette iterates sync
     generators in a threadpool, so the event loop stays free.
+
+    Two things this has to get right, because the old version got both wrong:
+
+    * **Replay.** Everything already emitted is sent first (`after` skips what the client has), so a
+      reload or a dropped connection resumes the transcript instead of starting blank.
+    * **Silence is not failure.** Progress is emitted per tool call, and one tool can legitimately run
+      for minutes (`validate_relevance` makes a dozen sequential LLM calls). The old 120s queue
+      timeout turned that silence into `{"step": "timeout", "status": "error"}` and closed the
+      stream — the UI showed "Pipeline Error" for runs that went on to succeed. Now a quiet interval
+      emits a heartbeat, and the stream only ends when the run actually ends or genuinely stalls.
     """
     q = get_progress_queue(run_id)
 
     def events():
         try:
-            while True:
-                try:
-                    event = q.get(timeout=120)
-                except Exception:
-                    yield ("data: " + json.dumps({"step": "timeout", "status": "error",
-                                                  "detail": "Timeout"}) + "\n\n")
-                    break
+            last_seq = after
+            for event in get_history(run_id, after_seq=after):
+                last_seq = event.get("seq", last_seq)
                 yield f"data: {json.dumps(event)}\n\n"
                 if event.get("step") in ("complete", "error"):
-                    break
+                    return          # already finished — replay and close
+
+            idle = 0.0
+            while True:
+                try:
+                    event = q.get(timeout=SSE_HEARTBEAT_SECONDS)
+                except Exception:
+                    idle += SSE_HEARTBEAT_SECONDS
+                    if idle >= SSE_STALL_SECONDS:
+                        yield ("data: " + json.dumps({
+                            "step": "error", "status": "error",
+                            "detail": f"No progress for {int(idle)}s — the run appears to have stalled.",
+                        }) + "\n\n")
+                        return
+                    yield ("data: " + json.dumps({"step": "heartbeat", "status": "running",
+                                                  "detail": "", "idle_s": int(idle)}) + "\n\n")
+                    continue
+                idle = 0.0
+                if event.get("seq", 0) <= last_seq:
+                    continue        # already replayed
+                last_seq = event.get("seq", last_seq)
+                yield f"data: {json.dumps(event)}\n\n"
+                if event.get("step") in ("complete", "error"):
+                    return
         finally:
-            # Runs even if the client disconnects mid-stream, so queues cannot accumulate.
+            # Only reclaims buffers for a run that has actually FINISHED. A client disconnecting
+            # mid-run must not delete the queue the live pipeline thread is still writing to.
             cleanup_progress(run_id)
+            prune_finished()
 
     return StreamingResponse(events(), media_type="text/event-stream", headers={
         "Cache-Control": "no-cache",
@@ -399,13 +473,31 @@ def api_stream(run_id: str):
     })
 
 
+@app.get("/api/status/{run_id}")
+def api_status(run_id: str):
+    """Whether a run is still going. Cheap and non-blocking — poll this, don't block on the result."""
+    thread = _running.get(run_id)
+    running = bool(thread and thread.is_alive())
+    return {
+        "run_id": run_id,
+        "running": running,
+        "finished": is_finished(run_id),
+        "has_result": run_id in _results or memory.get_run_result(run_id) is not None,
+    }
+
+
 @app.get("/api/result/{run_id}")
 def api_result(run_id: str):
-    """The finished run. Waits on an in-flight pipeline thread (in a threadpool, so other requests
-    keep being served)."""
+    """The finished run's payload, or 409 while it is still in flight.
+
+    This used to `thread.join(timeout=300)`. Starlette runs sync handlers in a bounded threadpool
+    (40 workers), so a handful of tabs polling long runs consumed every worker and stalled *all*
+    other endpoints — including the SSE streams those tabs were waiting on. Clients follow the
+    progress stream and fetch the result once it reports completion.
+    """
     thread = _running.get(run_id)
-    if thread and thread.is_alive():
-        thread.join(timeout=300)
+    if thread and thread.is_alive() and run_id not in _results:
+        raise HTTPException(409, "Run still in progress")
 
     from src.data_loader import get_topic_for_session
 
@@ -436,8 +528,7 @@ def api_proceed(run_id: str):
     get_progress_queue(run_id)  # fresh queue for the finalize phase
 
     def _finalize():
-        from src.llm_client import set_active_model
-        set_active_model(state.config.model)
+        # The model comes from state.config, carried over from the preview phase.
         result = finalize_pipeline(state, run_id)
         _results[run_id] = result
         _persist_result(run_id, result)
@@ -494,18 +585,25 @@ def api_approve(run_id: str, body: ReviewRequest):
         except Exception as e:  # noqa: BLE001
             log.error("FAILED to persist reviewer feedback for run %s: %s", run_id, e)
 
-        if accepted_ids:
+        # Filter to what the reviewer accepted. Keyed on `has_explicit_decisions`, not on
+        # `accepted_ids` being non-empty: accepting nothing is a real decision that must export
+        # nothing, and the old `if accepted_ids:` read it as "export everything".
+        if body.has_explicit_decisions:
+            accepted = set(accepted_ids)
             result.curated_output.question_details = [
-                q for q in result.curated_output.question_details
-                if q.question_id in accepted_ids
+                q for q in result.curated_output.question_details if q.question_id in accepted
             ]
             result.curated_output.coding_questions = [
-                q for q in result.curated_output.coding_questions
-                if q.id in accepted_ids
+                q for q in result.curated_output.coding_questions if q.id in accepted
             ]
 
         total_q = (len(result.curated_output.question_details)
                    + len(result.curated_output.coding_questions))
+        if total_q == 0:
+            # Nothing to export. Refuse rather than creating an empty spreadsheet and marking the run
+            # approved. The reviewer's rejections were already recorded above, so nothing is lost.
+            raise HTTPException(400, "No questions accepted — nothing to export. "
+                                     "Accept at least one question, or use Regenerate.")
         memory.save_run(
             run_id=run_id, session_name=session_name, question_count=total_q,
             composite_score=result.quality_report.composite_score if result.quality_report else 0,
@@ -564,32 +662,33 @@ def api_approve(run_id: str, body: ReviewRequest):
             log.error("FAILED to persist reviewer feedback for run %s: %s", run_id, e)
         _learn_from_reasons(session_name, rejected_feedback)
 
-        from src.llm_client import get_active_model
         # Preserve course identity on regeneration (category drives branding, course_type steers
         # session handling) — otherwise a non-GenAI course re-runs with default GEN_AI branding.
+        # Reuse the ORIGINAL run's model rather than whatever the picker currently shows, so a
+        # regeneration reproduces the run being corrected instead of inheriting another tab's choice.
+        prior_usage = (result.quality_report.api_usage if result.quality_report else {}) or {}
         config = GenerationConfig(
-            session_names=session_name.split(" + "),
+            session_names=memory._split_sessions(session_name),
             max_questions=original_count,
-            model=get_active_model(),
+            model=prior_usage.get("model") or get_active_model(),
             category=getattr(result, "category", "GEN_AI") or "GEN_AI",
             course_type=getattr(result.context, "session_type", None) if result.context else None,
         )
         # Drop the cached session resolution so the re-run re-derives outcomes.
-        try:
-            conn = memory.get_connection()
-            conn.execute("DELETE FROM session_resolutions WHERE session_name = ?", (session_name,))
-            conn.commit()
-            conn.close()
-        except Exception as e:  # noqa: BLE001
-            log.warning("could not clear cached resolution for %r: %s", session_name, e)
+        cleared = memory.clear_session_resolution(session_name)
+        log.info("cleared %d cached resolution(s) for %r", cleared, session_name)
 
         new_run_id = str(uuid.uuid4())
         get_progress_queue(new_run_id)
 
         def _rerun():
-            from src.llm_client import set_active_model
-            set_active_model(config.model)
             new_result = run_pipeline(config, run_id=new_run_id)
+            # A failed regeneration has no curated_output. Touching it raised an AttributeError that
+            # died unlogged in this daemon thread, leaving _results unset and the client polling a 404.
+            if new_result.error or not new_result.curated_output:
+                _results[new_run_id] = new_result
+                log.error("regeneration %s failed: %s", new_run_id, new_result.error)
+                return
             # PIN the accepted questions; fill freed slots with NEW distinct ones (rejected content is
             # already suppressed inside the pipeline). Keep the original set size.
             accepted_norms = {memory.normalize_content(q.content) for q in accepted_qs}

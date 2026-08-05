@@ -2,7 +2,8 @@ import re
 import json
 import time
 from openai import OpenAI
-from src.config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, LLM_MODEL
+from src.config import (LLM_MODEL, LLM_TIMEOUT_SECONDS, OPENROUTER_API_KEY,
+                        OPENROUTER_BASE_URL)
 
 # ── OpenRouter credit balance (cached) ────────────────────────────────────────
 _credit_cache: dict = {"at": 0.0, "value": None}
@@ -61,18 +62,38 @@ def get_credit_balance() -> dict | None:
 
 _TRANSIENT_SIGNALS = ('429', '500', '502', '503', 'Connection', 'Timeout', 'timeout', 'rate limit')
 
-# Runtime-selectable model (set per generation from the UI). Falls back to the
-# configured LLM_MODEL. Lets the user switch models without editing config/restarting.
-_active_model: str | None = None
+# Model most recently chosen in the UI. This is a DISPLAY default only — it seeds the picker and
+# `/api/meta`. It must never decide which model a run uses: two browser tabs generating at once would
+# retarget each other's in-flight calls mid-run, and the run's own cost accounting (which stamps the
+# model into api_usage) would then price its tokens at the wrong rate.
+#
+# The model a run actually uses comes from its own GenerationConfig, threaded through AgentState —
+# see `run_model()`.
+_ui_model_default: str | None = None
 
 
 def set_active_model(model: str | None):
-    global _active_model
-    _active_model = model.strip() if model and model.strip() else None
+    """Remember the UI's model choice for display/defaulting purposes."""
+    global _ui_model_default
+    _ui_model_default = model.strip() if model and model.strip() else None
 
 
 def get_active_model() -> str:
-    return _active_model or LLM_MODEL
+    """The UI's currently-selected model (display default), NOT necessarily any run's model."""
+    return _ui_model_default or LLM_MODEL
+
+
+def run_model(state) -> str:
+    """The model THIS run must use: its own config, else the configured default.
+
+    Every LLM call made on behalf of a run has to go through this. The agent tool-loops previously
+    hardcoded the `LLM_MODEL` constant, so the UI picker silently did nothing for the bulk of the
+    work while cost estimates were computed at the selected model's price — picking Opus inflated
+    the reported cost ~15x and changed nothing about the output.
+    """
+    cfg = getattr(state, "config", None)
+    chosen = getattr(cfg, "model", None) if cfg is not None else None
+    return (chosen or "").strip() or LLM_MODEL
 
 
 def _call_with_retry(fn, max_retries: int = 3):
@@ -97,14 +118,24 @@ def get_client() -> OpenAI:
         _client = OpenAI(
             api_key=OPENROUTER_API_KEY,
             base_url=OPENROUTER_BASE_URL,
+            # Without an explicit timeout the SDK waits 600s per request, so one wedged call could
+            # hold a run (and its SSE stream) open for ten minutes.
+            timeout=LLM_TIMEOUT_SECONDS,
+            # The SDK retries twice by default. Combined with our own _call_with_retry(3) that is up
+            # to 9 requests and ~7s of sleep per logical call, with the backoff applied at the wrong
+            # layer. Retries are handled in _call_with_retry, which knows what's transient.
+            max_retries=0,
         )
     return _client
 
 
-def _extract_json(text: str) -> dict:
-    """Extract JSON from LLM response text, handling markdown code blocks."""
+def _extract_json(text: str) -> dict | None:
+    """Parse JSON out of a model reply, tolerating markdown fences and surrounding prose.
+
+    Returns None when nothing parses — distinct from `{}`, which is a valid empty object.
+    """
     if not text:
-        return {}
+        return None
     text = text.strip()
 
     # Try direct parse first
@@ -130,7 +161,7 @@ def _extract_json(text: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    return {}
+    return None
 
 
 def chat_completion(
@@ -157,6 +188,26 @@ def chat_completion(
     return response.choices[0].message.content or ""
 
 
+class JSONResponseError(RuntimeError):
+    """The model's reply could not be parsed as JSON.
+
+    Raised instead of returning `{}` so callers can tell "the model said nothing usable" from
+    "the model returned an empty object". Returning a bare `{}` made every failure look like a
+    valid-but-empty answer, which is how a truncated critique response became an automatic
+    quality-gate PASS (`.get("pass", True)`).
+    """
+
+    def __init__(self, message: str, raw: str = ""):
+        super().__init__(message)
+        self.raw = raw
+
+
+# Providers differ on whether they accept response_format={"type":"json_object"}; Anthropic models
+# via OpenRouter generally reject it. Remember the answer per model so we stop paying for a request
+# that always fails on the first try (the old code retried the same doomed call on every JSON call).
+_supports_json_mode: dict[str, bool] = {}
+
+
 def chat_completion_json(
     system_prompt: str,
     user_prompt: str,
@@ -165,38 +216,60 @@ def chat_completion_json(
     max_tokens: int = 4096,
     on_usage=None,
 ) -> dict:
-    """Chat completion that returns parsed JSON. Handles models that don't support response_format."""
+    """Chat completion returning parsed JSON.
+
+    Raises `JSONResponseError` when the reply cannot be parsed — a truncated or prose reply is a
+    failure, not an empty result. Handles models that reject `response_format` by retrying once
+    without it and caching that fact per model.
+    """
     client = get_client()
+    target = model or get_active_model()
 
     msgs = [
         {"role": "system", "content": system_prompt + "\n\nYou MUST respond with valid JSON only. No markdown, no explanation, just JSON."},
         {"role": "user", "content": user_prompt},
     ]
 
-    # Try with response_format first (some models require it)
-    try:
-        response = _call_with_retry(lambda: client.chat.completions.create(
-            model=model or get_active_model(),
-            messages=msgs,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            response_format={"type": "json_object"},
-        ))
-        if on_usage and getattr(response, "usage", None):
-            on_usage(response.usage)
-        text = response.choices[0].message.content or ""
-        return _extract_json(text)
-    except Exception:
-        pass
+    def _create(use_json_mode: bool):
+        kwargs = dict(model=target, messages=msgs, temperature=temperature, max_tokens=max_tokens)
+        if use_json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        return _call_with_retry(lambda: client.chat.completions.create(**kwargs))
 
-    # Fallback: no response_format, parse JSON from text
-    response = _call_with_retry(lambda: client.chat.completions.create(
-        model=model or get_active_model(),
-        messages=msgs,
-        temperature=temperature,
-        max_tokens=max_tokens,
-    ))
+    use_json_mode = _supports_json_mode.get(target, True)
+    try:
+        response = _create(use_json_mode)
+        if use_json_mode:
+            _supports_json_mode[target] = True
+    except Exception as exc:
+        # Only an UNSUPPORTED-PARAMETER error justifies a second paid call. Previously any exception
+        # here — including a usage-callback bug or a hard auth failure — silently triggered one.
+        if not (use_json_mode and _is_json_mode_rejection(exc)):
+            raise
+        _supports_json_mode[target] = False
+        response = _create(False)
+
+    # Record usage BEFORE parsing, and never let a callback error look like an API failure.
     if on_usage and getattr(response, "usage", None):
-        on_usage(response.usage)
-    text = response.choices[0].message.content or ""
-    return _extract_json(text)
+        try:
+            on_usage(response.usage)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[llm] usage callback failed ({type(exc).__name__}: {exc})")
+
+    choice = response.choices[0] if response.choices else None
+    text = (choice.message.content if choice and choice.message else "") or ""
+    parsed = _extract_json(text)
+    if parsed is None:
+        reason = ("reply was truncated (hit max_tokens)"
+                  if choice and getattr(choice, "finish_reason", None) == "length"
+                  else "reply was not JSON")
+        raise JSONResponseError(f"{target}: {reason}", raw=text[:400])
+    return parsed
+
+
+def _is_json_mode_rejection(exc: Exception) -> bool:
+    """True when the provider rejected `response_format`, rather than failing for another reason."""
+    err = str(exc).lower()
+    markers = ("response_format", "json_object", "json mode", "unsupported parameter",
+               "unrecognized request argument", "not supported")
+    return any(m in err for m in markers)

@@ -24,7 +24,8 @@ MAX_REVISION_ROUNDS = 2
 # mis-tuned for an unusual session. Only the highest-fit rejects are restored.
 _MIN_POOL_AFTER_FIT = 30
 
-EmitFn = Callable[[str, str, str, str], None]   # (run_id, step_id, status, detail)
+# (run_id, step_id, status, detail, **structured_fields)
+EmitFn = Callable[..., None]
 
 _TOPIC_PROFILE_CACHE = None   # {topic: [profile texts]} — built once from course_structure + session_outcomes
 
@@ -139,10 +140,14 @@ def _topic_profiles(session_names) -> tuple[set, list]:
     return cur, other
 
 
-def _current_model() -> str:
-    """The model this run is using (for per-run cost estimation)."""
-    from src.llm_client import get_active_model
-    return get_active_model()
+def _current_model(state) -> str:
+    """The model THIS run is using, for per-run cost estimation.
+
+    Read from the run's own config, not from a process-wide global: two concurrent runs would
+    otherwise both report whichever model started last, and price their tokens at its rate.
+    """
+    from src.llm_client import run_model
+    return run_model(state)
 
 
 class AgentPipeline:
@@ -326,6 +331,26 @@ class AgentPipeline:
             emit("prefilter", "done",
                  f"Pre-filtered {len(drop)} off-topic candidate(s); {len(state.questions)} remain for scoring.")
 
+    def _enforce_submission(self, state, emit) -> bool:
+        """Guarantee the final set has actually been SELECTED. Returns True if we had to force it.
+
+        Ranking, the coverage/difficulty/session/attribution/role bonuses and the trim to the
+        requested count all live inside `tool_submit_question_set`, and the Evaluation agent is only
+        prompt-advised to call it. When it doesn't — a text-only reply, an API error that ends the
+        phase, or a budget spent on `check_*`/`remove_question` calls — nothing selects anything and
+        `state.questions` is still the raw candidate pool. Serializing that ships up to ~270 unranked,
+        untrimmed questions to the reviewer while the run reports success. So call it ourselves.
+        """
+        if state.submitted:
+            return False
+        from src.tools import tool_submit_question_set
+        before = len(state.questions)
+        tool_submit_question_set(state)
+        emit("submit_question_set", "warning",
+             f"Evaluation agent never submitted — selected {len(state.questions)} of {before} "
+             f"candidate(s) directly so the set is ranked and trimmed.")
+        return True
+
     def _evaluate_and_gate(self, state, emit) -> int:
         """Stage 4 + quality-gate loop. Returns revision rounds used."""
         eval_agent = EvaluationAgent()
@@ -333,15 +358,24 @@ class AgentPipeline:
         while True:
             state.submitted = False
             eval_agent.run(state, emit)
+            # Do this BEFORE the critique so the gate judges the set the reviewer will actually see.
+            if self._enforce_submission(state, emit):
+                state.submit_forced = True
 
             emit("critique", "running", "Quality gate — critiquing final set...")
             critique = _critique_question_set(state)
-            critique_pass = critique.get("pass", True)
-            must_fix = critique.get("must_fix", [])
+            # An unparseable/failed critique must NOT be read as approval — `.get("pass", True)`
+            # turned every LLM hiccup into a silent pass. `_critique_question_set` returns
+            # `pass=False` with an explicit note when it could not judge.
+            critique_pass = bool(critique.get("pass", False))
+            must_fix = critique.get("must_fix", []) or []
             critique_summary = critique.get("summary", "")
 
             if critique_pass or revision_round >= MAX_REVISION_ROUNDS:
-                state.submitted = True
+                forced = not critique_pass
+                state.gate_forced = forced
+                state.gate_issues = list(must_fix) if forced else []
+                state.gate_summary = critique_summary
                 label = "Passed" if critique_pass else f"Force-passed after {revision_round} revision(s)"
                 emit("critique", "done", f"{label}: {critique_summary}")
                 break
@@ -368,17 +402,25 @@ class AgentPipeline:
         result.run_id = run_id
         state = AgentState(config=config, data_store=get_data_store())
 
-        def emit(step_id: str, status: str, detail: str = ""):
-            emit_fn(run_id, step_id, status, detail)
+        def emit(step_id: str, status: str, detail: str = "", **fields):
+            # **fields carries structured data (agent, duration_ms, tokens, counts) to the UI so it
+            # renders numbers instead of regex-scraping them out of `detail`.
+            emit_fn(run_id, step_id, status, detail, **fields)
 
         emit("agent", "running", "Pipeline starting — 4-agent workflow...")
-        state.api_usage["model"] = _current_model()
+        state.api_usage["model"] = _current_model(state)
         try:
             self._pick_questions(state, emit)
             revision_round = self._evaluate_and_gate(state, emit)
             result = self._build_result(state, config, run_id, revision_round)
+            # Structured totals so the client doesn't have to parse this sentence to learn them.
             emit("complete", "done",
-                 f"Done! {state.total_questions} questions, {len(state.tool_log)} total tool calls, {revision_round} revision(s)")
+                 f"Done! {state.total_questions} questions, {len(state.tool_log)} total tool calls, "
+                 f"{revision_round} revision(s)",
+                 questions=state.total_questions, tool_calls=len(state.tool_log),
+                 revisions=revision_round, usage=dict(state.api_usage),
+                 score=result.quality_report.composite_score if result.quality_report else None,
+                 verdict=result.quality_report.pass_fail if result.quality_report else None)
         except Exception as exc:
             import traceback
             traceback.print_exc()
@@ -393,11 +435,13 @@ class AgentPipeline:
         result.run_id = run_id
         state = AgentState(config=config, data_store=get_data_store())
 
-        def emit(step_id: str, status: str, detail: str = ""):
-            emit_fn(run_id, step_id, status, detail)
+        def emit(step_id: str, status: str, detail: str = "", **fields):
+            # **fields carries structured data (agent, duration_ms, tokens, counts) to the UI so it
+            # renders numbers instead of regex-scraping them out of `detail`.
+            emit_fn(run_id, step_id, status, detail, **fields)
 
         emit("agent", "running", "Preview mode — picking questions (quality gate deferred)...")
-        state.api_usage["model"] = _current_model()
+        state.api_usage["model"] = _current_model(state)
         try:
             self._pick_questions(state, emit)
             result.curated_output = state.to_curated_output()
@@ -419,16 +463,22 @@ class AgentPipeline:
         result = PipelineResult()
         result.run_id = run_id
 
-        def emit(step_id: str, status: str, detail: str = ""):
-            emit_fn(run_id, step_id, status, detail)
+        def emit(step_id: str, status: str, detail: str = "", **fields):
+            # **fields carries structured data (agent, duration_ms, tokens, counts) to the UI so it
+            # renders numbers instead of regex-scraping them out of `detail`.
+            emit_fn(run_id, step_id, status, detail, **fields)
 
         emit("agent", "running", "Resuming — quality evaluation & gate...")
-        state.api_usage.setdefault("model", _current_model())
+        state.api_usage.setdefault("model", _current_model(state))
         try:
             revision_round = self._evaluate_and_gate(state, emit)
             result = self._build_result(state, state.config, run_id, revision_round)
             emit("complete", "done",
-                 f"Done! {state.total_questions} questions, {revision_round} revision(s)")
+                 f"Done! {state.total_questions} questions, {revision_round} revision(s)",
+                 questions=state.total_questions, revisions=revision_round,
+                 usage=dict(state.api_usage),
+                 score=result.quality_report.composite_score if result.quality_report else None,
+                 verdict=result.quality_report.pass_fail if result.quality_report else None)
         except Exception as exc:
             import traceback
             traceback.print_exc()
@@ -576,8 +626,35 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     if _web_note:
         notes.insert(0, _web_note)
 
+    # Quality-gate outcome. These used to exist only in the SSE log, so a force-passed set could
+    # display a clean "Pass" — the reviewer had no way to know the gate had objected.
+    gate_issues = list(getattr(state, "gate_issues", None) or [])
+    if getattr(state, "gate_forced", False):
+        notes.insert(0, f"⚠ Quality gate did NOT pass this set — shipped after "
+                        f"{revision_round} revision attempt(s) with {len(gate_issues)} unresolved "
+                        f"issue(s). {getattr(state, 'gate_summary', '') or ''}".strip())
+    if getattr(state, "submit_forced", False):
+        notes.insert(0, "⚠ The evaluation agent never submitted a final set — the pipeline selected "
+                        "and trimmed it directly. Ranking is applied, but the agent's own "
+                        "coverage/difficulty checks did not run.")
+    if not getattr(state, "relevance_scored", True):
+        notes.insert(0, "⚠ The relevance judge failed for every batch — NOTHING in this set was "
+                        "actually scored for topical fit. Treat it as unvalidated.")
+    # A phase that died on an API error used to leave no trace in the report, so a retrieval outage
+    # was indistinguishable from "this session genuinely has few questions".
+    for err in (getattr(state, "phase_errors", None) or []):
+        notes.insert(0, f"⚠ A pipeline stage failed and was skipped — {err}. This set is incomplete.")
+
+    # A gate that objected, an unscored set, or a set the agent never submitted cannot be a "pass",
+    # however good the independent metrics look.
+    if (getattr(state, "gate_forced", False) or not getattr(state, "relevance_scored", True)
+            or getattr(state, "phase_errors", None)):
+        passed = False
+
+    from src.models import FlaggedQuestion
     return QualityReport(
         composite_score=composite,
+        flagged_questions=[FlaggedQuestion.from_gate(i) for i in gate_issues],
         metric_scores={
             # Scored into the composite (all independent of the selector):
             "outcome_coverage": coverage_score,

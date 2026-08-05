@@ -55,6 +55,9 @@ MODEL_OPTIONS = [
 # OpenRouter
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# Per-request timeout. The OpenAI SDK's default is 600s, long enough for one wedged call to hold a
+# run — and its SSE stream — open for ten minutes.
+LLM_TIMEOUT_SECONDS = float(os.getenv("LLM_TIMEOUT_SECONDS", "120"))
 
 # Question constraints
 MIN_QUESTIONS = 5

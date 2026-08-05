@@ -133,10 +133,23 @@ def understand_session(session_names: list[str], data_store: DataStore) -> Sessi
 
 
 def _resolve_single(name: str, data_store: DataStore) -> SessionContext:
-    """Resolve one session to a SessionContext using its own content, then apply any curated override."""
+    """Resolve one session to a SessionContext using its own content, then apply any curated override.
+
+    A failed LLM resolution falls back to the knowledge graph rather than yielding a context with
+    empty outcomes. An empty context is worse than a coarse one: outcomes ground retrieval, the
+    session-fit gate and the relevance judge, so a run with none of them silently produces nothing
+    on-topic while still reporting success.
+    """
     if data_store.get_session_content(name):
         # Reading material is primary: extract only KPs that are directly taught.
-        context = _from_llm([name], name, data_store)
+        try:
+            context = _from_llm([name], name, data_store)
+        except Exception as exc:  # noqa: BLE001 — includes JSONResponseError
+            print(f"[session] LLM resolution failed for {name!r} ({type(exc).__name__}: {exc}); "
+                  f"falling back to the knowledge graph")
+            context = _from_knowledge_graph([name], name, data_store)
+            if not context:
+                raise
     else:
         context = _from_knowledge_graph([name], name, data_store)
         if not context:

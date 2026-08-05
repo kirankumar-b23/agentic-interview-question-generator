@@ -519,15 +519,22 @@ Respond in JSON only:
     diff_by_qid: dict[str, str] = {}
     failed_qids: set[str] = set()   # items in a batch the model failed to score at all (API/parse failure)
     _valid_diff = {"easy": "Easy", "medium": "Medium", "hard": "Hard"}
+    batches_total = batches_ok = 0
     for start in range(0, len(items), RELEVANCE_BATCH_SIZE):
         batch = items[start:start + RELEVANCE_BATCH_SIZE]
+        batches_total += 1
         numbered = [{"n": i + 1, "q": q.content[:600]} for i, (_, q) in enumerate(batch)]
-        result = chat_completion_json(
-            system_prompt=system_prompt,
-            user_prompt=f"Score these {len(numbered)} questions:\n{json.dumps(numbered)}",
-            max_tokens=4096,   # roomy vs a 25-item batch (~30 tokens/item) so JSON never truncates
-            on_usage=_usage_cb(state),
-        )
+        try:
+            result = chat_completion_json(
+                system_prompt=system_prompt,
+                user_prompt=f"Score these {len(numbered)} questions:\n{json.dumps(numbered)}",
+                max_tokens=4096,   # roomy vs a 25-item batch (~30 tokens/item) so JSON never truncates
+                on_usage=_usage_cb(state),
+            )
+        except Exception as exc:  # noqa: BLE001 — one bad batch must not lose the other batches
+            print(f"[relevance] batch {batches_total} failed ({type(exc).__name__}: {exc})")
+            failed_qids.update(q_id for q_id, _ in batch)
+            continue
         batch_scored = 0
         for s in (result.get("scores") or []):
             try:
@@ -546,6 +553,16 @@ Respond in JSON only:
         # they keep a neutral (threshold) score below.
         if batch_scored == 0:
             failed_qids.update(q_id for q_id, _ in batch)
+        else:
+            batches_ok += 1
+
+    # A partial failure is survivable — the neutral default below keeps those candidates in play.
+    # A TOTAL failure is not: every candidate would be kept at the threshold score, the relevance
+    # filter would remove nothing, and the run would report a clean pass having never checked topical
+    # fit at all. Record it so the quality gate fails and the report says so.
+    state.relevance_scored = batches_ok > 0 or batches_total == 0
+    if not state.relevance_scored:
+        print(f"[relevance] ALL {batches_total} batch(es) failed — the set was never scored")
 
     from src.config import RELEVANCE_THRESHOLD, RELEVANCE_FLOOR
     THRESHOLD = RELEVANCE_THRESHOLD

@@ -42,19 +42,52 @@ export const api = {
 
   getResult: (runId) => fetch(`/api/result/${runId}`).then(j),
 
-  approve: (runId, acceptedIds, rejectedFeedback, action) =>
+  // `decisionsSent` tells the server the reviewer made explicit per-question decisions. Without it
+  // an empty acceptedIds is ambiguous, and the server used to read "accepted nothing" as
+  // "no filter requested" — exporting and banking every rejected question.
+  approve: (runId, acceptedIds, rejectedFeedback, action, decisionsSent = true) =>
     fetch(`/api/approve/${runId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accepted_ids: acceptedIds, rejected_feedback: rejectedFeedback, action }),
+      body: JSON.stringify({
+        accepted_ids: acceptedIds,
+        rejected_feedback: rejectedFeedback,
+        action,
+        decisions_sent: decisionsSent,
+      }),
     }).then(j),
 
+  /**
+   * Subscribe to a run's progress stream.
+   *
+   * EventSource reconnects on its own after a network drop, but it cannot tell a dropped connection
+   * from a server that finished and closed — so the old code reported "Stream disconnected" on every
+   * successful run, and reconnected forever into an empty queue. Here:
+   *   - terminal events (`complete` / `error`) close the stream deliberately, so no retry storm;
+   *   - anything else that closes it is a real drop, and the server replays missed events on
+   *     reconnect (see orchestrator.get_history), so the transcript survives a tab reload;
+   *   - `heartbeat` frames are swallowed — they exist only to keep the connection warm.
+   */
   stream: (runId, onEvent) => {
+    let closed = false
     const es = new EventSource(`/api/stream/${runId}`)
-    es.onmessage = (e) => {
-      try { onEvent(JSON.parse(e.data)) } catch {}
+
+    const finish = () => {
+      if (!closed) { closed = true; es.close() }
     }
-    es.onerror = () => onEvent({ step: 'stream_error', status: 'error', detail: 'Stream disconnected' })
-    return es
+
+    es.onmessage = (e) => {
+      let ev
+      try { ev = JSON.parse(e.data) } catch { return }
+      if (ev.step === 'heartbeat') return
+      onEvent(ev)
+      if (ev.step === 'complete' || ev.step === 'error') finish()
+    }
+    es.onerror = () => {
+      // A close we initiated, or one after the run already ended, is not an error.
+      if (closed || es.readyState === EventSource.CLOSED) return
+      onEvent({ step: 'reconnecting', status: 'running', detail: 'Connection lost — reconnecting…' })
+    }
+    return { close: finish }
   },
 }

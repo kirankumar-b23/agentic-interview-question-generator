@@ -16,10 +16,11 @@ from src.models import (
 )
 from src.data_loader import DataStore, get_data_store
 from src.llm_client import get_client, chat_completion_json
-from src.config import LLM_MODEL, MAX_TOOL_CALLS, MIN_QUESTIONS, MAX_QUESTIONS
+from src.config import FINAL_SET_CAP, MIN_QUESTIONS
 from src.tools import TOOL_SCHEMAS, TOOL_DISPATCH
 
-MAX_REVISION_ROUNDS = 2
+# NOTE: the live revision-round limit is pipeline.MAX_REVISION_ROUNDS. A duplicate constant used to
+# sit here, unused, where it could silently diverge from the one that actually applies.
 
 
 # ── Agent State ─────────────────────────────────────────────────────────────
@@ -35,7 +36,20 @@ class AgentState:
     learning_outcomes: list[str] = field(default_factory=list)
     session_context: SessionContext | None = None
     has_bank_questions: bool = True
+    # True once the final set has been SELECTED (ranked + trimmed) by tool_submit_question_set.
+    # Read by pipeline._enforce_submission — if the Evaluation agent never called submit, the
+    # pipeline calls it directly rather than serializing the raw candidate pool.
     submitted: bool = False
+    submit_forced: bool = False    # the pipeline had to submit on the agent's behalf
+    # Quality-gate verdict, carried into QualityReport so it reaches the reviewer instead of
+    # existing only in the SSE log.
+    gate_forced: bool = False          # shipped despite an unresolved gate failure
+    gate_issues: list[dict] = field(default_factory=list)   # unresolved must_fix entries
+    gate_summary: str = ""             # the gate's one-line verdict
+    relevance_scored: bool = True      # False when the relevance judge failed for EVERY batch
+    # Phases that died on an API error. A phase used to fail silently and let the run continue with a
+    # partial pool, so a retrieval outage looked like "this session just has few questions".
+    phase_errors: list[str] = field(default_factory=list)
     dedup_removed: int = 0
     removed: list[dict] = field(default_factory=list)  # rejected questions {content, reason, stage, ...}
     removed_by_relevance: int = 0
@@ -139,56 +153,142 @@ EmitFn = Callable[[str, str, str, str], None]
 
 # ── Critique Gate ───────────────────────────────────────────────────────────
 
+def _deterministic_gate_issues(state: AgentState) -> list[dict]:
+    """Gate checks that don't need an LLM — run first, because they are exact and free.
+
+    The previous gate asked the model for all of its checks, and the only three it asked about
+    (off-domain, near-identical wording, too-few) were each already enforced deterministically
+    upstream, so it contributed no signal. These are the checks nothing else makes.
+    """
+    from src.quality import is_quality_question
+
+    issues: list[dict] = []
+    questions = list(state.questions.values())
+    total = len(questions) + len(state.coding_questions)
+    min_q = getattr(state.config, "min_questions", MIN_QUESTIONS) or MIN_QUESTIONS
+    max_q = min(getattr(state.config, "max_questions", None) or FINAL_SET_CAP, FINAL_SET_CAP)
+
+    if total < min_q:
+        issues.append({"id": None, "issue": "too-few",
+                       "suggestion": f"Only {total} question(s); this run asked for at least {min_q}. "
+                                     f"The on-topic pool was too thin — do NOT remove more."})
+    # Nothing else checks the upper bound. If selection didn't run, this is what catches it.
+    if total > max_q:
+        issues.append({"id": None, "issue": "too-many",
+                       "suggestion": f"{total} questions exceeds the requested {max_q} — the set was "
+                                     f"never trimmed. Re-run submit_question_set."})
+    # A total relevance-judge failure leaves every candidate at the neutral default score, which
+    # otherwise looks like a clean pass.
+    if not state.relevance_scored:
+        issues.append({"id": None, "issue": "unscored",
+                       "suggestion": "The relevance judge failed for every batch, so nothing in this "
+                                     "set was actually scored for topical fit."})
+    # Form garbage — page headings, fragments, blog titles. The bank is gated at build time, but
+    # web-harvested candidates reach here too.
+    for q in questions:
+        if not is_quality_question(q.content):
+            issues.append({"id": q.question_id, "issue": "malformed",
+                           "suggestion": "Not a well-formed standalone interview question "
+                                         "(heading, title or fragment) — remove it."})
+    # Per-session representation for a combined run: a session contributing nothing means the
+    # reviewer gets a set that doesn't cover what they selected.
+    selected = [s for s in (getattr(state.config, "session_names", None) or []) if s]
+    if len(selected) > 1:
+        covered = {q.session for q in questions if q.session}
+        missing = [s for s in selected if s not in covered]
+        # Only flag when attribution actually ran; an all-None `session` field means it didn't.
+        if covered and missing:
+            issues.append({"id": None, "issue": "session-gap",
+                           "suggestion": f"No questions represent: {', '.join(missing)}."})
+    return issues
+
+
 def _critique_question_set(state: AgentState) -> dict:
-    """LLM critiques the final set. Returns pass/fail + must_fix list."""
+    """Quality gate over the final set. Returns {pass, must_fix, summary}.
+
+    Deterministic checks run first (`_deterministic_gate_issues`); the LLM is asked only about the
+    things that genuinely need judgement — off-domain drift and semantic duplicates.
+
+    Fails CLOSED: an unparseable or errored critique returns `pass=False`. It used to be read via
+    `.get("pass", True)` against a `{}` returned on any failure, so every LLM hiccup became a
+    silent approval.
+    """
+    if not state.questions and not state.coding_questions:
+        return {"pass": False, "must_fix": [{"id": None, "issue": "empty",
+                                             "suggestion": "The set is empty."}],
+                "summary": "No questions were produced."}
+
+    issues = _deterministic_gate_issues(state)
+
     if not state.session_context:
-        return {"pass": True, "must_fix": []}
+        # Without a resolved session there is nothing to judge topical fit against; report what the
+        # deterministic checks found rather than claiming a pass.
+        return {"pass": not issues, "must_fix": issues,
+                "summary": "No session context — only structural checks ran."}
 
     outcomes = "\n".join(f"- {o}" for o in state.session_context.learning_outcomes)
     topics = ", ".join(getattr(state.session_context, "interview_topics", None) or []) or "(same as outcomes)"
-    q_list = [{"id": q.question_id, "content": q.content[:200], "difficulty": q.difficulty}
+    q_list = [{"id": q.question_id, "content": q.content[:400], "difficulty": q.difficulty}
               for q in state.questions.values()]
     cq_list = [{"id": q.id, "title": q.title, "difficulty": q.difficulty}
                for q in state.coding_questions.values()]
 
-    result = chat_completion_json(
-        system_prompt=f"""You are a quality gate for interview question sets.
+    try:
+        result = chat_completion_json(
+            system_prompt=f"""You are a quality gate for interview question sets. Judge ONLY the two
+things below — structural checks (set size, form, coverage) already ran separately.
 
 Session: {state.session_context.session_name}
 Learning Outcomes:
 {outcomes}
-Interview Topics (transferable concepts this session prepares for — questions testing these are ON-topic
-even if they don't name the specific tool/product used in the session): {topics}
+Interview Topics (transferable concepts this session prepares for — a question testing one of these
+is ON-topic even if it doesn't name the specific tool or product used in the session): {topics}
 
-Check ONLY these hard failures — only flag something if it is CLEARLY wrong:
-1. A question is from a completely different domain (e.g. a SQL question in an AI agents session).
-   A question about one of the Interview Topics is NOT a different domain — do not flag it.
-2. Two questions are near-identical duplicates (same wording, not just same topic)
-3. Total set has fewer than {MIN_QUESTIONS} questions
+1. OFF-DOMAIN — the question tests a different technology or domain than this session teaches.
+   Judge against the outcomes and interview topics above. A question that is broad but still about
+   this session's subject matter is NOT off-domain. Flag a question that would make a reviewer ask
+   "why is this here?" — for example a SQL-joins question in an AI-agents session, or a generic
+   "describe a project you built" question in any session.
+2. DUPLICATE — two questions test the same thing. Include REWORDINGS, not just identical wording:
+   "What are the parts of an agent?" and "What are an AI agent's core components?" are duplicates.
+   Flag the weaker of the pair.
 
-DO NOT flag questions as off-topic just because they don't match a specific outcome word-for-word.
-Questions that are topically related to the session's subject area should PASS.
-If the set looks reasonable, return pass=true with an empty must_fix list.
+Flag what is genuinely wrong. Do not invent problems to look thorough, and do not pass a set you
+would not hand to an interviewer.
 
 Respond in JSON:
 {{
     "pass": true/false,
-    "must_fix": [
-        {{"id": "...", "issue": "off-topic / duplicate / too-few", "suggestion": "..."}}
-    ],
+    "must_fix": [{{"id": "...", "issue": "off-domain | duplicate", "suggestion": "..."}}],
     "summary": "One-line overall verdict"
 }}""",
-        user_prompt=f"Theory questions:\n{json.dumps(q_list)}\n\nCoding questions:\n{json.dumps(cq_list)}",
-        max_tokens=1500,
-        temperature=0.0,
-        on_usage=lambda u: (
-            state.api_usage.__setitem__("llm_calls", state.api_usage["llm_calls"] + 1),
-            state.api_usage.__setitem__("prompt_tokens", state.api_usage["prompt_tokens"] + (u.prompt_tokens or 0)),
-            state.api_usage.__setitem__("completion_tokens", state.api_usage["completion_tokens"] + (u.completion_tokens or 0)),
-        ),
-    )
+            user_prompt=f"Theory questions:\n{json.dumps(q_list)}\n\nCoding questions:\n{json.dumps(cq_list)}",
+            max_tokens=2000,
+            temperature=0.0,
+            on_usage=lambda u: _record_usage(state, u),
+        )
+    except Exception as exc:  # noqa: BLE001 — includes JSONResponseError
+        issues.append({"id": None, "issue": "gate-error",
+                       "suggestion": f"The quality gate could not run ({type(exc).__name__}). The "
+                                     f"set was NOT checked for off-domain questions or duplicates."})
+        return {"pass": False, "must_fix": issues,
+                "summary": f"Quality gate failed to run: {exc}"}
 
-    return result
+    llm_issues = [i for i in (result.get("must_fix") or []) if isinstance(i, dict)]
+    all_issues = issues + llm_issues
+    return {
+        "pass": not all_issues,
+        "must_fix": all_issues,
+        "summary": result.get("summary", "") or f"{len(all_issues)} issue(s) found.",
+    }
+
+
+def _record_usage(state: AgentState, u) -> None:
+    """Accumulate one LLM call's token usage onto the run."""
+    state.api_usage["llm_calls"] = state.api_usage.get("llm_calls", 0) + 1
+    state.api_usage["prompt_tokens"] = state.api_usage.get("prompt_tokens", 0) + (u.prompt_tokens or 0)
+    state.api_usage["completion_tokens"] = (state.api_usage.get("completion_tokens", 0)
+                                            + (u.completion_tokens or 0))
 
 
 # ── Context Trimming ────────────────────────────────────────────────────────

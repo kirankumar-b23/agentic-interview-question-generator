@@ -129,6 +129,25 @@ def cache_resolution(session_name: str, resolution: dict):
     conn.close()
 
 
+def clear_session_resolution(session_name: str) -> int:
+    """Delete cached resolutions for `session_name`. Returns the number of rows removed.
+
+    Resolutions are keyed by a COMPOSITE string — `"{name}::{reading_material_hash}::ov{overrides}"`
+    (see session_understanding.cache_resolution callers) — so an exact-match DELETE on the bare name
+    matches nothing. The regenerate-after-reject path did exactly that and silently cleared 0 rows,
+    which is why rejecting a set never actually re-derived its outcomes.
+    """
+    conn = get_connection()
+    cur = conn.execute(
+        "DELETE FROM session_resolutions WHERE session_name = ? OR session_name LIKE ?",
+        (session_name, f"{session_name}::%"),
+    )
+    removed = cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+    conn.commit()
+    conn.close()
+    return removed
+
+
 # --- Run History ---
 
 def save_run(run_id: str, session_name: str, question_count: int,

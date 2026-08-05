@@ -250,9 +250,20 @@ class CuratedOutput(BaseModel):
 
 
 class FlaggedQuestion(BaseModel):
-    question_id: str
-    reason: str
-    score: float
+    """An unresolved quality-gate objection, surfaced to the reviewer.
+
+    `question_id` is None for set-level issues (too few/too many questions, an unscored set, a
+    session with no representation) — those aren't attributable to one question.
+    """
+    question_id: str | None = None
+    issue: str                      # off-domain | duplicate | malformed | too-few | too-many | …
+    suggestion: str = ""
+
+    @classmethod
+    def from_gate(cls, raw: dict) -> "FlaggedQuestion":
+        return cls(question_id=raw.get("id"),
+                   issue=str(raw.get("issue") or "unspecified"),
+                   suggestion=str(raw.get("suggestion") or ""))
 
 
 class QualityReport(BaseModel):
