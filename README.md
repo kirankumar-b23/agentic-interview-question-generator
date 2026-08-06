@@ -14,15 +14,23 @@ review-ready set. A human approves; Questor exports.
 ## What it does
 
 - **Understands the session** from its own reading material → learning outcomes + Knowledge Points.
-- **Retrieves real questions** (no LLM-invented questions) from three sources, in order:
-  1. a pre-indexed **question bank** (TF-IDF over ~1,500 company-attributed questions),
-  2. **Tavily web search** across 65+ interview-question domains (Glassdoor, AmbitionBox, Exponent, …) with best-effort company attribution,
-  3. curated **GitHub** interview-question repos.
-- **Validates & de-duplicates** questions against the session's outcomes (lenient, never zeroes a set).
-- **Evaluates** difficulty balance & outcome coverage, adds coding questions for code-heavy sessions, then runs an **LLM quality gate** (up to 2 revision rounds).
+- **Retrieves real questions** (no LLM-invented questions) from two sources, in order:
+  1. a pre-indexed **question bank**, ranked by a **hybrid** of semantic similarity and keyword match,
+  2. **Tavily web search** over an allowlist of interview-question domains (Glassdoor, AmbitionBox,
+     Exponent, …) with best-effort company attribution.
+
+  A GitHub interview-repo source exists but is **off by default** (`GITHUB_ENABLED=0`): those repos are
+  general ML/DS content with no company attribution.
+- **Scores every candidate against the session** — its curated outcomes, interview topics and its own
+  reading material — then filters for relevance and de-duplicates (including rewordings).
+- **Evaluates** difficulty balance & outcome coverage, then runs a **quality gate** (structural checks
+  in code, plus an LLM pass for off-domain drift and duplicates; up to 2 revision rounds).
 - **Human review** in a React UI → **export to Google Sheets** in NxtMock portal format, or **reject → regenerate**.
 
-Questions with no known company are labelled **NIAT**; real companies are shown in UPPERCASE.
+Attribution is honest rather than flattering: a verified company is shown in UPPERCASE, otherwise the
+**source site** it was found on (e.g. `GeeksforGeeks`), and only `NIAT` when neither is known. The
+Sheets export writes a company **only** when one is verified — a source site is provenance, not an
+employer.
 
 ---
 
@@ -34,9 +42,9 @@ Topic (→ its sessions)  +  model  +  question count
         ▼
 ┌──────────────── Agent pipeline (src/pipeline.py) ────────────────┐
 │  1 Understanding  understand_session → outcomes + KPs             │
-│  2 Retrieval      question_bank → Tavily web → GitHub            │
-│  3 Validation     validate_relevance + deduplicate               │
-│  4 Evaluation     difficulty/coverage checks → (coding) → submit │
+│  2 Retrieval      question_bank → Tavily web  (GitHub: opt-in)   │
+│  3 Validation     session-fit → relevance → deduplicate          │
+│  4 Evaluation     difficulty/coverage checks → select final set  │
 │        │                                                          │
 │        ▼  Quality Gate (LLM critique, ≤2 revisions)              │
 └──────────────────────────────────────────────────────────────────┘
@@ -71,7 +79,10 @@ src/
   agent.py                 # AgentState, PipelineResult, quality-gate critique
   tools.py                 # Tool schemas + implementations (generation disabled)
   session_understanding.py # Per-session reading material → SessionContext (+ KG fallback)
-  question_bank.py         # TF-IDF retriever over interview_questions.json
+  question_bank.py         # Hybrid (embedding + keyword) retriever over the question banks
+  human_agreement.py       # Predicted reviewer acceptance from past accept/reject decisions
+  quality.py               # Form gate — is this a well-formed standalone question?
+  rejection_rules.py       # Rejection-reason key → the rule the next run's judge reads
   sources/                 # tavily_search.py (web) + github_repo.py
   llm_client.py            # OpenRouter client + runtime model + credit balance
   sheets_writer.py         # Google Sheets export (OAuth)
@@ -79,7 +90,7 @@ src/
   memory.py                # SQLite: run persistence, history, learned rules
   models.py                # Pydantic models
   config.py                # Models list, paths, constraints
-  orchestrator.py          # SSE progress queue + run_pipeline wrapper
+  orchestrator.py          # Per-run SSE fan-out with replay history + heartbeats
 frontend/                  # React SPA (Vite). Pages: SessionSelector, AddCourse, Progress, Review, History
 data/
   interview_questions.json           # ~1,500 company-attributed questions (TF-IDF bank)
@@ -119,7 +130,7 @@ LLM_MODEL=anthropic/claude-haiku-4-5
 pip install -r requirements.txt
 cd frontend && npm install && npm run build && cd ..
 ```
-The React build lands in `frontend/dist/`, which Flask serves. **Rebuild after any frontend change.**
+The React build lands in `frontend/dist/`, which FastAPI serves. **Rebuild after any frontend change.**
 
 ### 3. (Optional) Rebuild data
 Prebuilt data files are committed, so you can skip this. To regenerate from source:
@@ -135,10 +146,36 @@ uvicorn main:app --port 5000 --reload     # development (auto-restart on edit)
 python3 main.py                           # equivalent to the first form
 ```
 Interactive API docs are served at `/docs`.
-On the first export, a browser OAuth flow authorizes Google Sheets and caches `token.json`
-(or run `python3 scripts/auth_sheets.py` beforehand).
+**Authorize Google Sheets once before your first export:**
+```bash
+python3 scripts/auth_sheets.py     # opens a browser, caches token.json
+```
+The server will not open a browser itself — inside a request that would block a worker thread
+indefinitely waiting for consent on the *server* machine.
 
 ---
+
+## Reviewing a generated set
+
+The review screen is keyboard-first, because an uncapped set can be 40+ questions:
+
+| Key | Action |
+|---|---|
+| `j` / `k` | move the cursor |
+| `a` / `r` | accept / reject |
+| `1`–`7` | give a rejection reason (after `r`) — this is what teaches the pipeline |
+| `u` | undo the decision on this question |
+| `shift`+`A` | accept everything at or above the high-confidence fit threshold |
+| `esc` | clear filters |
+| `?` | show the shortcut list |
+
+Questions are ranked by **session fit** — similarity to that session's learning outcomes and reading
+material — so working top-down and stopping where fit falls off is the intended flow. Filters isolate a
+slice (fit band, difficulty, source, real-company vs source-labelled attribution).
+
+Rejection reasons matter: each one maps to a rule the relevance judge reads on the next run
+(`src/rejection_rules.py`). Rejecting without a reason still suppresses the question, but teaches
+nothing.
 
 ## Usage
 
@@ -169,7 +206,7 @@ OpenRouter credit balance is shown in the sidebar footer.
 
 - **Backend:** Flask (JSON API + SSE), SQLite persistence
 - **Agents/LLM:** OpenRouter (Anthropic / OpenAI models) via the `openai` SDK, tool-use pipeline
-- **Retrieval:** scikit-learn TF-IDF (bank), Tavily API (web), GitHub REST API
+- **Retrieval:** local sentence-transformers embeddings + scikit-learn TF-IDF (hybrid bank ranking), Tavily API (web); GitHub REST API when enabled
 - **Knowledge graph:** networkx (KP prerequisites), Pydantic v2 models
 - **Frontend:** React + Vite (react-router), tokenized light/dark design system
 - **Export:** gspread + google-auth-oauthlib (Google Sheets, OAuth)

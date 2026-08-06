@@ -162,9 +162,18 @@ The happy path is not the risky part. These are load-bearing:
   silent whole-run default).
 - **A dead phase is recorded in `state.phase_errors`** and named in the report. Agent tool-loops are
   retried on transient errors; a swallowed outage used to look like "this session has few questions".
-- **Model comes from the run** (`llm_client.run_model(state)` ← `GenerationConfig.model`). The
-  module-level model is a UI display default ONLY — using it for work made the picker a no-op for
-  agent loops and let concurrent tabs retarget each other.
+- **Model comes from the run** (`llm_client.run_model(state)` ← `GenerationConfig.model`), for the
+  agent tool-loops AND every `chat_completion_json` call (gate, relevance judge, session
+  understanding). `get_active_model()` is a UI display default ONLY. Passing no `model=` to
+  `chat_completion_json` silently falls back to that global — which is how the two most expensive
+  stages kept riding it after the first fix.
+- **`main.py` imports `llm_client` at MODULE level.** Function-local imports there once left
+  `set_active_model` unbound in `api_generate`, so every POST /api/generate was a 500 while the test
+  suite stayed green (every test posted a body that failed validation before reaching the handler).
+  Endpoint tests must post VALID bodies.
+- **Event `seq` is a monotonic counter, not `len(history)`.** Using the length meant every event past
+  `MAX_HISTORY_EVENTS` shared a seq; both consumers dedupe on it, so a long run stopped delivering
+  events and never emitted `complete`.
 - **`/api/result` returns 409 while a run is in flight.** Do not reintroduce a blocking `thread.join`:
   Starlette's threadpool is bounded and a few polling tabs starved every other endpoint.
 - **SSE events are retained per run** (`orchestrator.get_history`) so a reload replays the transcript,
@@ -178,7 +187,13 @@ The happy path is not the risky part. These are load-bearing:
   `AgentTranscript` (grouped per agent, timed, collapsible) from structured SSE fields — not a flat log.
 - `QualityPanel` separates SCORED metrics from reported-only ones and renders `report.critique`. Adding
   `self_relevance` back alongside the scored metrics undoes the point of the scoring work.
-- Review is keyboard-first (`j/k`, `a`, `r`, `1-7`, `u`, `?`).
+- Review is keyboard-first (`j/k`, `a`, `r`, `1-7`, `u`, `shift+A` accept-above-fit, `esc` clear
+  filters, `?` help), with filters by fit band / difficulty / source / attribution. The cursor indexes
+  the FILTERED list and resets when filters change.
+- Bulk actions write explicit per-question decisions so `decisions_sent` stays truthful — an
+  all-rejected or bulk-cleared set must still be refused at export, not read as "no filter requested".
+- Every page uses `<TopBar>` (it renders the `<h1>`). Inline `<header className="topbar">` should stay
+  at zero; there were seven after the component was first written.
 
 ## Dormant: coding questions
 
@@ -188,10 +203,13 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 257 tests, no LLM or network required. Beyond unit coverage:
+`pytest tests/ -q` — 280 tests, no LLM or network required. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,
   including each outage above. This is the cheapest way to check a pipeline change.
 - `tests/test_failure_paths.py` and `tests/test_audit_fixes.py` pin the silent-failure classes.
 - `tests/test_data_integrity.py` checks the shipped `data/` files (missing reading material, bank
   form-garbage, implausible company attribution).
 - A guard that `REJECT_REASONS` in `Review.jsx` matches `src/rejection_rules.py`.
+- `tests/test_audit_fixes.py::TestFixesThatSilentlyDidNotLand` asserts *observable behaviour* for
+  fixes that were once reported as done but never applied (a no-op string replace fails silently, and
+  a commit message is not evidence). Prefer that style over asserting a line of code exists.
