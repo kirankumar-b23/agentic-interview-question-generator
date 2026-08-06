@@ -64,7 +64,7 @@ drives its own topic list in the sidebar. A **preview gate** lets you sanity-che
 session/outcomes before committing a full run, and per-run **usage** (LLM/Tavily calls, tokens,
 cost estimate) is tracked and shown in History.
 
-See **`docs/architecture.html`** (open in a browser) for an interactive diagram.
+See **`CLAUDE.md`** for the architecture, the load-bearing failure paths, and the scoring rationale.
 
 ---
 
@@ -72,7 +72,7 @@ See **`docs/architecture.html`** (open in a browser) for an interactive diagram.
 
 ```
 main.py                    # FastAPI JSON API + serves the React build (uvicorn)
-docs/architecture.html     # Standalone architecture visualization
+docs/                      # deep-research-report.md — source strategy behind the Tavily allowlist
 src/
   pipeline.py              # AgentPipeline — orchestrates the 4 agents + quality gate
   agents/                  # Understanding / Retrieval / Validation / Evaluation agents
@@ -228,7 +228,7 @@ OpenRouter credit balance is shown in the sidebar footer.
 
 ## Tech stack
 
-- **Backend:** Flask (JSON API + SSE), SQLite persistence
+- **Backend:** FastAPI + uvicorn (JSON API + SSE), SQLite persistence
 - **Agents/LLM:** OpenRouter (Anthropic / OpenAI models) via the `openai` SDK, tool-use pipeline
 - **Retrieval:** local sentence-transformers embeddings + scikit-learn TF-IDF (hybrid bank ranking), Tavily API (web); GitHub REST API when enabled
 - **Knowledge graph:** networkx (KP prerequisites), Pydantic v2 models
@@ -241,4 +241,4 @@ OpenRouter credit balance is shown in the sidebar footer.
 
 - **Real questions only** — LLM question *generation* is intentionally disabled; niche topics with little web coverage may return fewer questions.
 - **Google Sheets** requires OAuth on first use; `token.json`, `.env`, and `memory.db` are gitignored.
-- A fresh clone must run `npm run build` before Flask can serve the UI.
+- A fresh clone must run `npm run build` before FastAPI can serve the UI (`frontend/dist/` is gitignored).
