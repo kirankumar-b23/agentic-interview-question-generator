@@ -150,7 +150,9 @@ def main() -> int:
     print(f"  dropped (form-quality):     {dropped_form}")
     print(f"  dropped (duplicates):       {dup_removed}")
     print(f"  companies re-blanked:       {reblanked}")
-    print(f"  with real company: {withco}  | source-site/NIAT: {len(cleaned_bank) - withco}")
+    # "unattributed", not "source-site": attribution no longer borrows the site name for a row with
+    # no company (see models.attribution_label) — those rows surface as NIAT.
+    print(f"  with real company: {withco}  | unattributed (NIAT): {len(cleaned_bank) - withco}")
     print(f"  sources: {dict(Counter(q.get('source') for q in cleaned_bank))}")
     print(f"  difficulty: {dict(Counter(q.get('difficulty') for q in cleaned_bank))}")
 

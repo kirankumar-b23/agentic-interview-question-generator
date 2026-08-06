@@ -200,6 +200,15 @@ def is_quality_question(text: str) -> bool:
     # Short lines must open like a question/task; a short noun phrase ("The code quality?") is a scrap.
     if len(words) < _SHORT_WORDS and not t.lower().startswith(_SHORT_OK_STARTS):
         return False
+    # SENTENCE CONTINUATION: opens lowercase and never asks anything — the clause was split off a
+    # larger sentence, so its subject is in the half that got left behind ("how you would apply them
+    # in a Generative AI solution.", "why it matters.", "when you would set it to 0."). A live run
+    # shipped "how you would iteratively improve prompts and guards to increase reliability." this way.
+    # Requiring the missing "?" is what keeps it safe: 37 bank rows open lowercase and DO end in "?"
+    # ("what is the attention mechanism?") — those are real questions that merely lost their capital,
+    # and they all survive. Of the 29 this rejects, none was a genuine question.
+    if t[:1].islower() and not t.endswith("?"):
+        return False
     if _looks_like_heading(t):                # "How MCP Works Internally" → heading, not a question
         return False
     if _looks_like_article_title(t):          # "Build Human-Like AI Voice App with Gemini …" → title
