@@ -323,11 +323,17 @@ def append_learned_rule(rule: str) -> bool:
     return True
 
 
-def distill_rule(session_name: str, reason: str) -> str:
-    """Use LLM to distil a rejection reason into a reusable validation rule."""
+def distill_rule(session_name: str, reason: str, model: str | None = None) -> str:
+    """Distil a free-text rejection reason into a reusable validation rule.
+
+    `model` is optional and defaults to the UI's current selection. Unlike the pipeline stages, this is
+    a single short call triggered by a human clicking Reject — there is no run to inherit a model from,
+    so the UI default is the correct source here.
+    """
     from src.llm_client import chat_completion_json
     try:
         result = chat_completion_json(
+            model=model,
             system_prompt="You convert interview question rejection reasons into reusable validation rules.",
             user_prompt=(
                 f'A reviewer rejected an interview question for a session on "{session_name}" '

@@ -71,10 +71,9 @@ MAX_QUESTIONS = 60
 BANK_POOL_CAP = 150       # curated interview data
 WEB_POOL_CAP = 120        # fresh company-attributed questions (Tavily)
 GITHUB_POOL_CAP = 30      # curated GitHub repos (disabled by default)
-# Overall cost guard on candidates reaching the (LLM-scored) relevance stage.
-# NOTE: nothing reads this today — the per-source caps above are what actually bound the pool. Kept as
-# the intended knob, but treat it as inert until a caller uses `pool_target()`.
-CANDIDATE_POOL_TARGET = 300
+# NOTE: a CANDIDATE_POOL_TARGET / pool_target() pair used to sit here as an "overall pool cost guard".
+# Nothing ever read it, and its only apparent consumer (AgentState.remaining_capacity) was itself dead
+# and fed a phantom key into the progress summary. The pool is bounded by the per-source caps above.
 RELEVANCE_BATCH_SIZE = 25  # candidates scored per LLM call in validate_relevance (smaller → no JSON truncation)
 # Keep candidates scoring at/above this relevance; below → dropped (min-floor still applies).
 # 0.5 (not 0.6) because the scorer rates good foundational questions ~0.55–0.75; a stricter
@@ -173,9 +172,6 @@ EMBED_COVERAGE_THRESHOLD = float(os.getenv("EMBED_COVERAGE_THRESHOLD", "0.30")) 
 DEFAULT_DIFFICULTY_DISTRIBUTION = {"easy": 0.3, "medium": 0.5, "hard": 0.2}
 
 
-def pool_target(max_questions: int) -> int:
-    """Total candidate-pool ceiling before relevance ranking — never below max_questions."""
-    return max(CANDIDATE_POOL_TARGET, max_questions or 0)
 DEDUP_THRESHOLD = 0.85            # TF-IDF cosine (fallback path / cross-run dedup)
 # Semantic (embeddings) near-duplicate threshold for within-run dedup. TF-IDF misses REWORDED dupes
 # ("What are LLMs?" vs "What are Large Language Models in AI?"); embeddings catch them. 0.82 collapses

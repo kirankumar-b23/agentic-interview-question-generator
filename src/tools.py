@@ -21,7 +21,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from src.models import QuestionDetail, CodingQuestion
-from src.llm_client import chat_completion_json
+from src.llm_client import chat_completion_json, run_model
 
 
 def _usage_cb(state: "AgentState"):
@@ -227,7 +227,8 @@ def tool_understand_session(state: AgentState) -> dict:
     """Step 1: LLM reads session RM, extracts outcomes, maps to KPs."""
     from src.session_understanding import understand_session
 
-    context = understand_session(state.config.session_names, state.data_store)
+    context = understand_session(state.config.session_names, state.data_store,
+                                 model=run_model(state))
     state.session_context = context
     state.learning_outcomes = context.learning_outcomes
 
@@ -249,22 +250,30 @@ def tool_understand_session(state: AgentState) -> dict:
     interview_queries = [f"{q} interview" for q in concept_queries[:3]]
     all_queries = (concept_queries + interview_queries)[:8]
 
-    # Probe the bank with the top query to estimate coverage for this session
+    # Probe the bank to see whether it covers this session at all.
+    #
+    # This reports a MEASURED count, not an extrapolation. It used to return
+    # `len(probe) * min(len(all_queries), 5)` — a 5-result probe multiplied by the query count — and
+    # present that invented number to the model as `"Bank has ~N+ potential matches"`. The model has no
+    # way to know it was fabricated, so it planned its retrieval against a figure nobody measured.
     has_bank_questions = False
-    estimated_bank_count = 0
+    probe_hits = 0
+    probe_limit = 25
     if all_queries:
         from src.question_bank import get_retriever_for
         retriever = get_retriever_for(getattr(state.config, "category", None))
-        probe = retriever.search(all_queries[0], limit=5)
-        estimated_bank_count = len(probe) * min(len(all_queries), 5)
-        has_bank_questions = len(probe) > 0
+        probe = retriever.search(all_queries[0], limit=probe_limit)
+        probe_hits = len(probe)
+        has_bank_questions = probe_hits > 0
 
     state.has_bank_questions = has_bank_questions
 
     bank_hint = (
-        f"Bank has ~{estimated_bank_count}+ potential matches for this session."
+        f"The bank returned {probe_hits} match(es) for the FIRST query alone"
+        + (f" (probe capped at {probe_limit}, so there may be more)." if probe_hits >= probe_limit
+           else ". Other queries may match different questions.")
         if has_bank_questions
-        else "Bank may have few/no questions for this topic — prioritise search_github_questions and search_web_questions after bank searches."
+        else "The bank returned nothing for the first query — it is likely thin for this topic, so lean on search_web_questions."
     )
 
     return {
@@ -280,7 +289,8 @@ def tool_understand_session(state: AgentState) -> dict:
         ],
         "suggested_search_queries": all_queries,
         "has_bank_questions": has_bank_questions,
-        "estimated_bank_question_count": estimated_bank_count,
+        # Measured hits for the first query only — deliberately NOT an estimate of total coverage.
+        "bank_probe_hits": probe_hits,
         "instruction": f"Use suggested_search_queries for search_question_bank. {bank_hint}",
     }
 
@@ -526,6 +536,7 @@ Respond in JSON only:
         numbered = [{"n": i + 1, "q": q.content[:600]} for i, (_, q) in enumerate(batch)]
         try:
             result = chat_completion_json(
+                model=run_model(state),      # the run's model, not the UI global
                 system_prompt=system_prompt,
                 user_prompt=f"Score these {len(numbered)} questions:\n{json.dumps(numbered)}",
                 max_tokens=4096,   # roomy vs a 25-item batch (~30 tokens/item) so JSON never truncates

@@ -15,7 +15,7 @@ from src.models import (
     CuratedOutput, CurationMetadata, QualityReport, FlaggedQuestion,
 )
 from src.data_loader import DataStore, get_data_store
-from src.llm_client import get_client, chat_completion_json
+from src.llm_client import chat_completion_json, get_client, run_model
 from src.config import FINAL_SET_CAP, MIN_QUESTIONS
 from src.tools import TOOL_SCHEMAS, TOOL_DISPATCH
 
@@ -92,11 +92,6 @@ class AgentState:
     @property
     def total_questions(self) -> int:
         return len(self.questions) + len(self.coding_questions)
-
-    @property
-    def remaining_capacity(self) -> int:
-        from src.config import pool_target
-        return pool_target(self.config.max_questions) - self.total_questions
 
     @property
     def source_counts(self) -> dict[str, int]:
@@ -223,7 +218,14 @@ def _critique_question_set(state: AgentState) -> dict:
                                              "suggestion": "The set is empty."}],
                 "summary": "No questions were produced."}
 
-    issues = _deterministic_gate_issues(state)
+    # Guarded: an exception in the structural checks used to escape all the way to pipeline.run's
+    # handler and abort the whole run. The gate failing is not a reason to lose the question set —
+    # report it as an unresolved gate issue and let the reviewer decide.
+    try:
+        issues = _deterministic_gate_issues(state)
+    except Exception as exc:  # noqa: BLE001
+        issues = [{"id": None, "issue": "gate-error",
+                   "suggestion": f"Structural checks could not run ({type(exc).__name__}: {exc})."}]
 
     if not state.session_context:
         # Without a resolved session there is nothing to judge topical fit against; report what the
@@ -240,6 +242,10 @@ def _critique_question_set(state: AgentState) -> dict:
 
     try:
         result = chat_completion_json(
+            # The RUN's model, not the process-wide UI default. Without this the gate — one of the
+            # two most expensive stages — rode the global that a second browser tab could retarget
+            # mid-run, and billed tokens against a model the run never chose.
+            model=run_model(state),
             system_prompt=f"""You are a quality gate for interview question sets. Judge ONLY the two
 things below — structural checks (set size, form, coverage) already ran separately.
 
@@ -332,7 +338,7 @@ def _summarize_result(tool_name: str, result: dict) -> str:
 
     summaries = {
         "understand_session": lambda r: f"{r.get('session_type','')} session — {len(r.get('learning_outcomes',[]))} outcomes, {len(r.get('matched_kps',[]))} KPs",
-        "search_question_bank": lambda r: f"Found {r.get('found', 0)} relevant (total: {r.get('total_accumulated', 0)}, remaining: {r.get('remaining_capacity', '?')})",
+        "search_question_bank": lambda r: f"Found {r.get('found', 0)} relevant (total: {r.get('total_accumulated', 0)}, bank quota left: {r.get('bank_remaining', '?')})",
         "validate_relevance": lambda r: f"Kept {r.get('kept', 0)}, removed {r.get('removed', 0)} irrelevant",
         "deduplicate_questions": lambda r: f"Kept {r.get('kept', 0)}, removed {r.get('removed', 0)} duplicates",
         "check_difficulty_balance": lambda r: f"E:{r.get('counts',{}).get('Easy',0)} M:{r.get('counts',{}).get('Medium',0)} H:{r.get('counts',{}).get('Hard',0)} {'OK' if r.get('balanced') else 'Fix'}",

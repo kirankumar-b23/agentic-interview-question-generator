@@ -159,3 +159,96 @@ class TestRetrievalPromptMatchesAvailableTools:
         prompt = RetrievalAgent().get_system_prompt(_state())
         expected = "all three sources" if len(_TOOL_NAMES) >= 3 else "both sources"
         assert expected in prompt
+
+
+class TestFixesThatSilentlyDidNotLand:
+    """Guards for changes that were REPORTED as done but never applied.
+
+    A string-replace that matches nothing fails silently, and a commit message is not evidence. Each
+    of these asserts the observable behaviour rather than the presence of a line of code.
+    """
+
+    def test_bank_search_summary_shows_a_real_number(self):
+        """It read `remaining_capacity`; the tool returns `bank_remaining`, so it always printed "?"."""
+        from src.agent import _summarize_result
+        out = _summarize_result("search_question_bank",
+                                {"found": 8, "total_accumulated": 64, "bank_remaining": 86})
+        assert "86" in out and "?" not in out
+
+    def test_dead_capacity_property_is_gone(self):
+        from src.agent import AgentState
+        assert not hasattr(AgentState, "remaining_capacity")
+
+    def test_pool_target_knob_is_retired(self):
+        """It looked like a live cost guard and nothing read it."""
+        import src.config as cfg
+        assert not hasattr(cfg, "pool_target")
+        assert not hasattr(cfg, "CANDIDATE_POOL_TARGET")
+
+    def test_understand_session_reports_measured_hits_not_an_estimate(self):
+        """It multiplied a 5-result probe by the query count and presented that as bank coverage."""
+        import inspect
+        import src.tools as tools
+        src = inspect.getsource(tools.tool_understand_session)
+        assert "estimated_bank_question_count" not in src
+        assert "bank_probe_hits" in src
+
+    def test_too_few_verdict_does_not_tell_the_agent_to_remove_more(self):
+        """The revision prompt said "use remove_question" for every issue, including too-few."""
+        from src.agents import EvaluationAgent
+        from src.agent import AgentState
+        from src.data_loader import get_data_store
+        from src.models import GenerationConfig
+
+        st = AgentState(config=GenerationConfig(session_names=["S"], max_questions=8),
+                        data_store=get_data_store())
+        st.session_context = _state().session_context
+        st.revision_notes = [{"id": None, "issue": "too-few", "suggestion": "only 2 questions"}]
+        prompt = EvaluationAgent().get_system_prompt(st)
+        assert "Do NOT remove anything" in prompt
+        assert "reserve" in prompt.lower(), "the agent must be told submit backfills from the reserve"
+
+
+class TestSeqIsMonotonic:
+    """`seq = len(history)` collapsed to a constant once the history was trimmed, and both consumers
+    de-duplicate on seq — so a long run would stop delivering events entirely."""
+
+    def test_seq_is_unique_and_increasing_past_the_cap(self, monkeypatch):
+        import src.orchestrator as orch
+        monkeypatch.setattr(orch, "MAX_HISTORY_EVENTS", 5)
+        rid = "seq-monotonic-test"
+        try:
+            for i in range(12):
+                orch._emit(rid, f"s{i}", "done", "")
+            seqs = [e["seq"] for e in orch.get_history(rid)]
+            assert len(seqs) == len(set(seqs)), f"duplicate seq values: {seqs}"
+            assert seqs == sorted(seqs)
+        finally:
+            orch._emit(rid, "complete", "done", "")
+            orch.cleanup_progress(rid)
+
+    def test_replay_after_a_seq_returns_only_newer_events(self, monkeypatch):
+        import src.orchestrator as orch
+        rid = "seq-replay-test"
+        try:
+            for i in range(5):
+                orch._emit(rid, f"s{i}", "done", "")
+            newer = [e["step"] for e in orch.get_history(rid, after_seq=2)]
+            assert newer == ["s3", "s4"]
+        finally:
+            orch._emit(rid, "complete", "done", "")
+            orch.cleanup_progress(rid)
+
+
+class TestGateNeverAbortsTheRun:
+    def test_structural_check_failure_becomes_a_gate_issue(self, monkeypatch):
+        """An exception in the structural checks used to escape and abort the whole run."""
+        import src.agent as agent_mod
+        monkeypatch.setattr(agent_mod, "_deterministic_gate_issues",
+                            lambda state: (_ for _ in ()).throw(RuntimeError("boom")))
+        monkeypatch.setattr(agent_mod, "chat_completion_json",
+                            lambda **kw: {"pass": True, "must_fix": [], "summary": "ok"})
+        st = _state(contents=["What are the core components of an AI agent?"])
+        verdict = agent_mod._critique_question_set(st)
+        assert verdict["pass"] is False
+        assert any(i["issue"] == "gate-error" for i in verdict["must_fix"])

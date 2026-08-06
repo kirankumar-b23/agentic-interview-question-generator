@@ -40,6 +40,11 @@ from pydantic import BaseModel, Field
 from src import memory
 from src.agent import PipelineResult
 from src.data_loader import get_data_store
+# Imported at module level on purpose. These used to be function-local imports inside api_meta and
+# api_usage, while api_generate called set_active_model() with no import in scope — so every
+# POST /api/generate raised NameError and returned 500. Keep them here so a caller cannot be added
+# without the name being bound.
+from src.llm_client import get_active_model, get_credit_balance, set_active_model
 from src.models import GenerationConfig
 from src.orchestrator import (cleanup_progress, finalize_pipeline, get_history, get_progress_queue,
                               is_finished, prune_finished, run_pipeline, run_preview_pipeline)
@@ -244,7 +249,6 @@ def _prune_run_state() -> None:
 def api_meta():
     """Runtime info for the UI: active model, selectable models, credit balance, bank size."""
     from src.config import MODEL_OPTIONS
-    from src.llm_client import get_active_model, get_credit_balance
     try:
         from src.question_bank import get_retriever
         stats = get_retriever().get_stats()
@@ -743,7 +747,6 @@ def api_history():
 def api_usage():
     """Workflow usage aggregated across persisted runs, plus real OpenRouter key spend."""
     from src.config import estimate_cost
-    from src.llm_client import get_credit_balance
     totals = {"runs": 0, "llm_calls": 0, "prompt_tokens": 0,
               "completion_tokens": 0, "tavily_calls": 0, "est_cost": 0.0}
     for r in memory.get_run_history(limit=1000):

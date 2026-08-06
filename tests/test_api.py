@@ -8,8 +8,15 @@ port. These tests pin the parts that would fail silently in the browser:
   * unknown non-API paths must serve the SPA so react-router can handle client-side routes
   * unknown /api paths must 404 as JSON rather than returning index.html
 
-No LLM, network, or pipeline run is involved — only routing, validation and response shape.
+MOST IMPORTANTLY: `TestGenerateReachesTheHandler` and `TestRejectAll` post VALID bodies. Every earlier
+test here posted a body that failed Pydantic validation, so execution never reached a handler body —
+which is how a `NameError` in `api_generate` (a missing module-level import) shipped and made every
+POST /api/generate a 500 with a green test suite. A validation test is not an endpoint test.
+
+The pipeline itself is stubbed, so no LLM or network is involved.
 """
+import sqlite3
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -19,6 +26,135 @@ import main
 @pytest.fixture(scope="module")
 def client():
     return TestClient(main.app)
+
+
+@pytest.fixture
+def no_pipeline(monkeypatch):
+    """Let a request reach and complete a handler without running the real pipeline."""
+    started = []
+
+    def _fake_start(run_id, target):
+        started.append(run_id)          # never actually run the pipeline thread
+
+    monkeypatch.setattr(main, "_start", _fake_start)
+    return started
+
+
+class TestGenerateReachesTheHandler:
+    """The regression guard for the P0: a valid body must get all the way through api_generate.
+
+    `raise_server_exceptions=False` so a handler exception surfaces as a 500 we can assert on, rather
+    than being re-raised and masking which endpoint broke.
+    """
+
+    def test_valid_body_starts_a_run(self, no_pipeline):
+        c = TestClient(main.app, raise_server_exceptions=False)
+        r = c.post("/api/generate",
+                   json={"session_names": ["Introduction to AI Agents"], "max_questions": 6})
+        assert r.status_code == 200, f"api_generate raised: {r.text[:300]}"
+        assert r.json().get("run_id")
+        assert no_pipeline, "the handler must have reached _start"
+
+    def test_custom_topic_only_is_accepted(self, no_pipeline):
+        c = TestClient(main.app, raise_server_exceptions=False)
+        r = c.post("/api/generate", json={"session_names": [], "custom_topic": "Vector databases"})
+        assert r.status_code == 200, r.text[:300]
+
+    def test_model_choice_is_carried_into_the_run(self, no_pipeline):
+        """The picked model must reach the run. It is also recorded as the UI default."""
+        c = TestClient(main.app, raise_server_exceptions=False)
+        r = c.post("/api/generate", json={"session_names": ["Introduction to AI Agents"],
+                                          "model": "openai/gpt-4o-mini"})
+        assert r.status_code == 200, r.text[:300]
+        from src.llm_client import get_active_model
+        assert get_active_model() == "openai/gpt-4o-mini"
+
+    def test_preview_mode_is_accepted(self, no_pipeline):
+        c = TestClient(main.app, raise_server_exceptions=False)
+        r = c.post("/api/generate", json={"session_names": ["Introduction to AI Agents"],
+                                          "preview": True})
+        assert r.status_code == 200, r.text[:300]
+
+
+class TestRejectAll:
+    """A2 — the plan named this and it had no test. Rejecting everything must export nothing AND bank
+    nothing: a banked reject suppresses future candidates as "already approved"."""
+
+    @pytest.fixture
+    def staged_run(self, tmp_path, monkeypatch):
+        """A finished run in memory, with all persistence pointed at a throwaway database."""
+        from src import memory
+        from src.models import (CurationMetadata, CuratedOutput, QualityReport, QuestionDetail,
+                                SessionContext)
+
+        db = tmp_path / "review.db"
+        monkeypatch.setattr(memory, "MEMORY_DB", db)
+        monkeypatch.setattr(memory, "_FEEDBACK_EXAMPLES", tmp_path / "feedback.json")
+        monkeypatch.setattr(memory, "_RULES_FILE", tmp_path / "rules.md")
+        memory.init_db()
+
+        result = main.PipelineResult()
+        result.run_id = "reject-all"
+        qs = [QuestionDetail(question_id=f"ra{i}", category="GEN_AI", topic="Gen AI",
+                             source="interview_db", content=f"What is agent memory {i}?")
+              for i in range(3)]
+        result.curated_output = CuratedOutput(session_name="S", question_details=qs,
+                                              coding_questions=[], code_snippets=[],
+                                              metadata=CurationMetadata())
+        result.quality_report = QualityReport()
+        result.context = SessionContext(
+            session_name="S", learning_outcomes=["x"], key_concepts=["y"], scope_in=[], scope_out=[],
+            session_type="mixed", matched_kp_ids=[], matched_csv_topics=[],
+            prerequisite_kp_chain=[], difficulty_distribution={})
+        main._results["reject-all"] = result
+        yield db, qs
+        main._results.pop("reject-all", None)
+
+    def test_export_is_refused(self, staged_run):
+        _db, qs = staged_run
+        c = TestClient(main.app, raise_server_exceptions=False)
+        r = c.post("/api/approve/reject-all", json={
+            "action": "approve", "accepted_ids": [],
+            "rejected_feedback": {q.question_id: "off_topic" for q in qs},
+            "decisions_sent": True})
+        assert r.status_code == 400
+        assert "nothing to export" in r.json()["error"].lower()
+
+    def test_rejected_questions_are_not_banked(self, staged_run):
+        """The dangerous half: banking them would suppress them from FUTURE runs as approved."""
+        db, qs = staged_run
+        c = TestClient(main.app, raise_server_exceptions=False)
+        c.post("/api/approve/reject-all", json={
+            "action": "approve", "accepted_ids": [],
+            "rejected_feedback": {q.question_id: "off_topic" for q in qs},
+            "decisions_sent": True})
+        banked = sqlite3.connect(db).execute("SELECT COUNT(*) FROM question_bank").fetchone()[0]
+        assert banked == 0
+
+    def test_accepting_some_still_exports_only_those(self, staged_run, monkeypatch):
+        _db, qs = staged_run
+        # Stub the export: a real one would try Google OAuth from inside the test.
+        import src.sheets_writer as sw
+        monkeypatch.setattr(sw, "write_to_sheets", lambda **kw: "https://example.test/sheet")
+        c = TestClient(main.app, raise_server_exceptions=False)
+        r = c.post("/api/approve/reject-all", json={
+            "action": "approve", "accepted_ids": [qs[0].question_id],
+            "rejected_feedback": {q.question_id: "off_topic" for q in qs[1:]},
+            "decisions_sent": True})
+        assert r.status_code == 200, r.text[:300]
+        assert r.json()["saved"] == 1
+
+    def test_reject_action_reaches_the_handler(self, staged_run, no_pipeline):
+        """Covers the second missing import — the reject branch called get_active_model().
+        `no_pipeline` keeps it from spawning a real regeneration thread."""
+        _db, qs = staged_run
+        c = TestClient(main.app, raise_server_exceptions=False)
+        r = c.post("/api/approve/reject-all", json={
+            "action": "reject", "accepted_ids": [qs[0].question_id],
+            "rejected_feedback": {qs[1].question_id: "off_topic"},
+            "decisions_sent": True})
+        assert r.status_code == 200, f"reject branch raised: {r.text[:300]}"
+        assert r.json()["status"] == "rejected" and r.json().get("run_id")
 
 
 class TestErrorShape:

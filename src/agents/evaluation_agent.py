@@ -45,11 +45,27 @@ class EvaluationAgent(BaseAgent):
                 f"  - {item.get('id', '?')}: {item.get('issue', '')} → {item.get('suggestion', '')}"
                 for item in state.revision_notes
             )
+            # The remediation must match the issue. Telling the agent to "use remove_question" for
+            # every issue was actively wrong for a `too-few` verdict — its only mutating tool removes
+            # questions, so the instruction pushed it to make the problem worse. The real growth path
+            # is submit itself: it re-selects from the RESERVE (validated candidates that missed the
+            # cut) as well as the current set, so re-submitting after removals backfills the freed
+            # slots. The agent had no way to know that.
+            too_few = any(i.get("issue") == "too-few" for i in state.revision_notes)
+            remedy = (
+                "This set is TOO SMALL. Do NOT remove anything. Call `submit_question_set` again — it "
+                "re-selects from the reserve of validated candidates that missed the last cut, which "
+                "backfills the set. If it still comes back short, the on-topic pool is genuinely thin "
+                "and a smaller set is the correct outcome; submit it as-is."
+                if too_few else
+                "Call `remove_question` for each flagged ID, then `submit_question_set` — it will "
+                "backfill the freed slots from the reserve of validated candidates."
+            )
             revision_section = f"""
 ## REVISION MODE — Fix These Issues First
 {issues}
 
-Use `remove_question` for flagged IDs, then re-check and submit.
+{remedy}
 """
 
         return f"""You are the final evaluator for an interview question set.

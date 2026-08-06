@@ -79,7 +79,13 @@ def set_active_model(model: str | None):
 
 
 def get_active_model() -> str:
-    """The UI's currently-selected model (display default), NOT necessarily any run's model."""
+    """The UI's currently-selected model — a DISPLAY default only.
+
+    Every LLM call made on behalf of a run goes through `run_model(state)` instead. Reintroducing this
+    into a pipeline stage brings back the bug it was split out of: a second browser tab starting a run
+    would retarget the first run's in-flight calls, and the first run's `api_usage["model"]` would then
+    misprice its own tokens.
+    """
     return _ui_model_default or LLM_MODEL
 
 

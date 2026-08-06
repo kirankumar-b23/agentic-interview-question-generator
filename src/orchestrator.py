@@ -23,6 +23,7 @@ from src.pipeline import AgentPipeline
 _progress_queues: dict[str, queue.Queue] = {}
 _history: dict[str, list[dict]] = {}
 _finished: set[str] = set()
+_next_seq: dict[str, int] = {}     # monotonic per-run event counter (NOT len(history) — see _emit)
 _lock = threading.Lock()
 
 # Keep runs addressable long enough for a reviewer to reload the page, then reclaim them.
@@ -42,7 +43,14 @@ def _emit(run_id: str, step_id: str, status: str, detail: str = "", **fields):
 
     with _lock:
         hist = _history.setdefault(run_id, [])
-        event["seq"] = len(hist)
+        # A MONOTONIC counter, not len(hist). Using the list length meant that once the trim below
+        # capped the list, every subsequent event got the same seq — with a cap of 5, nine emits
+        # produced [0, 5, 5, 5, 5]. Both consumers de-duplicate on seq (main.py's stream loop and
+        # useAgentRun), so past the cap nothing new was delivered: a long run would never emit
+        # `complete` and the UI would sit on "Generating…" until the stall timeout.
+        _next_seq[run_id] = seq = _next_seq.get(run_id, 0)
+        _next_seq[run_id] += 1
+        event["seq"] = seq
         hist.append(event)
         # Keep the head (which agent ran first) and drop the middle; the tail matters most.
         if len(hist) > MAX_HISTORY_EVENTS:
@@ -87,6 +95,7 @@ def cleanup_progress(run_id: str):
         _history.pop(run_id, None)
         _finished.discard(run_id)
         _finished_at.pop(run_id, None)
+        _next_seq.pop(run_id, None)
 
 
 def prune_finished(now: float | None = None) -> int:
@@ -99,6 +108,7 @@ def prune_finished(now: float | None = None) -> int:
             _history.pop(rid, None)
             _finished.discard(rid)
             _finished_at.pop(rid, None)
+            _next_seq.pop(rid, None)
     return len(stale)
 
 

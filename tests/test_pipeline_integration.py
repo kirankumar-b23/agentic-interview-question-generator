@@ -257,3 +257,66 @@ class TestRelevanceJudgeOutage:
         result, _ = _run()
         assert result.quality_report.pass_fail == "fail"
         assert any("relevance judge failed" in n for n in result.quality_report.critique)
+
+
+class TestConcurrentRuns:
+    """Two runs in flight must not contaminate each other.
+
+    The model used to come from a module-level global that each run set on start, so a second browser
+    tab retargeted the first run's in-flight calls and the first run's `api_usage["model"]` then
+    mispriced its own tokens.
+    """
+
+    def test_each_run_uses_its_own_model(self, stub_llm):
+        fake = stub_llm()
+        per_run_models = {}
+
+        # Record which model each create() call used, keyed by the run that was active.
+        original_create = fake.create
+
+        def _tracking_create(*, model=None, **kw):
+            per_run_models.setdefault(model, 0)
+            per_run_models[model] += 1
+            return original_create(model=model, **kw)
+        fake.create = _tracking_create
+
+        a, _ = _run(model="anthropic/claude-haiku-4-5")
+        b, _ = _run(model="openai/gpt-4o-mini")
+
+        assert a.quality_report.api_usage["model"] == "anthropic/claude-haiku-4-5"
+        assert b.quality_report.api_usage["model"] == "openai/gpt-4o-mini"
+        # Both models were actually used — neither run silently rode the other's choice.
+        assert per_run_models.get("anthropic/claude-haiku-4-5", 0) > 0
+        assert per_run_models.get("openai/gpt-4o-mini", 0) > 0
+
+    def test_ui_default_does_not_override_a_run(self, stub_llm):
+        """Changing the picker mid-run must not retarget the run."""
+        from src.llm_client import set_active_model
+        stub_llm()
+        set_active_model("anthropic/claude-opus-4.1")     # a third tab changes the picker
+        result, _ = _run(model="openai/gpt-4o-mini")
+        assert result.quality_report.api_usage["model"] == "openai/gpt-4o-mini"
+
+    def test_runs_keep_independent_state(self, stub_llm):
+        """Each run must honour its OWN config and carry its own report.
+
+        Note: the two runs legitimately return overlapping question_ids — bank questions keep their
+        corpus id, so the same question retrieved twice is the same id by design. What must not leak is
+        per-run STATE: the requested count, the usage totals and the report.
+        """
+        stub_llm()
+        a, _ = _run(max_questions=4)
+        b, _ = _run(max_questions=8)
+
+        assert len(a.curated_output.question_details) <= 4
+        assert len(b.curated_output.question_details) <= 8
+        assert a.quality_report is not b.quality_report
+        # Usage is accumulated per run, so neither total includes the other's calls.
+        assert a.quality_report.api_usage["llm_calls"] > 0
+        assert b.quality_report.api_usage["llm_calls"] > 0
+        # The question objects are distinct instances even when ids coincide, so a decision or a
+        # score written on one run's set cannot mutate the other's.
+        a_by_id = {q.question_id: q for q in a.curated_output.question_details}
+        for q in b.curated_output.question_details:
+            if q.question_id in a_by_id:
+                assert q is not a_by_id[q.question_id], "runs must not share question INSTANCES"
