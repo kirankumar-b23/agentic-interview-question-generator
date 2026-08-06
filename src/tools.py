@@ -33,8 +33,7 @@ def _usage_cb(state: "AgentState"):
     return _cb
 
 
-from src.config import DEDUP_THRESHOLD, pool_target
-from src.question_bank import get_retriever
+from src.config import DEDUP_THRESHOLD
 from src.quality import is_quality_question, strip_artifacts
 from src.sources.base import split_into_clauses, looks_like_question
 

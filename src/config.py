@@ -71,9 +71,9 @@ MAX_QUESTIONS = 60
 BANK_POOL_CAP = 150       # curated interview data
 WEB_POOL_CAP = 120        # fresh company-attributed questions (Tavily)
 GITHUB_POOL_CAP = 30      # curated GitHub repos (disabled by default)
-# Overall cost guard — total candidates that reach the (LLM-scored) relevance stage.
-# NOTE: read via pool_target() by tool_submit_question_set's sibling helpers only; the per-source caps
-# above are what actually bound the pool today.
+# Overall cost guard on candidates reaching the (LLM-scored) relevance stage.
+# NOTE: nothing reads this today — the per-source caps above are what actually bound the pool. Kept as
+# the intended knob, but treat it as inert until a caller uses `pool_target()`.
 CANDIDATE_POOL_TARGET = 300
 RELEVANCE_BATCH_SIZE = 25  # candidates scored per LLM call in validate_relevance (smaller → no JSON truncation)
 # Keep candidates scoring at/above this relevance; below → dropped (min-floor still applies).

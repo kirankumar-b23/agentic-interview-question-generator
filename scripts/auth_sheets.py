@@ -4,13 +4,17 @@ Usage:
     python3 scripts/auth_sheets.py
 
 After completing the browser flow, token.json is saved at the project root.
-The Flask server then reuses this token automatically on every approve.
+The server then reuses this token automatically on every approve — it will NOT open a browser
+itself, because doing so inside a request thread hangs it indefinitely waiting for consent on the
+server machine.
 """
 import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+# This script IS the interactive flow, so allow it here (the server defaults to off).
+os.environ.setdefault("ALLOW_INTERACTIVE_OAUTH", "1")
 from dotenv import load_dotenv
 load_dotenv()
 

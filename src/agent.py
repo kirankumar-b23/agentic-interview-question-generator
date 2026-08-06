@@ -31,6 +31,11 @@ class AgentState:
     config: GenerationConfig
     data_store: DataStore
     questions: dict[str, QuestionDetail] = field(default_factory=dict)
+    # DORMANT: nothing assigns these today. Coding-question GENERATION is permanently blocked, and no
+    # retrieval path produces them, so they are always empty — which makes the CodingQuestion /
+    # CodeSnippet sheet tabs and the coding branches in selection and review unreachable. Kept because
+    # the exported sheet's tab structure is part of the LMS unit import format, and because retrieved
+    # (not generated) coding questions remain the intended way to fill them.
     coding_questions: dict[str, CodingQuestion] = field(default_factory=dict)
     code_snippets: dict[str, CodeSnippet] = field(default_factory=dict)
     learning_outcomes: list[str] = field(default_factory=list)
