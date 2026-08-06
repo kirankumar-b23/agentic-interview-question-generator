@@ -187,8 +187,8 @@ export default function Sidebar() {
       {/* Generate area */}
       <div className="sidebar-generate-area">
         <div className="sidebar-maxq-label">
-          Target count: <strong>{maxQuestions}</strong>
-          <span className="sidebar-maxq-hint"> (all relevant questions are kept)</span>
+          Target count <strong>{maxQuestions}</strong>
+          <span className="sidebar-maxq-hint">Every relevant question is kept — this is a ceiling.</span>
         </div>
         <input
           id="sb-count" type="range" min={5} max={40} value={maxQuestions}

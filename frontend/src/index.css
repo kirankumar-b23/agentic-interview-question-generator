@@ -1,8 +1,17 @@
 /* ════════════════════════════════════════════════════════════════════
-   NxtMock — "Precision Instrument" design system
-   Deep-ink dark theme · azure→aqua signal accent · mono eyebrow labels
+   NxtMock — "Ledger" design system
+   An editorial masthead over an instrument-grade data ledger.
+
+   Three voices, and every element belongs to exactly one:
+     · Instrument Serif  — mastheads and page titles. This tool produces question papers a human
+                           signs off on, so the headings read like a dossier, not a dashboard.
+     · Hanken Grotesk    — UI prose, controls, question text.
+     · JetBrains Mono    — every number, id, timestamp and eyebrow label. If it is data, it is mono.
+
+   Surfaces are deep ink with hairline rules rather than stacked boxes; the azure→aqua accent is
+   reserved for signal (state, focus, the one number that matters) and never used as decoration.
    ════════════════════════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
   /* Surfaces — cool deep ink */
@@ -45,14 +54,27 @@
   /* Agent / flow hues */
   --c1:#4d8df6; --c2:#43c98a; --c3:#e3b341; --c4:#b98af5; --c-gate:#f2705b; --c-review:#46d6cf;
 
-  /* Spacing scale. Previously every padding/margin was an inlined literal (0.35rem, 1.35rem, …)
-     with no system, which made density impossible to retune in one place. */
-  --s-1: 0.25rem; --s-2: 0.5rem;  --s-3: 0.75rem; --s-4: 1rem;
-  --s-5: 1.35rem; --s-6: 1.75rem; --s-7: 2.25rem;
+  /* Spacing — a strict 4px rhythm. Previously every padding/margin was an inlined literal
+     (0.35rem, 1.05rem, 1.35rem, …) with no system, which is why the sidebar reads cramped and
+     unalignable: density could not be retuned in one place. */
+  --s-1: 0.25rem;  /*  4px */  --s-2: 0.5rem;   /*  8px */
+  --s-3: 0.75rem;  /* 12px */  --s-4: 1rem;     /* 16px */
+  --s-5: 1.25rem;  /* 20px */  --s-6: 1.75rem;  /* 28px */
+  --s-7: 2.25rem;  /* 36px */  --s-8: 3rem;     /* 48px */
 
-  /* Type scale. `2xs`/`xs` are the mono metadata sizes; `sm` up is UI prose. */
-  --fs-2xs: 0.65rem; --fs-xs: 0.76rem; --fs-sm: 0.85rem;
-  --fs-md: 0.95rem;  --fs-lg: 1.1rem;  --fs-xl: 1.45rem;
+  /* Type scale. `2xs`/`xs` are the mono metadata sizes; `sm`–`md` is UI prose; `display` is the
+     serif masthead. The old band topped out at 0.85rem for body text, which is what made every
+     control look shrunken. */
+  --fs-2xs: 0.7rem;  --fs-xs: 0.8rem;   --fs-sm: 0.895rem;
+  --fs-md: 1rem;     --fs-lg: 1.15rem;  --fs-xl: 1.5rem;
+  --fs-display: 1.9rem;
+
+  /* Eyebrow labels: mono, uppercase, wide-tracked. Used by every section label so they read as
+     instrument panel legends rather than headings competing with the serif. */
+  --track-eyebrow: 0.15em;
+
+  /* Definite masthead height. The sticky table header offsets by exactly this to sit beneath it. */
+  --topbar-h: 76px;
 
   /* Radius / shadow / motion */
   --r-sm: 6px; --r: 9px; --r-lg: 13px; --r-pill: 999px;
@@ -60,9 +82,11 @@
   --shadow:    0 8px 28px rgba(0,0,0,.4);
   --inset-hi:  inset 0 1px 0 rgba(255,255,255,.03);
   --t: .16s cubic-bezier(.4,0,.2,1);
+  --t-slow: .34s cubic-bezier(.22,1,.36,1);
 
   --font-sans: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, 'SF Mono', Consolas, monospace;
+  --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
 }
 
 /* ── Light theme (token overrides — everything else flips via var()) ── */
@@ -116,6 +140,29 @@
 
 /* ── Reset & base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* THE reset this stylesheet was missing, and the single cause of most of the UI looking broken.
+   Nothing here reset `button`, so any button that didn't declare its own background/border/font fell
+   through to native UA chrome: `buttonface` (#efefef) fill, `2px outset` border, Arial 13.3px, and a
+   shrink-wrapped width. Measured on the History page before this rule: `.sidebar-run-item` rendered
+   in Arial on rgb(239,239,239) with a 2px border at FIVE different widths (160/186/242/212/132px),
+   and `.sidebar-logo` kept its UA border on three sides because it only set `border-bottom`.
+
+   `font: inherit` is what pulls buttons into the type system; `width: auto` + per-component
+   `width:100%` keeps sizing an explicit decision. Anything that wants chrome opts in (see `.btn`). */
+button, [type="button"], [type="submit"], [type="reset"] {
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+button:disabled { cursor: not-allowed; }
+select, input, textarea { font-family: inherit; }
 html { font-size: 16px; }
 body {
   font-family: var(--font-sans);
@@ -129,6 +176,17 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+/* A very low-opacity grain over the whole page. Flat deep-ink surfaces go plasticky on a large
+   display; a little noise gives the ink some tooth. Inlined SVG turbulence so nothing is fetched,
+   `pointer-events: none` so it never intercepts a click, and it sits under every positioned element
+   (z-index is left alone; the fixed layer paints first because nothing else is at z-index 0). */
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  opacity: .035; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+:root[data-theme="light"] body::after { opacity: .02; mix-blend-mode: multiply; }
+
 a { color: var(--accent-bright); text-decoration: none; transition: color var(--t); }
 a:hover { color: var(--link-hover); }
 code, pre { font-family: var(--font-mono); }
@@ -183,8 +241,20 @@ ul { list-style: none; }
 .hist-table th { font-family: var(--font-mono); }
 
 /* ── Shell (sidebar + main) ── */
-.shell { display: grid; grid-template-columns: 284px 1fr; min-height: 100vh; }
-.shell-main { display: flex; flex-direction: column; min-width: 0; overflow-x: hidden; }
+/* A real viewport layout, which is what makes `position: sticky` work.
+   `.shell-main` used to carry `overflow-x: hidden`. That silently makes the element a scroll
+   container (overflow-x:hidden + overflow-y:visible computes to overflow-y:auto), so `.topbar`'s
+   `position: sticky; top: 0` anchored to a box that was never itself scrolled — the document
+   scrolled instead and the header, with the table's column labels, scrolled away. Now the shell is
+   exactly 100vh, `.page-content` is the ONE vertical scroller, and the horizontal clamp lives on the
+   wide children that actually need it (`.hist-table-wrap`, `.topbar`). */
+.shell { display: grid; grid-template-columns: 284px 1fr; height: 100vh; overflow: hidden; }
+/* `.shell-main` is THE scroller, and it has to be this element rather than `.page-content`, because
+   not every page has one: Review renders `.action-banner` / `.review-gutter` as direct children here.
+   Scoping the scroll to `.page-content` left Review clipped inside a 100vh shell with nothing to
+   scroll — measured `.topbar` at top:-233px with 1163px of content in a 640px box. Sticky works
+   because this element genuinely scrolls, which was the missing half of the original bug. */
+.shell-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; }
 
 /* ── Sidebar ── */
 .sidebar {
@@ -192,60 +262,114 @@ ul { list-style: none; }
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
-.sidebar-logo { padding: 1.15rem 1.15rem 0.95rem; border-bottom: 1px solid var(--border); cursor: pointer; }
-.sidebar-logo-main { display: block; font-size: 1.02rem; font-weight: 800; letter-spacing: -0.02em;
-  background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.sidebar-logo-sub { display: block; font-size: 0.6rem; color: var(--text-3); letter-spacing: 0.22em; text-transform: uppercase; margin-top: 0.3rem; }
-.sidebar-section-label { display: block; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-3); padding: 1rem 1.15rem 0.4rem; }
-.sidebar-footer { margin-top: auto; padding: 0.9rem 1.15rem; border-top: 1px solid var(--border); }
-.sidebar-model-label { font-size: 0.6rem; color: var(--text-3); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 0.35rem; }
+/* Masthead. It is a <button> (it navigates home) and declared no background, so it used to render as
+   a light-grey UA button with an outset border on three sides — the pale slab at the top of the
+   sidebar in the report. Now it is a serif wordmark with an accent index-rule, and `width: 100%`
+   stops it shrink-wrapping. */
+.sidebar-logo {
+  display: block; width: 100%; text-align: left; position: relative;
+  padding: var(--s-5) var(--s-5) var(--s-4);
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo::before {
+  content: ''; position: absolute; left: 0; top: var(--s-5); bottom: var(--s-4);
+  width: 2px; background: var(--accent-grad); border-radius: 0 2px 2px 0;
+}
+.sidebar-logo-main {
+  display: block; font-family: var(--font-display); font-size: 1.6rem; font-weight: 400;
+  letter-spacing: 0; line-height: 1; color: var(--text);
+}
+.sidebar-logo-sub {
+  display: block; font-size: var(--fs-2xs); color: var(--text-3);
+  letter-spacing: var(--track-eyebrow); text-transform: uppercase; margin-top: var(--s-2);
+}
+.sidebar-logo:hover .sidebar-logo-main { color: var(--accent-bright); }
+.sidebar-section-label {
+  display: block; font-size: var(--fs-2xs); letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase; color: var(--text-3); padding: var(--s-4) var(--s-5) var(--s-2);
+}
+.sidebar-footer { margin-top: auto; padding: var(--s-4) var(--s-5); border-top: 1px solid var(--border); }
+.sidebar-model-label { font-size: var(--fs-2xs); color: var(--text-3); letter-spacing: var(--track-eyebrow); text-transform: uppercase; margin-bottom: var(--s-2); }
 .sidebar-model-chip { display: inline-block; background: var(--accent-soft); border: 1px solid rgba(77,141,246,.3); padding: 0.16rem 0.5rem; border-radius: var(--r-sm); color: var(--accent-bright); font-size: 0.66rem; font-family: var(--font-mono); }
 .sidebar-model-via { font-size: 0.68rem; color: var(--text-3); margin-top: 0.3rem; font-family: var(--font-mono); }
 
 /* ── Sidebar topic picker (dropdown) ── */
-.sidebar-picker { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 88px; padding: 0.25rem 0; overflow: hidden; }
-.sidebar-picker-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.05rem 0.4rem; }
-.sidebar-select-wrap { padding: 0 1.05rem 0.3rem; }
-.sidebar-topic-select { width: 100%; background: var(--surface-3); border: 1px solid var(--border-2); border-radius: var(--r-sm); color: var(--text); padding: 0.46rem 0.55rem; font-size: 0.76rem; font-family: var(--font-sans); cursor: pointer; transition: border-color var(--t), box-shadow var(--t); }
+/* ONE scroll container in the sidebar: `.sidebar` itself.
+   This block used to be `flex: 1 1 auto; min-height: 88px; overflow: hidden`. In a short viewport the
+   fixed siblings (logo + generate + a 150px-capped history + footer ≈ 515px) starved it, it clamped
+   at 88px, and `overflow:hidden` sliced the "Select by" and "Topic" labels through the middle — both
+   measured as clipped before this change, with the whole topic picker invisible. `flex: 0 0 auto`
+   makes the section size to its content and lets the sidebar scroll, which is the behaviour the
+   `overflow-y: auto` on `.sidebar` always intended. */
+.sidebar-picker { display: flex; flex-direction: column; flex: 0 0 auto; padding: var(--s-1) 0; }
+.sidebar-picker-head { display: flex; align-items: center; justify-content: space-between; padding: var(--s-4) var(--s-5) var(--s-2); }
+.sidebar-select-wrap { padding: 0 var(--s-5) var(--s-2); }
+.sidebar-topic-select { width: 100%; background: var(--surface-3); border: 1px solid var(--border-2); border-radius: var(--r-sm); color: var(--text); padding: var(--s-2) var(--s-2); font-size: var(--fs-xs); font-family: var(--font-sans); cursor: pointer; transition: border-color var(--t), box-shadow var(--t); }
 .sidebar-topic-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .sidebar-topic-select option { background: var(--surface-3); color: var(--text); }
-.sidebar-session-list { flex: 1; overflow-y: auto; min-height: 0; padding: 0 0 0.25rem; }
-.sidebar-session-info { padding: 0.24rem 1.05rem 0.24rem 1.35rem; font-size: 0.69rem; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; line-height: 1.5; position: relative; }
-.sidebar-session-info::before { content: ''; position: absolute; left: 1.05rem; top: 0.62rem; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: .5; }
+/* Capped by line count, not by a pixel height, and it no longer scrolls inside the sidebar's own
+   scroller — a nested scrollbar here was one of the three that fought each other. */
+.sidebar-session-list { flex: 0 0 auto; padding: 0 0 var(--s-1); }
+.sidebar-session-info { padding: var(--s-1) var(--s-5) var(--s-1) var(--s-6); font-size: var(--fs-2xs); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; line-height: 1.55; position: relative; }
+.sidebar-session-info::before { content: ''; position: absolute; left: var(--s-5); top: 0.66rem; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: .5; }
 
 /* ── Sidebar generate area ── */
-.sidebar-generate-area { padding: 0.85rem 1.05rem; border-top: 1px solid var(--border); flex-shrink: 0; }
-.sidebar-maxq-label { font-size: 0.66rem; color: var(--text-3); margin-bottom: 0.35rem; letter-spacing: .02em; }
+.sidebar-generate-area { padding: var(--s-4) var(--s-5); border-top: 1px solid var(--border); flex: 0 0 auto; }
+.sidebar-maxq-label { font-family: var(--font-mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: var(--track-eyebrow); color: var(--text-3); margin-bottom: var(--s-2); }
 .sidebar-maxq-label strong { color: var(--accent-bright); font-family: var(--font-mono); }
-.sidebar-range { width: 100%; accent-color: var(--accent); margin: 0 0 0.65rem; display: block; cursor: pointer; }
-.sidebar-preview-toggle { display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; color: var(--text-2); margin: 0 0 0.6rem; cursor: pointer; }
+/* Its own line. Inline, this ran the eyebrow label onto a ragged second line in a 284px column. */
+.sidebar-maxq-hint { display: block; text-transform: none; letter-spacing: 0; font-family: var(--font-sans); color: var(--text-3); margin-top: 0.2rem; }
+.sidebar-range { width: 100%; accent-color: var(--accent); margin: 0 0 var(--s-3); display: block; cursor: pointer; }
+.sidebar-preview-toggle { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-2xs); color: var(--text-2); margin: 0 0 var(--s-3); cursor: pointer; }
 .sidebar-preview-toggle input { accent-color: var(--accent); cursor: pointer; }
-.sidebar-mode-radios { display: flex; gap: 0.9rem; padding: 0 1.05rem 0.5rem; }
-.sidebar-mode-radios label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--text-2); cursor: pointer; }
+.sidebar-mode-radios { display: flex; gap: var(--s-4); padding: 0 var(--s-5) var(--s-2); }
+.sidebar-mode-radios label { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-xs); color: var(--text-2); cursor: pointer; }
 .sidebar-mode-radios input { accent-color: var(--accent); cursor: pointer; }
-.sidebar-gen-btn { width: 100%; padding: 0.55rem 0.5rem; background: var(--accent-grad); border: none; border-radius: var(--r-sm); color: var(--on-accent); font-size: 0.78rem; font-weight: 700; letter-spacing: .01em; cursor: pointer; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: filter var(--t), box-shadow var(--t), transform var(--t); }
+.sidebar-gen-btn { display: block; width: 100%; padding: var(--s-3) var(--s-2); background: var(--accent-grad); border-radius: var(--r-sm); color: var(--on-accent); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .01em; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: filter var(--t), box-shadow var(--t), transform var(--t); }
 .sidebar-gen-btn:hover:not(:disabled) { filter: brightness(1.08); box-shadow: 0 0 22px var(--accent-glow); }
 .sidebar-gen-btn:active:not(:disabled) { transform: translateY(1px); }
 .sidebar-gen-btn:disabled { opacity: 0.5; cursor: not-allowed; background: var(--surface-3); color: var(--text-3); }
 
 /* ── Sidebar history ── */
-.sidebar-history { border-top: 1px solid var(--border); flex-shrink: 0; max-height: 150px; overflow-y: auto; }
-.sidebar-run-item { padding: 0.36rem 1.05rem; cursor: pointer; transition: background var(--t); }
-.sidebar-run-item:hover { background: var(--surface-2); }
-.sidebar-run-name { font-size: 0.73rem; color: var(--text-2); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The `max-height: 150px; overflow-y: auto` here was the third competing scrollbar, and it cut the
+   last run card off through its middle. The list is bounded by ITEM COUNT in Sidebar.jsx
+   (`.slice(0, 6)`), which is the honest way to bound it — a pixel cap has no idea how tall a row is. */
+.sidebar-history { border-top: 1px solid var(--border); flex: 0 0 auto; padding-bottom: var(--s-2); }
+
+/* Ledger rows, not floating pills. Declaring `display: block; width: 100%; text-align: left` is what
+   fixes the five-different-widths measurement; the `font: inherit` now comes from the button reset,
+   so these finally render in Hanken Grotesk instead of Arial. Hover marks the row with an accent
+   rule rather than a fill — the same language the History table uses. */
+.sidebar-run-item {
+  display: block; width: 100%; text-align: left; position: relative;
+  padding: var(--s-2) var(--s-5); border-left: 2px solid transparent;
+  transition: background var(--t), border-color var(--t);
+}
+.sidebar-run-item:hover { background: var(--surface-2); border-left-color: var(--accent); }
+.sidebar-run-name { font-size: var(--fs-xs); color: var(--text-2); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-run-item:hover .sidebar-run-name { color: var(--text); }
-.sidebar-run-meta { font-size: 0.68rem; color: var(--text-3); font-family: var(--font-mono); }
-.sidebar-empty-hist { font-size: 0.7rem; color: var(--text-3); padding: 0.3rem 1.05rem 0.7rem; }
-.sidebar-history-header { display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1.05rem 0.35rem; }
-.sidebar-history-label { font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-3); }
-.sidebar-view-all { font-size: 0.66rem; color: var(--accent-bright); cursor: pointer; opacity: 0.85; white-space: nowrap; transition: opacity var(--t); }
-.sidebar-view-all:hover { opacity: 1; text-decoration: underline; }
+.sidebar-run-meta { font-size: var(--fs-2xs); color: var(--text-3); font-family: var(--font-mono); }
+.sidebar-empty-hist { font-size: var(--fs-2xs); color: var(--text-3); padding: var(--s-1) var(--s-5) var(--s-3); }
+.sidebar-history-header { display: flex; align-items: center; justify-content: space-between; padding: var(--s-3) var(--s-5) var(--s-2); }
+.sidebar-history-label { font-size: var(--fs-2xs); letter-spacing: var(--track-eyebrow); text-transform: uppercase; color: var(--text-3); }
+
+/* A text link, so it must NOT inherit button chrome — it did (Arial on #efefef with an outset
+   border), which is what made "+ Add" and "View all" look like stray form controls. */
+.sidebar-view-all {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--accent-bright);
+  display: inline-flex; align-items: center; gap: var(--s-1);
+  letter-spacing: .04em; white-space: nowrap; opacity: .85; transition: opacity var(--t);
+}
+.sidebar-view-all:hover { opacity: 1; text-decoration: underline; text-underline-offset: 3px; }
 
 /* ── Topbar ── */
-.topbar { background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding: 0 1.35rem; display: flex; align-items: center; justify-content: space-between; min-height: 54px; gap: 1rem; flex-shrink: 0; overflow-x: auto; position: sticky; top: 0; z-index: 10; }
-.topbar-title-group { display: flex; flex-direction: column; gap: 0.08rem; flex-shrink: 0; }
-.topbar-title { font-size: 0.92rem; font-weight: 700; color: var(--text); white-space: nowrap; letter-spacing: -0.01em; }
-.topbar-sub { font-size: 0.72rem; color: var(--text-3); white-space: nowrap; }
+/* The masthead. Sticky at the top of `.shell-main`, which is the element that actually scrolls.
+   Its height is DEFINITE (not min-height) because the sticky table header offsets itself by
+   `--topbar-h` to land directly underneath — an elastic masthead would let the two overlap. */
+.topbar { background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding: 0 var(--s-6); display: flex; align-items: center; justify-content: space-between; height: var(--topbar-h); gap: var(--s-4); flex-shrink: 0; overflow-x: auto; overflow-y: hidden; position: sticky; top: 0; z-index: 20; }
+.topbar-title-group { display: flex; flex-direction: column; gap: 0.1rem; flex-shrink: 0; }
+.topbar-title { font-family: var(--font-display); font-size: var(--fs-display); font-weight: 400; line-height: 1.05; color: var(--text); white-space: nowrap; letter-spacing: 0; }
+.topbar-sub { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-3); white-space: nowrap; letter-spacing: .04em; }
 
 /* ── Topbar stepper ── */
 .topbar-stepper { display: flex; align-items: center; flex: 1; overflow-x: auto; padding: 0.35rem 0; justify-content: flex-end; }
@@ -261,11 +385,22 @@ ul { list-style: none; }
 .ts-connector { width: 18px; height: 1.5px; background: var(--border-2); margin: 0 2px 14px; flex-shrink: 0; }
 
 /* ── Page content area ── */
-.page-content { flex: 1; padding: 1.35rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; animation: rise .4s cubic-bezier(.4,0,.2,1) both; }
+/* THE vertical scroller. `min-height: 0` is what lets a flex child actually shrink and scroll instead
+   of growing the whole column — without it `overflow-y: auto` here was inert and the document
+   scrolled, which is how the header and the table's column labels used to disappear. */
+/* A layout band, NOT a scroll container — `.shell-main` scrolls. Giving this element the scroll and a
+   bounded height crushed its children instead: any child with `overflow: hidden` (`.card-table`,
+   `.transcript`, `.quality`, `.q-set-panel`) has an automatic minimum size of zero, so flex shrank it
+   and it silently clipped its own content with no scrollbar — a 2626px table rendered into a 564px
+   box, rows 9–38 unreachable, indistinguishable from "the content fits". `flex-shrink: 0` keeps that
+   impossible even if this band is ever height-bound again. */
+.page-content { flex: 1 1 auto; padding: var(--s-6); display: flex; flex-direction: column; gap: var(--s-5); animation: rise .4s cubic-bezier(.4,0,.2,1) both; }
+.page-content > * { flex-shrink: 0; }
 
 /* ── Cards ── */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1.3rem; box-shadow: var(--shadow-sm), var(--inset-hi); }
-.card-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 1rem; letter-spacing: -0.01em; }
+/* Section headings are mastheads too — same serif voice as the page title, one step down. */
+.card-title { font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 400; color: var(--text); margin-bottom: var(--s-4); letter-spacing: 0; line-height: 1.15; }
 .muted { color: var(--text-2); font-size: 0.875rem; }
 .loading { text-align: center; padding: 2rem; }
 
@@ -464,6 +599,46 @@ p.q-note-warn { padding: var(--s-2) var(--s-4); background: var(--warn-soft); bo
 .cq-tag-subtopic { background: var(--surface-3); color: var(--text-2); border-color: var(--border-2); }
 .cq-tag-lang     { background: var(--warn-soft); color: var(--warn); border-color: rgba(227,179,65,.3); }
 .cq-tag-source   { background: var(--surface-3); color: var(--text-3); border-color: var(--border-2); }
+/* "adapted" — the question was trimmed to the session's scope but still carries a company's name, so
+   the edit is flagged in warn colour rather than hidden. Hovering shows the text as sourced. */
+.cq-adapted {
+  font-size: var(--fs-2xs);
+  font-family: var(--font-mono);
+  color: var(--warn);
+  background: var(--warn-soft);
+  border: 1px solid var(--warn-soft);
+  border-radius: 4px;
+  padding: 1px var(--s-1);
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* "off-syllabus" — on-domain but testing something the session's reading material never covers. Loud
+   enough to notice, since deciding whether to stretch candidates past the material is the reviewer's
+   call; danger colour because unlike "adapted" nothing has been done about it. */
+.cq-offsyllabus {
+  font-size: var(--fs-2xs);
+  font-family: var(--font-mono);
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-soft);
+  border-radius: 4px;
+  padding: 1px var(--s-1);
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* Provenance ("via DataCamp") — deliberately quieter than .cq-company so the eye reads the asking
+   company first and never confuses the two. */
+.cq-via {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  padding: 1px var(--s-1);
+  white-space: nowrap;
+}
 
 /* ── Rejected questions panel (Review) ── */
 .rejected-card { border-left: 3px solid var(--danger); }
@@ -511,9 +686,11 @@ p.q-note-warn { padding: var(--s-2) var(--s-4); background: var(--warn-soft); bo
 /* ── Home hero ── */
 .home-hero { text-align: center; padding: 1.5rem 1rem 0.5rem; }
 .home-eyebrow { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.24em; color: var(--text-3); }
-.home-hero-title { font-size: 3rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 0.5rem 0 0.6rem;
+/* The same word appears in the masthead directly above this, so it has to be the same voice — a serif
+   masthead over a gradient-sans hero of the identical word read as two unrelated logos. */
+.home-hero-title { font-family: var(--font-display); font-size: 4rem; font-weight: 400; letter-spacing: -0.01em; line-height: 1; margin: var(--s-3) 0 var(--s-4);
   background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.home-hero-tagline { max-width: 62ch; margin: 0 auto; color: var(--text-2); font-size: 0.95rem; line-height: 1.6; }
+.home-hero-tagline { max-width: 58ch; margin: 0 auto; color: var(--text-2); font-size: var(--fs-md); line-height: 1.65; }
 
 /* ── Home mini-pipeline ── */
 .home-pipeline { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.15rem;
@@ -542,11 +719,19 @@ p.q-note-warn { padding: var(--s-2) var(--s-4); background: var(--warn-soft); bo
 .home-hint-sep { color: var(--border-2); }
 
 /* ── History usage summary ── */
-.usage-summary { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; }
-.usage-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.85rem 0.9rem; box-shadow: var(--shadow-sm), var(--inset-hi); }
-.usage-tile-or { border-left: 3px solid var(--accent); }
-.usage-num { display: block; font-size: 1.35rem; font-weight: 800; color: var(--text); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.usage-lbl { display: block; font-size: 0.6rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.3rem; }
+/* ONE stat strip, divided by hairlines — not six floating cards. Six bordered boxes in a row read as
+   six unrelated things; these are six readings off the same instrument, so they share one panel. */
+.usage-summary {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  overflow: hidden; box-shadow: var(--shadow-sm), var(--inset-hi);
+}
+.usage-tile { padding: var(--s-4) var(--s-5); border-left: 1px solid var(--border); }
+.usage-tile:first-child { border-left: 0; }
+.usage-tile-or { background: var(--accent-soft); }
+.usage-num { display: block; font-family: var(--font-mono); font-size: 1.32rem; font-weight: 600; color: var(--text); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.usage-lbl { display: block; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-3); text-transform: uppercase; letter-spacing: var(--track-eyebrow); margin-top: var(--s-2); line-height: 1.35; white-space: nowrap; }
+.usage-sub { display: block; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--accent-bright); margin-top: 0.15rem; white-space: nowrap; }
 
 .review-gutter { padding: var(--s-4) var(--s-5) 0; }
 
@@ -624,26 +809,142 @@ kbd { display: inline-block; min-width: 1.15rem; padding: 0.05rem 0.3rem; backgr
 @media (max-width: 900px) { .usage-summary { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 560px) { .usage-summary { grid-template-columns: repeat(2, 1fr); } }
 
-/* ── History page table ── */
-.hist-table-wrap { overflow-x: auto; }
-.hist-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-.hist-table th { text-align: left; font-size: 0.62rem; font-weight: 700; color: var(--text-3); letter-spacing: 0.1em; text-transform: uppercase; padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.hist-table td { padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
+/* ── History ledger ──
+   Was nine columns that overflowed the viewport at 1280px, hiding Cost, Status and the only control
+   that opened a run. Now six: Topic and Sessions share one two-line cell, and API usage rides under
+   the score, which is where you read it anyway. Ruled rows, no outer card, numerics in tabular mono. */
+/* No overflow here, deliberately. `position: sticky` resolves against the NEAREST scroll container,
+   and `overflow-x: auto` makes this element one (a visible cross-axis computes to auto), so the
+   sticky `th` below anchored to a box that never scrolls and the column labels slid away — measured
+   `theadVisible: false` after a 400px scroll. Cutting the columns from nine to six removed the need
+   for a horizontal scroller at desktop widths; the narrow case drops columns in a media query
+   instead, which keeps the labels readable rather than pushing them off-screen. */
+.hist-table-wrap { }
+/* `table-layout: fixed` is the structural fix, and it replaced a breakpoint hunt. With auto layout the
+   table's minimum width is set by the longest topic/session string, so clipping appeared at scattered
+   widths (measured failures at 640, 700, 999 and 1100px) and every breakpoint that fixed one width
+   broke another. Fixed layout honours the column widths below and scales them down when space is
+   tight, so the Run cell ellipsises instead of the table overrunning its box — at ANY width. */
+.hist-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--fs-xs); }
+.hist-table th:nth-child(1) { width: 100px; }   /* Date   — mono, two lines */
+.hist-table th:nth-child(2) { width: auto; }    /* Run    — absorbs all slack, ellipsises */
+.hist-table th:nth-child(3) { width: 48px; }    /* Qs     */
+/* Wide enough for the "NN LLM · NN.NK tok" sub-line, which needs ~121px of mono plus cell padding.
+   At 152px it ellipsised to "63.1K t…", so this is measured to the content, not eyeballed. */
+.hist-table th:nth-child(4) { width: 176px; }   /* Score  — 84px meter + percentage + usage */
+.hist-table th:nth-child(5) { width: 92px; }    /* Cost   */
+.hist-table th:nth-child(6) { width: 128px; }   /* Status + open control */
+.hist-table td { overflow: hidden; }
+.hist-table th {
+  text-align: left; font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 500;
+  color: var(--text-3); letter-spacing: var(--track-eyebrow); text-transform: uppercase;
+  padding: var(--s-2) var(--s-4); white-space: nowrap;
+  /* Sticky inside `.shell-main`, offset by the masthead's definite height so it parks directly under
+     it instead of sliding behind it. The opaque background is required — a translucent header lets
+     rows show through as they pass beneath. */
+  position: sticky; top: var(--topbar-h); z-index: 2;
+  background: var(--surface); border-bottom: 1px solid var(--border-2);
+}
+.hist-table td { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
 .hist-row { cursor: pointer; transition: background var(--t); }
+/* An accent left-rule instead of a fill: it marks the row without repainting it, and it is the same
+   hover language as the sidebar's run list. The 2px transparent border on every row stops the text
+   from shifting sideways on hover. */
+.hist-row td:first-child { border-left: 2px solid transparent; }
 .hist-row:hover { background: var(--surface-2); }
+.hist-row:hover td:first-child { border-left-color: var(--accent); }
 .hist-row:last-child td { border-bottom: none; }
-.hist-date { font-size: 0.74rem; color: var(--text-3); white-space: nowrap; font-family: var(--font-mono); }
-.hist-session { color: var(--text); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hist-count { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 700; text-align: right; font-family: var(--font-mono); }
-.hist-usage { font-size: 0.74rem; color: var(--text-3); white-space: nowrap; font-family: var(--font-mono); }
-.hist-score { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.14rem 0.46rem; border-radius: var(--r-pill); font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
-.score-pass { background: var(--ok-soft); color: var(--ok); }
-.score-mid { background: var(--warn-soft); color: var(--warn); }
-.score-fail { background: var(--danger-soft); color: var(--danger); }
-.hist-status { display: inline-block; font-size: 0.66rem; padding: 0.12rem 0.46rem; border-radius: var(--r-pill); white-space: nowrap; font-weight: 600; }
-.hist-approved { background: var(--ok-soft); color: var(--ok); border: 1px solid rgba(67,201,138,.3); }
-.hist-pending { background: var(--surface-3); color: var(--text-3); border: 1px solid var(--border); }
-.hist-empty { padding: 2rem; text-align: center; color: var(--text-3); font-size: 0.88rem; }
+.hist-date { font-size: var(--fs-2xs); color: var(--text-3); white-space: nowrap; font-family: var(--font-mono); line-height: 1.5; }
+.hist-date-time { display: block; color: var(--text-2); }
+/* The run identity: topic on top in prose, its sessions beneath in muted mono. */
+.hist-run-topic { display: block; font-size: var(--fs-sm); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-run-sessions { display: block; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 0.15rem; }
+.hist-count { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; text-align: right; font-family: var(--font-mono); font-size: var(--fs-sm); }
+/* Ellipsis, not the hard clip `overflow: hidden` on the cell would otherwise give it. */
+.hist-usage { display: block; font-size: var(--fs-2xs); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); margin-top: 0.2rem; }
+
+/* Score as a meter, not a sweet. A pill says "badge"; a bar says "measurement", which is what a
+   composite score is — and the honest-scoring work is the whole reason this number exists. */
+.hist-score-cell { min-width: 108px; }
+.hist-score { display: flex; align-items: center; gap: var(--s-2); font-family: var(--font-mono); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+/* Capped, not `flex: 1`. Stretching the meter to fill a column sized by the usage line beneath it
+   made the bar the loudest thing in the row; a fixed track also lets you compare bars down the
+   column, which is the entire reason for drawing it as a bar. */
+.hist-meter { width: 84px; flex: 0 0 84px; height: 3px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.hist-meter-fill { display: block; height: 100%; border-radius: 2px; }
+.score-pass .hist-meter-fill { background: var(--ok); }
+.score-mid  .hist-meter-fill { background: var(--warn); }
+.score-fail .hist-meter-fill { background: var(--danger); }
+.score-pass .hist-score-num { color: var(--ok); }
+.score-mid  .hist-score-num { color: var(--warn); }
+.score-fail .hist-score-num { color: var(--danger); }
+
+.hist-status { display: inline-flex; align-items: center; gap: var(--s-1); font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.hist-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.hist-approved { color: var(--ok); }
+.hist-pending { color: var(--text-3); }
+.hist-go { text-align: right; white-space: nowrap; }
+.hist-go .hist-status { margin-right: var(--s-3); }
+.hist-open { color: var(--text-3); padding: var(--s-1); border-radius: var(--r-sm); vertical-align: middle; transition: color var(--t), transform var(--t); }
+.hist-row:hover .hist-open { color: var(--accent-bright); transform: translateX(2px); }
+.hist-loading { padding: var(--s-5); }
+
+/* The table owns its own edges, so the card must not add padding around it. No `overflow: hidden`:
+   it would be another scroll container between the sticky `th` and `.page-content`. The sticky header
+   shares the card's own `--surface`, so nothing visibly overruns the rounded corners. */
+.card-table { padding: 0; }
+/* Round the last row's fill so a hover on it can't square off the card's bottom corners. */
+.hist-row:last-child td:first-child { border-bottom-left-radius: var(--r-lg); }
+.hist-row:last-child td:last-child { border-bottom-right-radius: var(--r-lg); }
+
+/* Narrow widths drop the lowest-value columns rather than growing a horizontal scrollbar.
+   5 = Cost, 3 = Qs; Date / Run / Score / Status survive to the smallest size.
+   Breakpoints were measured, not guessed: at 820px the six-column table still overran its box by
+   11px with `overflow-x: visible`, i.e. clipped and unreachable. Cost now goes at 1000px, which
+   leaves slack at every width down to the next breakpoint. */
+/* 1120, not a round 1000: between those two the 284px sidebar is still present, so keeping Cost left
+   the Run column under 120px. The breakpoint is set by where Run stops being readable. */
+@media (max-width: 1120px) {
+  .hist-table th:nth-child(5), .hist-table td:nth-child(5) { display: none; }
+}
+@media (max-width: 600px) {
+  /* Fixed layout hands Run whatever the other columns leave, so the narrow case needs its own widths:
+     at the desktop values (100 + 176 + 128) Run was left ~30px and rendered "No-…". */
+  .hist-table th:nth-child(1) { width: 92px; }
+  .hist-table th:nth-child(4) { width: 104px; }
+  .hist-table th:nth-child(6) { width: 60px; }
+  .hist-table th:nth-child(3), .hist-table td:nth-child(3) { display: none; }
+  /* The per-run API usage line is ~200px of mono and the widest thing left; it is detail, not
+     triage, and the same numbers are on the run's own page. */
+  .hist-usage { display: none; }
+  /* Status keeps its coloured dot and loses its word — the dot carries the state. */
+  .hist-status { font-size: 0; gap: 0; }
+  .hist-status::before { width: 6px; height: 6px; }
+  .hist-table td, .hist-table th { padding-left: var(--s-2); padding-right: var(--s-2); }
+  .hist-meter { width: 48px; flex-basis: 48px; }
+  /* Safety net: below this width the columns can still outgrow the viewport on a long topic, and
+     `.shell-main`'s `overflow-x: hidden` would CLIP them unreachably rather than scroll. Trading the
+     sticky header for guaranteed reachability is the right way round on a phone. */
+  .hist-table-wrap { overflow-x: auto; }
+  .hist-table th { position: static; }
+}
+/* Below ~375px (narrower than an iPhone SE) even the two-line date costs more than it earns: it left
+   the Run column at 77px. The timestamp stays in the row's title attribute. */
+@media (max-width: 380px) {
+  .hist-table th:nth-child(1), .hist-table td:nth-child(1) { display: none; }
+  .hist-row td:nth-child(2) { border-left: 2px solid transparent; }
+  .hist-row:hover td:nth-child(2) { border-left-color: var(--accent); }
+}
+.hist-empty { padding: var(--s-8) var(--s-5); text-align: center; color: var(--text-3); font-size: var(--fs-sm); display: flex; flex-direction: column; align-items: center; gap: var(--s-3); }
+
+/* One orchestrated load: rows rise in sequence rather than each animating on its own schedule. */
+.hist-row { animation: rowRise .34s cubic-bezier(.22,1,.36,1) both; }
+@keyframes rowRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.hist-row:nth-child(1) { animation-delay: .02s } .hist-row:nth-child(2) { animation-delay: .04s }
+.hist-row:nth-child(3) { animation-delay: .06s } .hist-row:nth-child(4) { animation-delay: .08s }
+.hist-row:nth-child(5) { animation-delay: .10s } .hist-row:nth-child(6) { animation-delay: .12s }
+.hist-row:nth-child(7) { animation-delay: .14s } .hist-row:nth-child(8) { animation-delay: .16s }
+.hist-row:nth-child(n+9) { animation-delay: .18s }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 7px; height: 7px; }

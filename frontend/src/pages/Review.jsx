@@ -22,7 +22,12 @@ const REJECT_REASONS = [
 
 function CompactQuestion({
   id, content, title, difficulty,
-  company, role, topic, subTopic, language, source, sourceUrl,
+  // `company` is WHO ASKED (a real company, or the NIAT placeholder); `site` is WHERE IT WAS FOUND.
+  // They render as separate tags on purpose — a content site used to be shown in the company tag,
+  // so "Indeed" looked like an employer that had asked the question.
+  // `original` is set only when the scope trim shortened the question: it still carries the company's
+  // name, so the edit has to be visible and the source text inspectable.
+  company, site, original, offSyllabus, role, topic, subTopic, language, source, sourceUrl,
   snippet, decision, onDecide, index, fit, reason, focused, onFocus,
 }) {
   const [open, setOpen] = useState(false)
@@ -57,7 +62,16 @@ function CompactQuestion({
           <span className={`cq-text${open ? ' cq-text-full' : ''}`}>{isCoding ? title : content}</span>
         </button>
         <div className="cq-tags">
-          {company && <span className="cq-company" title={company}>{company}</span>}
+          {company && <span className="cq-company" title={`Asked at ${company}`}>{company}</span>}
+          {site && <span className="cq-via" title={`Found on ${site} — provenance, not the asking company`}>via {site}</span>}
+          {original && (
+            <span className="cq-adapted"
+                  title={`Trimmed to this session's scope. As sourced: "${original}"`}>adapted</span>
+          )}
+          {offSyllabus && (
+            <span className="cq-offsyllabus"
+                  title={`Tests "${offSyllabus}", which does not appear in this session's reading material. On-domain, but beyond the syllabus.`}>off-syllabus</span>
+          )}
           {typeof fit === 'number' && (
             <span
               className="cq-fit"
@@ -177,7 +191,9 @@ export default function Review() {
     if (f >= fitHighThreshold * 0.6) return 'review'
     return 'low'
   }
-  // A real company vs the honest source-site label (see models.attribution_label).
+  // A real company vs the NIAT placeholder. Keyed on `asked_in_company`, not on `attribution`, so it
+  // stays true regardless of how attribution is rendered (see models.attribution_label — the site
+  // name is provenance and lives in `source_site`, never here).
   const hasCompany = (q) => !!(q.asked_in_company || '').trim()
 
   const visible = useMemo(() => ranked.filter((q) => (
@@ -541,7 +557,7 @@ export default function Review() {
                     onChange={(e) => setFilter('attribution', e.target.value)}>
               <option value="all">any attribution</option>
               <option value="company">real company</option>
-              <option value="source">source-labelled</option>
+              <option value="source">unattributed (NIAT)</option>
             </select>
 
             {filtersActive && (
@@ -590,6 +606,9 @@ export default function Review() {
                     content={q.question || q.content}
                     difficulty={q.difficulty_level || q.difficulty}
                     company={q.attribution || q.asked_in_company}
+                    site={q.source_site}
+                    original={q.original_content}
+                    offSyllabus={q.off_syllabus_concept}
                     role={q.role}
                     topic={q.topic}
                     subTopic={q.sub_topic}
