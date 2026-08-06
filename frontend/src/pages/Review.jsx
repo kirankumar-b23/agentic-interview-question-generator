@@ -162,6 +162,35 @@ export default function Review() {
     [result],
   )
 
+  // ── Filters ──
+  // Ranking alone is not enough for an uncapped set: to judge "are the low-fit ones all bad?" or
+  // "did the web source contribute anything usable?" the reviewer has to be able to isolate a slice.
+  const fitHighThreshold = result?.thresholds?.session_fit_high ?? 0.35
+  const [filters, setFilters] = useState({ fit: 'all', difficulty: 'all', source: 'all', attribution: 'all' })
+  const setFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value }))
+  const filtersActive = Object.values(filters).some((v) => v !== 'all')
+
+  const bandOf = (q) => {
+    const f = fitOf(q)
+    if (f < 0) return 'unscored'
+    if (f >= fitHighThreshold) return 'high'
+    if (f >= fitHighThreshold * 0.6) return 'review'
+    return 'low'
+  }
+  // A real company vs the honest source-site label (see models.attribution_label).
+  const hasCompany = (q) => !!(q.asked_in_company || '').trim()
+
+  const visible = useMemo(() => ranked.filter((q) => (
+    (filters.fit === 'all' || bandOf(q) === filters.fit)
+    && (filters.difficulty === 'all' || (q.difficulty || 'Medium') === filters.difficulty)
+    && (filters.source === 'all' || (q.source || '') === filters.source)
+    && (filters.attribution === 'all'
+        || (filters.attribution === 'company' ? hasCompany(q) : !hasCompany(q)))
+  )), [ranked, filters, fitHighThreshold])
+
+  const sourcesPresent = useMemo(
+    () => [...new Set(ranked.map((q) => q.source).filter(Boolean))], [ranked])
+
   // ── Keyboard triage ──
   // An uncapped set can be 50+ questions; accept/reject was mouse-only, one click per row, with the
   // buttons ~1000px apart from the text on a wide screen. j/k to move, a/r to decide, 1-7 to give a
@@ -169,31 +198,54 @@ export default function Review() {
   const [cursor, setCursor] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
 
+  // The cursor indexes the VISIBLE list, so changing a filter must not leave it out of bounds
+  // pointing at a row the reviewer can no longer see.
+  useEffect(() => { setCursor(0) }, [filters])
+
+  // ── Bulk actions ──
+  // Accepting the high-confidence band in one keystroke is the point of ranking: the reviewer then
+  // only hand-judges the tail. These write explicit decisions, so `decisions_sent` stays truthful and
+  // an all-rejected set still cannot export.
+  const acceptAboveFit = useCallback(() => {
+    setDecisions((cur) => {
+      const next = { ...cur }
+      for (const q of ranked) {
+        if (fitOf(q) >= fitHighThreshold) next[q.question_id] = { status: 'accepted' }
+      }
+      return next
+    })
+  }, [ranked, fitHighThreshold])
+
+  const clearDecisions = useCallback(() => setDecisions({}), [])
+  const aboveFitCount = useMemo(
+    () => ranked.filter((q) => fitOf(q) >= fitHighThreshold).length, [ranked, fitHighThreshold])
+
   useEffect(() => {
     function onKey(e) {
       // Never hijack typing, and let real shortcuts through.
       const tag = e.target?.tagName
       if (e.metaKey || e.ctrlKey || e.altKey) return
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return
-      if (!ranked.length) return
+      if (!visible.length) return
 
-      const current = ranked[cursor]
+      const current = visible[cursor]
       const key = e.key
 
-      if (key === 'j' || key === 'ArrowDown') { setCursor(c => Math.min(c + 1, ranked.length - 1)); e.preventDefault() }
+      if (key === 'j' || key === 'ArrowDown') { setCursor(c => Math.min(c + 1, visible.length - 1)); e.preventDefault() }
       else if (key === 'k' || key === 'ArrowUp') { setCursor(c => Math.max(c - 1, 0)); e.preventDefault() }
-      else if (key === 'a' && current) { onDecide(current.question_id, 'accepted'); setCursor(c => Math.min(c + 1, ranked.length - 1)) }
+      else if (key === 'a' && current) { onDecide(current.question_id, 'accepted'); setCursor(c => Math.min(c + 1, visible.length - 1)) }
       else if (key === 'r' && current) { onDecide(current.question_id, 'rejected') }
       else if (key === 'u' && current) { setDecisions(cur => { const n = { ...cur }; delete n[current.question_id]; return n }) }
+      else if (key === 'A') { acceptAboveFit(); e.preventDefault() }        // shift+a
       else if (key === '?') setShowHelp(v => !v)
-      else if (key === 'Escape') setShowHelp(false)
+      else if (key === 'Escape') { setShowHelp(false); setFilters({ fit: 'all', difficulty: 'all', source: 'all', attribution: 'all' }) }
       else if (/^[1-7]$/.test(key) && current && decisions[current.question_id]?.status === 'rejected') {
         onDecide(current.question_id, 'rejected', REJECT_REASONS[Number(key) - 1].key)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [ranked, cursor, decisions, onDecide])
+  }, [visible, cursor, decisions, onDecide, acceptAboveFit])
 
   async function handleApprove() {
     const acceptedIds = []
@@ -286,9 +338,10 @@ export default function Review() {
   if (!result) return null
 
   const questions = ranked
-  const fitHigh = result.thresholds?.session_fit_high ?? 0.35
-  // Index of the first question below the high-confidence bar → where the divider goes.
-  const firstLowFit = questions.findIndex(q => fitOf(q) >= 0 && fitOf(q) < fitHigh)
+  // Index of the first question below the high-confidence bar → where the divider goes. Computed
+  // against the VISIBLE list, since that is what is rendered; filtering otherwise put the divider in
+  // an arbitrary place.
+  const visibleFirstLowFit = visible.findIndex(q => fitOf(q) >= 0 && fitOf(q) < fitHighThreshold)
   const codingQs = result.output?.coding_questions || []
   const snippets = result.output?.code_snippets || []
   const snippetMap = Object.fromEntries(snippets.map(s => [s.code_id, s]))
@@ -424,7 +477,9 @@ export default function Review() {
         <div className="q-set-panel">
           <div className="q-set-head">
             <span className="q-set-title">Theory questions</span>
-            <span className="q-set-badge">{questions.length}</span>
+            <span className="q-set-badge">
+              {filtersActive ? `${visible.length} / ${questions.length}` : questions.length}
+            </span>
             <button className="kbd-hint" onClick={() => setShowHelp(v => !v)} aria-expanded={showHelp}>
               <Icon name="keyboard" size={13} /> shortcuts
             </button>
@@ -436,21 +491,94 @@ export default function Review() {
               <div><kbd>r</kbd> reject</div>
               <div><kbd>1</kbd>–<kbd>7</kbd> reason (after reject)</div>
               <div><kbd>u</kbd> undo</div>
+              <div><kbd>shift</kbd>+<kbd>a</kbd> accept all above fit</div>
+              <div><kbd>esc</kbd> clear filters</div>
               <div><kbd>?</kbd> toggle this</div>
             </div>
           )}
+
+          {/* Filters + bulk actions. Ranking gets the best questions to the top; these let the
+              reviewer isolate a slice ("are the low-fit ones all bad?") and clear the confident
+              majority in one action so only the tail needs hand-judging. */}
+          <div className="q-toolbar">
+            <Icon name="filter" size={13} className="q-toolbar-ico" />
+            <label className="sr-only" htmlFor="flt-fit">Filter by session fit</label>
+            <select id="flt-fit" className="q-filter" value={filters.fit}
+                    onChange={(e) => setFilter('fit', e.target.value)}>
+              <option value="all">any fit</option>
+              <option value="high">high fit (≥ {fitHighThreshold.toFixed(2)})</option>
+              <option value="review">needs a look</option>
+              <option value="low">low fit</option>
+              <option value="unscored">unscored</option>
+            </select>
+
+            <label className="sr-only" htmlFor="flt-diff">Filter by difficulty</label>
+            <select id="flt-diff" className="q-filter" value={filters.difficulty}
+                    onChange={(e) => setFilter('difficulty', e.target.value)}>
+              <option value="all">any difficulty</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+
+            {sourcesPresent.length > 1 && (
+              <>
+                <label className="sr-only" htmlFor="flt-src">Filter by source</label>
+                <select id="flt-src" className="q-filter" value={filters.source}
+                        onChange={(e) => setFilter('source', e.target.value)}>
+                  <option value="all">any source</option>
+                  {sourcesPresent.map((src) => <option key={src} value={src}>{src}</option>)}
+                </select>
+              </>
+            )}
+
+            <label className="sr-only" htmlFor="flt-attr">Filter by attribution</label>
+            <select id="flt-attr" className="q-filter" value={filters.attribution}
+                    onChange={(e) => setFilter('attribution', e.target.value)}>
+              <option value="all">any attribution</option>
+              <option value="company">real company</option>
+              <option value="source">source-labelled</option>
+            </select>
+
+            {filtersActive && (
+              <button className="q-filter-clear"
+                      onClick={() => setFilters({ fit: 'all', difficulty: 'all', source: 'all', attribution: 'all' })}>
+                <Icon name="x" size={11} /> clear
+              </button>
+            )}
+
+            <span className="q-toolbar-spacer" />
+            <button className="btn btn-ghost btn-sm" onClick={acceptAboveFit}
+                    disabled={aboveFitCount === 0}
+                    title={`Accept the ${aboveFitCount} question(s) at or above fit ${fitHighThreshold.toFixed(2)}`}>
+              <Icon name="check" size={13} /> Accept {aboveFitCount} above fit
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={clearDecisions}
+                    disabled={Object.keys(decisions).length === 0}>
+              <Icon name="refresh" size={13} /> Reset
+            </button>
+          </div>
           <div className="q-set-body">
             {questions.length === 0 ? (
               <div className="empty-state">
                 <Icon name="info" size={22} />
                 <p>No theory questions survived validation for this session. The report above says why.</p>
               </div>
+            ) : visible.length === 0 ? (
+              <div className="empty-state">
+                <Icon name="filter" size={22} />
+                <p>No questions match these filters — {questions.length} are hidden.</p>
+                <button className="btn btn-ghost btn-sm"
+                        onClick={() => setFilters({ fit: 'all', difficulty: 'all', source: 'all', attribution: 'all' })}>
+                  Clear filters
+                </button>
+              </div>
             ) : (
-              questions.map((q, i) => (
+              visible.map((q, i) => (
                 <Fragment key={q.question_id}>
-                  {i === firstLowFit && firstLowFit > 0 && (
+                  {i === visibleFirstLowFit && visibleFirstLowFit > 0 && (
                     <div className="cq-tier-divider">
-                      Below fit {fitHigh.toFixed(2)} — weaker match to this session, review closely
+                      Below fit {fitHighThreshold.toFixed(2)} — weaker match to this session, review closely
                     </div>
                   )}
                   <CompactQuestion

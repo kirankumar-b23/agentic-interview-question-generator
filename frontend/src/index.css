@@ -575,6 +575,20 @@ p.q-note-warn { padding: var(--s-2) var(--s-4); background: var(--warn-soft); bo
 .kbd-help > div { display: inline-flex; align-items: center; gap: 0.28rem; }
 kbd { display: inline-block; min-width: 1.15rem; padding: 0.05rem 0.3rem; background: var(--surface-3); border: 1px solid var(--border-2); border-bottom-width: 2px; border-radius: 4px; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text); text-align: center; }
 
+.q-toolbar { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; padding: var(--s-2) var(--s-3); background: var(--surface-2); border-bottom: 1px solid var(--border-soft); }
+.q-toolbar-ico { color: var(--text-3); flex-shrink: 0; }
+.q-toolbar-spacer { flex: 1 1 auto; }
+.q-filter { padding: 0.16rem 0.4rem; background: var(--surface); border: 1px solid var(--border-2); border-radius: var(--r-sm); color: var(--text-2); font-family: var(--font-mono); font-size: var(--fs-2xs); cursor: pointer; max-width: 12rem; }
+.q-filter:hover { border-color: var(--accent); color: var(--text); }
+.q-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.q-filter-clear { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.14rem 0.42rem; background: none; border: 1px solid var(--border-2); border-radius: var(--r-pill); color: var(--text-3); font-family: var(--font-mono); font-size: var(--fs-2xs); cursor: pointer; }
+.q-filter-clear:hover { color: var(--danger); border-color: var(--danger); }
+/* Below the tablet breakpoint the toolbar's bulk buttons drop to their own row rather than
+   squeezing the selects to unreadable widths. */
+@media (max-width: 760px) {
+  .q-toolbar-spacer { flex-basis: 100%; height: 0; }
+}
+
 /* ── Mobile nav drawer ──
    Below 900px the sidebar becomes an off-canvas drawer. It used to simply go `position: static`
    while sitting before the main content in the DOM, burying every page under the control panel. */

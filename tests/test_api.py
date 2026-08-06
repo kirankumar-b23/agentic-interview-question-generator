@@ -267,3 +267,69 @@ class TestSpaRouting:
     def test_path_traversal_is_refused(self, client):
         r = client.get("/../../etc/passwd")
         assert "root:" not in r.text
+
+
+class TestBulkActionsRespectTheExportRule:
+    """Tier 3's bulk accept/reset must not be able to re-open the reject-all hole.
+
+    The client always sends `decisions_sent: true`, so a bulk-cleared set (nothing accepted) is still
+    an explicit decision and must be refused rather than exporting everything. These assert the
+    SERVER contract that guarantees it, whatever the UI does.
+    """
+
+    def test_explicit_empty_acceptance_is_still_refused(self):
+        """What a bulk "Reset" followed by Export would send."""
+        body = main.ReviewRequest(action="approve", accepted_ids=[], rejected_feedback={},
+                                  decisions_sent=True)
+        assert body.has_explicit_decisions is True
+
+    def test_a_client_that_sends_nothing_is_treated_as_no_decisions(self):
+        """Backwards compatibility: an old client with no flag and no ids made no decisions."""
+        body = main.ReviewRequest(action="approve")
+        assert body.has_explicit_decisions is False
+
+    def test_rejections_alone_count_as_explicit_decisions(self):
+        body = main.ReviewRequest(action="approve", rejected_feedback={"q1": "off_topic"})
+        assert body.has_explicit_decisions is True
+
+    def test_bulk_accepted_ids_are_honoured(self, staged_bulk_run, monkeypatch):
+        """A bulk accept-above-fit sends many ids at once; all of them must export."""
+        import src.sheets_writer as sw
+        monkeypatch.setattr(sw, "write_to_sheets", lambda **kw: "https://example.test/s")
+        qs = staged_bulk_run
+        c = TestClient(main.app, raise_server_exceptions=False)
+        r = c.post("/api/approve/bulk-run", json={
+            "action": "approve",
+            "accepted_ids": [q.question_id for q in qs[:2]],
+            "rejected_feedback": {qs[2].question_id: "too_generic"},
+            "decisions_sent": True})
+        assert r.status_code == 200, r.text[:300]
+        assert r.json()["saved"] == 2
+
+    @pytest.fixture
+    def staged_bulk_run(self, tmp_path, monkeypatch):
+        from src import memory
+        from src.models import (CurationMetadata, CuratedOutput, QualityReport, QuestionDetail,
+                                SessionContext)
+        monkeypatch.setattr(memory, "MEMORY_DB", tmp_path / "bulk.db")
+        monkeypatch.setattr(memory, "_FEEDBACK_EXAMPLES", tmp_path / "fb.json")
+        monkeypatch.setattr(memory, "_RULES_FILE", tmp_path / "rules.md")
+        memory.init_db()
+
+        result = main.PipelineResult()
+        result.run_id = "bulk-run"
+        qs = [QuestionDetail(question_id=f"bk{i}", category="GEN_AI", topic="Gen AI",
+                             source="interview_db", content=f"What is agent planning {i}?",
+                             session_fit=0.8 - i * 0.2)
+              for i in range(3)]
+        result.curated_output = CuratedOutput(session_name="S", question_details=qs,
+                                              coding_questions=[], code_snippets=[],
+                                              metadata=CurationMetadata())
+        result.quality_report = QualityReport()
+        result.context = SessionContext(
+            session_name="S", learning_outcomes=["x"], key_concepts=["y"], scope_in=[], scope_out=[],
+            session_type="mixed", matched_kp_ids=[], matched_csv_topics=[],
+            prerequisite_kp_chain=[], difficulty_distribution={})
+        main._results["bulk-run"] = result
+        yield qs
+        main._results.pop("bulk-run", None)
