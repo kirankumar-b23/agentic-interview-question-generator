@@ -46,8 +46,8 @@ from src.data_loader import get_data_store
 # without the name being bound.
 from src.llm_client import get_active_model, get_credit_balance, set_active_model
 from src.models import GenerationConfig
-from src.orchestrator import (cleanup_progress, finalize_pipeline, get_history, get_progress_queue,
-                              is_finished, prune_finished, run_pipeline, run_preview_pipeline)
+from src.orchestrator import (finalize_pipeline, get_history, get_progress_queue, is_finished,
+                              prune_finished, run_pipeline, run_preview_pipeline)
 from src.rejection_rules import rule_for
 
 log = logging.getLogger("questor")
@@ -465,9 +465,12 @@ def api_stream(run_id: str, after: int = -1):
                 if event.get("step") in ("complete", "error"):
                     return
         finally:
-            # Only reclaims buffers for a run that has actually FINISHED. A client disconnecting
-            # mid-run must not delete the queue the live pipeline thread is still writing to.
-            cleanup_progress(run_id)
+            # Reclaim only runs that finished LONG ago. Calling cleanup_progress(run_id) here was
+            # self-defeating: when a run completes, this generator returns, the `finally` fires, the
+            # run is already in `_finished`, and the retention window is deleted on the spot. Reloading
+            # /progress/<id> after completion then found an empty, not-finished-looking run and sat
+            # emitting heartbeats until the 900s stall bound — so RETAIN_FINISHED_SECONDS could never
+            # be what actually reclaimed anything.
             prune_finished()
 
     return StreamingResponse(events(), media_type="text/event-stream", headers={

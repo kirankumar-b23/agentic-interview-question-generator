@@ -305,7 +305,12 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
     bank_have = state.added_by_source.get("bank", 0)
     max_to_add = BANK_POOL_CAP - bank_have
     if max_to_add <= 0:
-        return {"found": 0, "warning": f"Bank quota full ({BANK_POOL_CAP}). Use web/github or submit."}
+        # Return the SAME keys as the success path. Omitting them made the progress line read
+        # "Found 0 relevant (total: 0, bank quota left: ?)" — reporting an empty pool at the moment
+        # the pool was actually full.
+        return {"found": 0, "total_accumulated": len(state.questions) + len(state.coding_questions),
+                "bank_remaining": 0,
+                "warning": f"Bank quota full ({BANK_POOL_CAP}) — move to web search or submit."}
 
     # Per-call cap raised 8→25 so a single search pulls a much wider slice into the pool
     # (the whole pool is relevance-scored later; we want the judge to see more candidates).

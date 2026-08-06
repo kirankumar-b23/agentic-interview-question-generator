@@ -198,9 +198,13 @@ export default function Review() {
   const [cursor, setCursor] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
 
-  // The cursor indexes the VISIBLE list, so changing a filter must not leave it out of bounds
-  // pointing at a row the reviewer can no longer see.
+  // The cursor indexes the VISIBLE list. Clamp on ANY change to that list, not just on a filter
+  // change — a fresh result with fewer questions would otherwise leave the cursor past the end and
+  // `visible[cursor]` undefined.
   useEffect(() => { setCursor(0) }, [filters])
+  useEffect(() => {
+    setCursor((c) => Math.min(c, Math.max(0, visible.length - 1)))
+  }, [visible.length])
 
   // ── Bulk actions ──
   // Accepting the high-confidence band in one keystroke is the point of ranking: the reviewer then

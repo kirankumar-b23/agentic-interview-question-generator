@@ -252,3 +252,86 @@ class TestGateNeverAbortsTheRun:
         verdict = agent_mod._critique_question_set(st)
         assert verdict["pass"] is False
         assert any(i["issue"] == "gate-error" for i in verdict["must_fix"])
+
+
+class TestFinishedRunsStayReadableForAWhile:
+    """The stream's `finally` used to call cleanup_progress(run_id), which deleted the retention window
+    the instant a run finished — so reloading the progress page after completion found an empty,
+    not-finished-looking run and heartbeated until the 900s stall bound. Reclamation is time-based."""
+
+    def test_a_just_finished_run_survives_prune(self):
+        import src.orchestrator as orch
+        rid = "retain-now"
+        try:
+            orch._emit(rid, "complete", "done", "done", questions=8)
+            orch.prune_finished()                    # what the stream's finally now calls
+            assert orch.is_finished(rid) is True
+            assert len(orch.get_history(rid)) == 1, "a reload right after completion must see history"
+        finally:
+            orch.cleanup_progress(rid)
+
+    def test_an_old_run_is_reclaimed(self):
+        import time
+        import src.orchestrator as orch
+        rid = "retain-old"
+        orch._emit(rid, "complete", "done", "done")
+        orch.prune_finished(now=time.time() + orch.RETAIN_FINISHED_SECONDS + 1)
+        assert orch.is_finished(rid) is False
+        assert orch.get_history(rid) == []
+
+    def test_the_stream_no_longer_deletes_one_run_on_close(self):
+        """Guard the specific regression: main's stream teardown must not target a single run.
+
+        Checks for a CALL, not the identifier — the explanatory comment mentions it by name.
+        """
+        import ast
+        import inspect
+        import textwrap
+        import main
+        tree = ast.parse(textwrap.dedent(inspect.getsource(main.api_stream)))
+        called = {n.func.id for n in ast.walk(tree)
+                  if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+        assert "cleanup_progress" not in called
+        assert "prune_finished" in called, "time-based reclamation must still run"
+
+
+class TestBankQuotaFullStillReportsNumbers:
+    """The early return omitted the keys the transcript renders, so a FULL pool was reported as
+    "Found 0 relevant (total: 0, bank quota left: ?)"."""
+
+    def test_quota_full_result_has_the_same_keys_as_success(self, monkeypatch):
+        from src.agent import _summarize_result
+        from src.config import BANK_POOL_CAP
+        from src.tools import tool_search_question_bank
+
+        st = _state(contents=["What are the core components of an AI agent?"])
+        st.added_by_source["bank"] = BANK_POOL_CAP        # quota exhausted
+        result = tool_search_question_bank(st, query="agents")
+
+        assert result["found"] == 0
+        assert result["bank_remaining"] == 0
+        assert result["total_accumulated"] == 1, "the pool is not empty just because the quota is"
+        rendered = _summarize_result("search_question_bank", result)
+        assert "?" not in rendered
+
+
+class TestLightFallbackIsComplete:
+    """A system-light visitor with no stored theme got light surfaces but a dark accent gradient, so
+    primary buttons stayed dark-themed while the page turned light."""
+
+    def test_prefers_color_scheme_block_sets_every_var_the_explicit_theme_does(self):
+        import pathlib
+        import re
+        css = pathlib.Path(__file__).resolve().parent.parent / "frontend" / "src" / "index.css"
+        text = css.read_text()
+
+        def vars_in(block_start: str) -> set:
+            i = text.index(block_start)
+            body = text[i:text.index("\n}", i)]
+            return set(re.findall(r"(--[a-z0-9-]+)\s*:", body))
+
+        explicit = vars_in(':root[data-theme="light"] {')
+        fallback = vars_in(":root:not([data-theme]) {")
+        # The fallback may legitimately omit shadows; colour tokens must all be present.
+        missing = {v for v in explicit - fallback if not v.startswith("--shadow")}
+        assert not missing, f"prefers-color-scheme fallback is missing: {sorted(missing)}"

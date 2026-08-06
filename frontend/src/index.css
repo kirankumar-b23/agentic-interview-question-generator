@@ -156,6 +156,16 @@ ul { list-style: none; }
     --accent-soft: rgba(47,111,224,.12); --accent-glow: rgba(47,111,224,.28);
     --ok: #1f9d62; --warn: #b07d12; --danger: #d6452f;
     --easy: #1f9d62; --medium: #b07d12; --hard: #d6452f;
+    /* These five were missing, so a system-light visitor with no stored choice got light surfaces
+       with a dark accent gradient and near-black text ON it — primary buttons stayed dark-themed
+       while the rest of the page turned light. Keep this list in step with [data-theme="light"]. */
+    --accent-grad: linear-gradient(135deg, #2f6fe0, #14b8ac);
+    --on-accent: #ffffff; --on-ok: #ffffff;
+    --link-hover: #0b4bb5; --tag-role: #6d28d9;
+    --ok-soft: rgba(31,157,98,.14); --warn-soft: rgba(176,125,18,.16);
+    --danger-soft: rgba(214,69,47,.12);
+    --c1: #2f6fe0; --c2: #1f9d62; --c3: #b07d12; --c4: #8b5cf6;
+    --c-gate: #d6452f; --c-review: #0d9488;
     --inset-hi: inset 0 1px 0 rgba(255,255,255,.6);
   }
 }

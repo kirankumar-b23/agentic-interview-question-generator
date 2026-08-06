@@ -82,11 +82,13 @@ def is_finished(run_id: str) -> bool:
 
 
 def cleanup_progress(run_id: str):
-    """Drop a finished run's buffers. A no-op while the run is still going.
+    """Drop ONE finished run's buffers immediately. A no-op while the run is still going.
 
-    Called when a stream ends. It must NOT discard state for a live run just because the browser
-    went away — the pipeline keeps running on its own thread and its remaining events (including
-    `complete`) still need somewhere to land.
+    Deliberately NOT called when a stream closes. Doing that deleted the retention window the moment a
+    run finished — the stream returns, `finally` fires, the run is already in `_finished` — so a page
+    reload after completion found an empty, not-finished-looking run and heartbeated until the stall
+    bound. Reclamation is time-based via `prune_finished`; this exists for tests and for explicitly
+    discarding a single run.
     """
     with _lock:
         if run_id not in _finished:
