@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import Icon from '../components/Icon.jsx'
+import TopBar from '../components/TopBar.jsx'
 
 const TYPES = [
   { v: 'mixed', l: 'Mixed' },
@@ -64,19 +65,21 @@ export default function AddCourse() {
 
   return (
     <>
-      <header className="topbar">
-        <div className="topbar-title-group">
-          <span className="topbar-title">Add a Course</span>
-          <span className="topbar-sub">Provide reading material — questions are retrieved &amp; validated against it</span>
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}><Icon name="arrowLeft" size={13} /> Home</button>
-      </header>
+      <TopBar
+        title="Add a course"
+        sub="Provide reading material — questions are retrieved &amp; validated against it"
+        actions={
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>
+            <Icon name="arrowLeft" size={13} /> Home
+          </button>
+        }
+      />
 
       <div className="page-content">
         {/* Mode toggle */}
         <div className="addc-modes">
           <button className={`addc-mode ${mode === 'session' ? 'active' : ''}`} onClick={() => { setMode('session'); reset() }}>
-            ＋ Single session
+            <Icon name="plus" size={13} /> Single session
           </button>
           <button className={`addc-mode ${mode === 'course' ? 'active' : ''}`} onClick={() => { setMode('course'); reset() }}>
             Full course (paste Markdown)
@@ -130,10 +133,10 @@ export default function AddCourse() {
             </>
           )}
 
-          {err && <div className="alert alert-error" style={{ marginTop: '0.8rem' }}>{err}</div>}
+          {err && <div className="alert alert-error addc-alert">{err}</div>}
           {msg && (
-            <div className="alert alert-success" style={{ marginTop: '0.8rem' }}>
-              {msg} <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>Go generate ▸</button>
+            <div className="alert alert-success addc-alert">
+              {msg} <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>Go generate <Icon name="arrowRight" size={13} /></button>
             </div>
           )}
         </section>

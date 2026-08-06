@@ -94,7 +94,7 @@ export default function Sidebar() {
       {/* Course + Topic pickers */}
       <div className="sidebar-picker">
         <div className="sidebar-picker-head">
-          <label className="sidebar-section-label" htmlFor="sb-course" style={{ padding: 0 }}>Course</label>
+          <label className="sidebar-section-label sidebar-label-flush" htmlFor="sb-course">Course</label>
           <button className="sidebar-view-all" onClick={() => navigate('/add')}>
             <Icon name="plus" size={12} /> Add
           </button>
@@ -151,7 +151,7 @@ export default function Sidebar() {
             {/* Sessions included in this topic — info only */}
             {sessions.length > 0 && (
               <>
-                <span className="sidebar-section-label" style={{ marginTop: '0.5rem' }}>
+                <span className="sidebar-section-label sidebar-label-spaced">
                   Sessions included ({sessions.length})
                 </span>
                 <div className="sidebar-session-list">
@@ -209,7 +209,7 @@ export default function Sidebar() {
           {starting
             ? 'Starting…'
             : canGen
-              ? 'Generate Questions ▸'
+              ? 'Generate questions'
               : selectMode === 'topic' ? 'Select a topic first' : 'Select a unit first'}
         </button>
       </div>
@@ -256,8 +256,8 @@ export default function Sidebar() {
             {(selectedModel || meta?.model || '').replace(/^.*\//, '') || '—'}
           </span>
         )}
-        <div className="sidebar-model-via" style={{ marginTop: '0.3rem' }}>via OpenRouter</div>
-        <div className="sidebar-model-via" style={{ marginTop: '0.35rem' }}>
+        <div className="sidebar-model-via">via OpenRouter</div>
+        <div className="sidebar-model-via">
           {meta?.credits?.remaining != null
             ? `Credits: $${meta.credits.remaining.toFixed(2)} left${meta.credits.scope === 'key' ? ' (key)' : ''}`
             : 'Credits: —'}

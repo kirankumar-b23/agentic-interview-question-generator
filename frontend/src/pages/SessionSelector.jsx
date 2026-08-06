@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import Icon from '../components/Icon.jsx'
+import TopBar from '../components/TopBar.jsx'
 
 const PIPELINE = [
   { icon: 'understand', label: 'Understand' },
@@ -27,12 +28,7 @@ export default function WelcomePage() {
 
   return (
     <>
-      <header className="topbar">
-        <div className="topbar-title-group">
-          <span className="topbar-title">Questor</span>
-          <span className="topbar-sub">Agentic interview-question workflow</span>
-        </div>
-      </header>
+      <TopBar title="Questor" sub="Agentic interview-question workflow" />
 
       <div className="page-content">
         {/* Hero */}
@@ -78,8 +74,8 @@ export default function WelcomePage() {
         {/* Courses */}
         <section className="card">
           <div className="card-title-row">
-            <h2 className="card-title" style={{ marginBottom: 0 }}>Courses</h2>
-            <button className="btn btn-primary btn-sm" onClick={() => navigate('/add')}>＋ Add course</button>
+            <h2 className="card-title card-title-flush">Courses</h2>
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/add')}><Icon name="plus" size={13} /> Add course</button>
           </div>
           <div className="course-grid">
             {courses.map(c => (
@@ -96,7 +92,7 @@ export default function WelcomePage() {
               </div>
             )}
           </div>
-          <p className="muted" style={{ fontSize: '0.76rem', marginTop: '0.6rem' }}>
+          <p className="muted home-note">
             Pick a course &amp; topic from the sidebar to generate. Add your own via “Add course”.
           </p>
         </section>

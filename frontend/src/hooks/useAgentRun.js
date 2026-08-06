@@ -89,8 +89,15 @@ export function useAgentRun(runId) {
       const phase = ev.step.slice(6)
       phaseStatus[phase] = ev.status
       const t = phaseTiming[phase] || (phaseTiming[phase] = {})
-      if (ev.status === 'running') t.startedAt = ev.ts
-      else { t.endedAt = ev.ts; if (ev.duration_ms != null) t.durationMs = ev.duration_ms }
+      if (ev.status === 'running') {
+        t.startedAt = ev.ts
+      } else {
+        t.endedAt = ev.ts
+        if (ev.duration_ms != null) t.durationMs = ev.duration_ms
+        // The group header renders this; without capturing it the phase token count was always
+        // undefined and silently never displayed.
+        if (ev.tokens != null) t.tokens = ev.tokens
+      }
     }
     // Prefer the server's measured duration; fall back to the timestamp delta.
     for (const t of Object.values(phaseTiming)) {
@@ -108,7 +115,7 @@ export function useAgentRun(runId) {
       const group = ev.agent || TOOL_OWNER[ev.step] || 'other'
       const key = `${group}:${ev.step}`
       if (ev.status === 'running') {
-        const step = { group, tool: ev.step, startedAt: ev.ts, status: 'running', detail: ev.detail, data: ev }
+        const step = { group, tool: ev.step, startedAt: ev.ts, status: 'running', detail: ev.detail, data: ev, tokens: undefined }
         openByKey.set(key, step)
         steps.push(step)
         continue
@@ -121,6 +128,7 @@ export function useAgentRun(runId) {
           detail: ev.detail || open.detail,
           endedAt: ev.ts,
           data: ev,
+          tokens: ev.tokens,
           durationMs: ev.duration_ms ?? (open.startedAt && ev.ts
             ? Math.round((ev.ts - open.startedAt) * 1000) : undefined),
         })

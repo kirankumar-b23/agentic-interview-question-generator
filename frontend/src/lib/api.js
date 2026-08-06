@@ -70,24 +70,36 @@ export const api = {
    */
   stream: (runId, onEvent) => {
     let closed = false
-    const es = new EventSource(`/api/stream/${runId}`)
+    let lastSeq = -1
+    let es = null
 
     const finish = () => {
-      if (!closed) { closed = true; es.close() }
+      closed = true
+      if (es) es.close()
     }
 
-    es.onmessage = (e) => {
-      let ev
-      try { ev = JSON.parse(e.data) } catch { return }
-      if (ev.step === 'heartbeat') return
-      onEvent(ev)
-      if (ev.step === 'complete' || ev.step === 'error') finish()
+    // Reopen with `after=lastSeq` so a reconnect resumes from where we left off. EventSource's own
+    // reconnect reopens the original URL, which replayed the entire transcript every time; the server
+    // supports the offset (orchestrator.get_history) and this is what actually uses it.
+    const open = () => {
+      if (closed) return
+      es = new EventSource(`/api/stream/${runId}?after=${lastSeq}`)
+      es.onmessage = (e) => {
+        let ev
+        try { ev = JSON.parse(e.data) } catch { return }
+        if (typeof ev.seq === 'number') lastSeq = Math.max(lastSeq, ev.seq)
+        if (ev.step === 'heartbeat') return
+        onEvent(ev)
+        if (ev.step === 'complete' || ev.step === 'error') finish()
+      }
+      es.onerror = () => {
+        if (closed || es.readyState !== EventSource.CLOSED) return
+        // The browser closed it for good; reconnect ourselves so `after` is honoured.
+        onEvent({ step: 'reconnecting', status: 'running', detail: 'Connection lost — reconnecting…' })
+        setTimeout(open, 1500)
+      }
     }
-    es.onerror = () => {
-      // A close we initiated, or one after the run already ended, is not an error.
-      if (closed || es.readyState === EventSource.CLOSED) return
-      onEvent({ step: 'reconnecting', status: 'running', detail: 'Connection lost — reconnecting…' })
-    }
+    open()
     return { close: finish }
   },
 }

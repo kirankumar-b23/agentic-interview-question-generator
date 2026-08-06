@@ -4,6 +4,7 @@ import Icon from '../components/Icon.jsx'
 import PipelineStepper from '../components/PipelineStepper.jsx'
 import QualityPanel from '../components/QualityPanel.jsx'
 import { api } from '../lib/api.js'
+import TopBar from '../components/TopBar.jsx'
 
 // One-click rejection reasons. These exist because the free-text reason box was effectively never
 // filled in — 68 rejections produced zero learned rules — so the system never learned anything from
@@ -258,13 +259,14 @@ export default function Review() {
 
   if (loading) return (
     <>
-      <header className="topbar">
-        <div className="topbar-title-group">
-          <span className="topbar-title">Review Questions</span>
-        </div>
-        <PipelineStepper completedUntil="gate" activeStage="review" />
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}><Icon name="arrowLeft" size={13} /> History</button>
-      </header>
+      <TopBar title="Review questions" actions={
+        <>
+          <PipelineStepper completedUntil="gate" activeStage="review" />
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>
+            <Icon name="arrowLeft" size={13} /> History
+          </button>
+        </>
+      } />
       <div className="page-content" aria-busy="true" aria-label="Loading results">
         <div className="skeleton skeleton-panel" />
         {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton skeleton-row" />)}
@@ -274,10 +276,9 @@ export default function Review() {
 
   if (error && !result) return (
     <>
-      <header className="topbar">
-        <div className="topbar-title-group"><span className="topbar-title">Review Questions</span></div>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}><Icon name="arrowLeft" size={13} /> History</button>
-      </header>
+      <TopBar title="Review questions" actions={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>
+            <Icon name="arrowLeft" size={13} /> History
+          </button>} />
       <div className="page-content"><div className="alert alert-error">{error}</div></div>
     </>
   )
@@ -298,18 +299,21 @@ export default function Review() {
   if (done) {
     return (
       <>
-        <header className="topbar">
-          <div className="topbar-title-group"><span className="topbar-title">Export Complete</span></div>
-          <PipelineStepper completedUntil="export" />
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}><Icon name="arrowLeft" size={13} /> History</button>
-        </header>
+        <TopBar title="Export complete" actions={
+          <>
+            <PipelineStepper completedUntil="export" />
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>
+            <Icon name="arrowLeft" size={13} /> History
+          </button>
+          </>
+        } />
         <div className="page-content">
           <div className="done-banner">
-            <h1>Approved!</h1>
+            <h2>Approved</h2>
             {sheetUrl ? (
               <>
                 <p>{approvedCount} question{approvedCount !== 1 ? 's' : ''} exported to Google Sheets.</p>
-                <a href={sheetUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ marginBottom: '0.75rem', display: 'inline-block' }}>
+                <a href={sheetUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary done-sheet-link">
                   Open Google Sheet
                 </a>
               </>
@@ -335,14 +339,18 @@ export default function Review() {
 
   return (
     <>
-      <header className="topbar">
-        <div className="topbar-title-group">
-          <span className="topbar-title">{awaitingGate ? 'Preview — Picked Questions' : 'Review Questions'}</span>
-          <span className="topbar-sub" title={sessionName}>{displayName}{sessionType ? ` · ${sessionType}` : ''}</span>
-        </div>
-        <PipelineStepper completedUntil="gate" activeStage="review" />
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}><Icon name="arrowLeft" size={13} /> History</button>
-      </header>
+      <TopBar
+        title={awaitingGate ? 'Preview — picked questions' : 'Review questions'}
+        sub={`${displayName}${sessionType ? ` · ${sessionType}` : ''}`}
+        actions={
+          <>
+            <PipelineStepper completedUntil="gate" activeStage="review" />
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/history')}>
+            <Icon name="arrowLeft" size={13} /> History
+          </button>
+          </>
+        }
+      />
 
       {/* Action banner */}
       <div className="action-banner" style={awaitingGate ? { borderLeftColor: 'var(--warn)' } : undefined}>
@@ -353,7 +361,7 @@ export default function Review() {
               : 'Action needed — Review before publishing to portal'}
           </span>
           <span className="ab-sub">
-            {total} questions for <strong style={{ color: 'var(--text)' }} title={sessionName}>{displayName}</strong>
+            {total} questions for <strong title={sessionName}>{displayName}</strong>
             {' · '}{questions.length} theory · {codingQs.length} coding
             {!awaitingGate && result.report && ` · Quality ${Math.round(result.report.composite_score * 100)}/100`}
             {!awaitingGate && result.report?.loops_used > 0 && ` · ${result.report.loops_used} revision(s)`}
@@ -400,7 +408,7 @@ export default function Review() {
 
       {/* Learning outcomes */}
       {result.context?.learning_outcomes?.length > 0 && (
-        <details className="card outcomes-card" style={{ margin: '0.75rem 1.25rem 0' }}>
+        <details className="card outcomes-card">
           <summary>
             <strong>Learning Outcomes</strong> ({result.context.learning_outcomes.length})
           </summary>
@@ -505,7 +513,7 @@ export default function Review() {
 
       {/* Rejected questions + reasons */}
       {result.removed?.length > 0 && (
-        <details className="card rejected-card" style={{ margin: '0 1.35rem 1.6rem' }}>
+        <details className="card rejected-card">
           <summary className="rejected-summary">
             Rejected questions ({result.removed.length}) — why they were dropped
           </summary>

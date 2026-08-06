@@ -135,6 +135,11 @@ function Step({ step }) {
             </span>
           ))}
         </span>
+        {step.tokens > 0 && (
+          <span className="tr-step-tok" title="tokens this step spent">
+            {step.tokens >= 1000 ? `${(step.tokens / 1000).toFixed(1)}K` : step.tokens}
+          </span>
+        )}
         {duration && <span className="tr-step-time">{duration}</span>}
         <StatusMark status={step.status} />
       </button>

@@ -110,6 +110,8 @@ class BaseAgent:
                 emit(name, "running", f"{self.display_name}: calling {name}...",
                      agent=self.name, label=self.display_name)
                 tool_started = time.time()
+                tool_tokens_at_start = (state.api_usage.get("prompt_tokens", 0)
+                                        + state.api_usage.get("completion_tokens", 0))
 
                 try:
                     handler = tool_dispatch.get(name)
@@ -128,9 +130,14 @@ class BaseAgent:
                     state.dedup_removed += tool_result.get("removed", 0)
 
                 summary = _summarize_result(name, tool_result)
+                # Per-step token cost: a tool that makes its own LLM calls (validate_relevance) is
+                # where the spend actually goes, so attributing tokens only per phase hid it.
+                tool_tokens = ((state.api_usage.get("prompt_tokens", 0)
+                                + state.api_usage.get("completion_tokens", 0)) - tool_tokens_at_start)
                 emit(name, "done" if "error" not in tool_result else "error", summary,
                      agent=self.name, label=self.display_name,
                      duration_ms=int((time.time() - tool_started) * 1000),
+                     tokens=tool_tokens or None,
                      pool=len(state.questions))
 
                 result_str = json.dumps(tool_result, default=str)

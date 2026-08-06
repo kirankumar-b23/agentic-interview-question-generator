@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import Icon from '../components/Icon.jsx'
+import TopBar from '../components/TopBar.jsx'
 
 function formatDate(ts) {
   if (!ts) return '—'
@@ -60,16 +61,15 @@ export default function History() {
 
   return (
     <>
-      <header className="topbar">
-        <div className="topbar-title-group">
-          <span className="topbar-title">Run History</span>
-          <span className="topbar-sub">
-            {runs.length} run{runs.length !== 1 ? 's' : ''}
-            {approvedCount > 0 && ` · ${approvedCount} approved`}
-          </span>
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}><Icon name="arrowLeft" size={13} /> Home</button>
-      </header>
+      <TopBar
+        title="Run history"
+        sub={`${runs.length} run${runs.length !== 1 ? 's' : ''}${approvedCount > 0 ? ` · ${approvedCount} approved` : ''}`}
+        actions={
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>
+            <Icon name="arrowLeft" size={13} /> Home
+          </button>
+        }
+      />
 
       <div className="page-content">
         {/* Overall usage summary */}
@@ -105,10 +105,10 @@ export default function History() {
                     <th>Date</th>
                     <th>Topic</th>
                     <th>Sessions</th>
-                    <th style={{ textAlign: 'right' }}>Questions</th>
+                    <th className="num-col">Questions</th>
                     <th>Score</th>
                     <th>API Usage</th>
-                    <th style={{ textAlign: 'right' }}>Cost</th>
+                    <th className="num-col">Cost</th>
                     <th>Status</th>
                     <th></th>
                   </tr>
@@ -122,7 +122,7 @@ export default function History() {
                       <td className="hist-count">{run.question_count ?? '—'}</td>
                       <td><ScoreBadge score={run.composite_score} /></td>
                       <td><UsageCell usage={run.api_usage} /></td>
-                      <td className="hist-count" style={{ fontWeight: 600 }}>
+                      <td className="hist-count hist-cost">
                         {run.cost != null ? `$${run.cost.toFixed(4)}` : '—'}
                       </td>
                       <td>

@@ -277,7 +277,9 @@ def write_to_sheets(
             cq_rows.append([
                 q.id, q.category, q.title, strip_question_prefix(q.content[:1000]), q.code_id or "",
                 cat, q.sub_topic or "", (q.difficulty or "").upper(), q.language,
-                cat, q.tool or "", q.attribution,
+                # Only a VERIFIED company, matching the theory tab. `attribution` falls back to the
+                # source site for in-app provenance, which would assert a company that never asked it.
+                cat, q.tool or "", (q.asked_in_company or "").strip().upper(),
             ])
         ws_cq.update(range_name="A1", values=cq_rows)
 
