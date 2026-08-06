@@ -96,3 +96,59 @@ class TestQuestionBanks:
     def test_genai_bank_ids_are_unique(self):
         ids = [r["id"] for r in _load(GENAI_BANK_JSON)]
         assert len(ids) == len(set(ids)), "duplicate question ids in the GenAI bank"
+
+
+# MCQ tells. These are assessment items, not interview questions — nobody is asked to "match the
+# following" in an interview. The form gate does NOT catch them: 61% of the 1,772 rows in
+# data/curriculum/*.json pass `is_quality_question` ("Which of the following images represents the node
+# used to send HTTP requests…"), which is why this is asserted against the shipped corpora directly.
+MCQ_SHAPES = (
+    "which of the following", "match the following", "statement i:", "statement ii:",
+    "all of the above", "none of the above", "choose the correct option", "select the correct",
+    "options:", "\\_\\_\\_", "________",
+)
+
+
+class TestNoAssessmentItemsInTheRetrievalCorpus:
+    """The curriculum MCQs must never reach retrieval.
+
+    A startup line read "Loaded 1819 curriculum questions into bank" immediately above "Question bank
+    ready: 1509 questions indexed", so it looked as though course MCQs were being retrieved. They were
+    not — the list was read by nothing — but the dead loader has been removed and these tests pin the
+    OUTCOME (nothing MCQ-shaped is in the corpora) rather than the absence of a function.
+    """
+
+    @pytest.mark.parametrize("path,key", [(INTERVIEW_QUESTIONS_JSON, "questions"), (GENAI_BANK_JSON, None)])
+    def test_no_mcq_shaped_questions_in_the_banks(self, path, key):
+        data = _load(path)
+        rows = data[key] if key else data
+        bad = [r["content"] for r in rows
+               if any(tell in (r.get("content") or "").lower() for tell in MCQ_SHAPES)]
+        assert not bad, (f"{len(bad)} assessment-item(s) in {path.name} — these are MCQs, not "
+                         f"interview questions. First few: {bad[:3]}")
+
+    def test_the_runtime_loader_exposes_no_curriculum_questions(self):
+        """The pool that fed the misleading log line is gone, not merely unread."""
+        from src.data_loader import get_data_store
+
+        assert not hasattr(get_data_store(), "curriculum_questions")
+
+    def test_dropping_the_loader_cost_the_kp_catalog_nothing(self):
+        """The removed function also merged KPs — but all 106 it referenced were already in the graph."""
+        from src.data_loader import get_data_store
+
+        assert len(get_data_store().kp_catalog) >= 113
+
+    def test_curriculum_files_remain_on_disk_as_build_inputs(self):
+        """`scripts/build_knowledge_graph.py` regenerates knowledge_graph.json from these by literal
+        path, so ignoring them at runtime must not become deleting them."""
+        curriculum = DATA_DIR / "curriculum"
+        assert (curriculum / "gen_ai_final.json").exists()
+        assert (curriculum / "llm_applications_kp_links_final_fixed.json").exists()
+
+    def test_config_declares_no_runtime_path_to_them(self):
+        """An unused constant is what invited the dead loader in the first place."""
+        import src.config as cfg
+
+        for name in ("GEN_AI_JSON", "LLM_APPS_JSON", "FLASK_JSON"):
+            assert not hasattr(cfg, name), f"{name} is back — the curriculum files are build-time only"

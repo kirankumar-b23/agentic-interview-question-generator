@@ -15,10 +15,13 @@ INTERVIEW_QUESTIONS_JSON = DATA_DIR / "interview_questions.json"
 GENAI_BANK_JSON = DATA_DIR / "genai_question_bank.json"
 KNOWLEDGE_GRAPH_JSON = DATA_DIR / "knowledge_graph.json"
 
-# Curriculum context (KP supplements — runtime, loaded by data_loader)
-GEN_AI_JSON = DATA_DIR / "curriculum/gen_ai_final.json"
-LLM_APPS_JSON = DATA_DIR / "curriculum/llm_applications_kp_links_final_fixed.json"
-FLASK_JSON = DATA_DIR / "curriculum/flask_kp_links_final.json"
+# NOT declared here on purpose: data/curriculum/*.json.
+# Those are course assessment items (1,610 of 1,822 are multiple-choice), and they are BUILD-TIME
+# inputs only — `scripts/build_knowledge_graph.py` reads them by literal path to regenerate
+# knowledge_graph.json. They are never loaded at runtime and must never reach the retrieval corpus.
+# Constants for them used to live here and `data_loader` used them to build a question list nothing
+# read, while printing "Loaded 1819 curriculum questions into bank" — which is exactly the confusion
+# an unused path invites, so the path is gone rather than merely unused.
 # Reading materials (runtime, used by session_understanding)
 GEN_AI_RM = DATA_DIR / "reading_materials/gen_ai_reading_material.md"
 LLM_APPS_RM = DATA_DIR / "reading_materials/llm_applications_reading_material.md"

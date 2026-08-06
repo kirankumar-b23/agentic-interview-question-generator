@@ -2,7 +2,7 @@
   "metadata": {
     "source": "Interview Intelligence Master_ 2026 - Master Sheet.csv",
     "total_original": 36079,
-    "total_filtered": 1509,
+    "total_filtered": 1499,
     "filtered_at": "2026-06-17T10:38:46.611431",
     "skipped": {
       "empty": 27537,
@@ -12,37 +12,17 @@
       "topic": 4296
     },
     "ai_filter_applied": true,
-    "removed_non_ai": 49
+    "removed_non_ai": 49,
+    "removed_assessment_items": 10,
+    "removed_assessment_items_note": "Multiple-choice assessment items (lettered options) removed: aptitude/logical-reasoning and C/Java syntax MCQs, none company-attributed. They are not interview questions and were sitting in the retrieval corpus. Guarded by tests/test_data_integrity.py."
   },
   "questions": [
-    {
-      "id": "543ec5d6-2f1e-4a9b-a793-4604414e7b61",
-      "content": "A travel agency is planning a five-city tour for a group of tourists. The cities are Mumbai (M), Delhi (D), Kolkata (K), Chennai (C), and Jaipur (J). The tour follows a specific sequence, and the following conditions must be met: 1. Mumbai must be visited before Delhi and Jaipur. 2. Kolkata cannot be visited immediately before or after Jaipur. 3. If Chennai is visited third, then Delhi must be visited fifth. 4. Jaipur must be visited immediately before or after Delhi. 5. Chennai cannot be visited immediately before or after Mumbai. If Kolkata is visited first, which of the following must be true? A. Mumbai is visited second B. Jaipur is visited immediately before Delhi C. Chennai is visited third D. Delhi is visited fifth",
-      "question_type": "GENERAL",
-      "topic": "LOGICAL_REASONING",
-      "sub_topic": "SEQUENCING_CONSTRAINTS",
-      "difficulty": "Medium",
-      "company": "ADP",
-      "role": "Junior Python Developer",
-      "tech_stack": "Python"
-    },
     {
       "id": "593f76e09baa4a1695b3ad74643cedf1",
       "content": "What is the largest number, less than 10,000, that yields a remainder of 2 when divided by 13 and a remainder of 3 when divided by 6?",
       "question_type": "GENERAL",
       "topic": "NUMBER_THEORY",
       "sub_topic": "REMAINDER_PROBLEMS",
-      "difficulty": "Medium",
-      "company": "ADP",
-      "role": "Junior Python Developer",
-      "tech_stack": "Python"
-    },
-    {
-      "id": "f890ab6cde084428a1d754df92013920",
-      "content": "When 9 is added to both the numerator and the denominator of a fraction, the result is 1/2. When 9 is subtracted from the squares of the numerator and the denominator, the result is 1/2. Which of the following is the original fraction? (A) 17/43 (B) 7/23 (C) 23/55 (D) 53/115",
-      "question_type": "GENERAL",
-      "topic": "QUANTITATIVE_APTITUDE",
-      "sub_topic": "ALGEBRAIC_EQUATIONS",
       "difficulty": "Medium",
       "company": "ADP",
       "role": "Junior Python Developer",
@@ -60,19 +40,8 @@
       "tech_stack": "Python"
     },
     {
-      "id": "45a9bd5846c243dd8a18764aeada7e4d",
-      "content": "If Y is the largest integer that satisfies 6Y - 22 \u2264 38 and X is the largest integer that satisfies 11X - 17Y \u2264 182, find the value of (X + Y) / (X - Y). Options: A) 1/11, B) 21/11, C) 32/11, D) 9/11",
-      "question_type": "GENERAL",
-      "topic": "ALGEBRAIC_INEQUALITIES",
-      "sub_topic": "LINEAR_INEQUALITIES",
-      "difficulty": "Medium",
-      "company": "ADP",
-      "role": "Junior Python Developer",
-      "tech_stack": "Python"
-    },
-    {
       "id": "bb49a4a04aa64a5dbb0a385b09ae4b2c",
-      "content": "Ravi went to the market to buy an array A of N integers. But the shopkeeper was cunning. The array he gave to Ravi was containing some elements more than once, which Ravi didn't want to be the case. So, he asks you to help him.\n\nWrite a program that would remove all the repeated elements from Ravi's array.\n\nInput Format:\n- The first line of input contains a single integer N\n- Next N lines of input contain an integer each, the elements of the Array.\n\nConstraints:\n- 1 <= N <= 10\u2075\n- 1 <= A[i] <= N\n\nOutput Format:\n- Return the new array containing no repeated elements.\n- The new array should be strictly increasing.",
+      "content": "Ravi went to the market to buy an array A of N integers. But the shopkeeper was cunning. The array he gave to Ravi was containing some elements more than once, which Ravi didn't want to be the case. So, he asks you to help him.\n\nWrite a program that would remove all the repeated elements from Ravi's array.\n\nInput Format:\n- The first line of input contains a single integer N\n- Next N lines of input contain an integer each, the elements of the Array.\n\nConstraints:\n- 1 <= N <= 10⁵\n- 1 <= A[i] <= N\n\nOutput Format:\n- Return the new array containing no repeated elements.\n- The new array should be strictly increasing.",
       "question_type": "CODING",
       "topic": "ARRAYS",
       "sub_topic": "REMOVE_DUPLICATES",
@@ -115,17 +84,6 @@
       "tech_stack": "Python"
     },
     {
-      "id": "ce908b8a33cd436394a4edf5cf3bf7b1",
-      "content": "Which of the following statements is correct? A) First time method of a class is called, the constructor method is called. B) Every time method of a class is called, the constructor method is called. C) Every time an instance of a class is created, the constructor method is called. D) None of the above",
-      "question_type": "THEORY",
-      "topic": "INTRODUCTION_TO_OOP",
-      "sub_topic": "CONSTRUCTOR_METHOD",
-      "difficulty": "Easy",
-      "company": "Hexagon",
-      "role": "Software Engineer (QA)",
-      "tech_stack": "Python"
-    },
-    {
       "id": "fcc1aa14e53a4a7c826a76d8930a42ac",
       "content": "#include <math.h>\nvoid main() {\nprintf(\"%f\", sqrt(36.0));\n}",
       "question_type": "CODING",
@@ -142,17 +100,6 @@
       "question_type": "THEORY",
       "topic": "ARRAYS",
       "sub_topic": "ARRAY_INITIALIZATION",
-      "difficulty": "Easy",
-      "company": "Hexagon",
-      "role": "Software Engineer (QA)",
-      "tech_stack": "Python"
-    },
-    {
-      "id": "4c172072c9cd430abf891eba5ffff9c5",
-      "content": "According to ANSI specifications, the correct way to declare main() when there are command line arguments is: A) main(int argc, char*argv[]) B) main(argc,agrv) Int argc;int argv[]; C) main() { int argc; char* agrv[]; } D) None of the above",
-      "question_type": "THEORY",
-      "topic": "PROGRAMMING_LANGUAGES",
-      "sub_topic": "C_MAIN_FUNCTION_DECLARATION",
       "difficulty": "Easy",
       "company": "Hexagon",
       "role": "Software Engineer (QA)",
@@ -176,39 +123,6 @@
       "topic": "OOP_CONCEPTS",
       "sub_topic": "STATIC_MEMBERS",
       "difficulty": "Easy",
-      "company": "Hexagon",
-      "role": "Software Engineer (QA)",
-      "tech_stack": "Python"
-    },
-    {
-      "id": "0761bcf5a45d43cbacc784b0e11f7115",
-      "content": "What is the following program doing? \n```c\n#include<stdio.h>\nmain()\n{\nchar u,1;\nscanf(\"%c\",&u);\nl=u+32;\nprintf(\"%c\",1);\n}\n```\nA. converting to 32 bit char\nB. Converting Uppercase to lowercase\nC. Converting Int to Char\nD. None of the above",
-      "question_type": "CODING",
-      "topic": "CHARACTER_ENCODING",
-      "sub_topic": "ASCII_CONVERSION",
-      "difficulty": "Medium",
-      "company": "Hexagon",
-      "role": "Software Engineer (QA)",
-      "tech_stack": "Python"
-    },
-    {
-      "id": "88ab07cc3f854e39a82b627fcb7a76ed",
-      "content": "What is the following program doing? \n```c\n#include<stdio.h>\nmain()\n{\nchar u,1;\nscanf(\"%c\",&u);\nl=u+32;\nprintf(\"%c\",1);\n}\n```\nA. converting to 32 bit char\nB. Converting Uppercase to lowercase\nC. Converting Int to Char\nD. None of the above",
-      "question_type": "CODING",
-      "topic": "CHARACTER_ENCODING",
-      "sub_topic": "ASCII_CONVERSION",
-      "difficulty": "Easy",
-      "company": "Hexagon",
-      "role": "Software Engineer (QA)",
-      "tech_stack": "Python"
-    },
-    {
-      "id": "b19d28bcb3e448a3a8514eed4ba09f4e",
-      "content": "What is the following program doing? \n```c\n#include<stdio.h>\nmain()\n{\nchar u,1;\nscanf(\"%c\",&u);\nl=u+32;\nprintf(\"%c\",1);\n}\n```\nA. converting to 32 bit char\nB. Converting Uppercase to lowercase\nC. Converting Int to Char\nD. None of the above",
-      "question_type": "CODING",
-      "topic": "CHARACTER_ENCODING",
-      "sub_topic": "ASCII_CONVERSION",
-      "difficulty": "Medium",
       "company": "Hexagon",
       "role": "Software Engineer (QA)",
       "tech_stack": "Python"
@@ -467,34 +381,12 @@
       "tech_stack": "HTML, CSS, JavaScript, React js, Node js, Python"
     },
     {
-      "id": "18d8d211400e4712ad522f0ffc9eec45",
-      "content": "One of the consequences of having a highly decoupled application can be the complex setup which uses multiple classes to obtain a meaningful result. The client has to interact with all of these classes to get the desired result. Which of the following design patterns provides a high-level interface that interacts with the client and makes the subsystem easier to use? A) Facade pattern B) Decorator pattern C) Adapter pattern D) Proxy pattern",
-      "question_type": "THEORY",
-      "topic": "DESIGN_PATTERNS",
-      "sub_topic": "FACADE_PATTERN",
-      "difficulty": "Medium",
-      "company": "High Radius",
-      "role": "Technical Consultant",
-      "tech_stack": "JavaScript"
-    },
-    {
       "id": "d4a4fa9c8a0943c7a0578723d36978d3",
       "content": "Which pattern is used to make sure that steps in creating a complex object are centralized and not exposed to composing classes? A) Builder B) Factory C) Mediator D) Template",
       "question_type": "THEORY",
       "topic": "DESIGN_PATTERNS",
       "sub_topic": "BUILDER_PATTERN",
       "difficulty": "Medium",
-      "company": "High Radius",
-      "role": "Technical Consultant",
-      "tech_stack": "JavaScript"
-    },
-    {
-      "id": "3385284e34e449fc890440354795742b",
-      "content": "Which of the following statements have the correct syntax? A. int [] is = new int[15]; B. float fa = new float[20]; C. char[] ca = \"some String\"; D. Object oa = new float[20]; E. int is[] = {4,5,6,}, {1,2,3}; \u2610 Both A and B \u2610 Both B and C \u2610 Both A and D \u2610 Both D and E",
-      "question_type": "THEORY",
-      "topic": "ARRAYS",
-      "sub_topic": "ARRAY_DECLARATION_SYNTAX",
-      "difficulty": "Easy",
       "company": "High Radius",
       "role": "Technical Consultant",
       "tech_stack": "JavaScript"
@@ -3196,7 +3088,7 @@
     },
     {
       "id": "0a3beb85-b175-42de-8d8b-5e396a878e6d",
-      "content": "Solve a Data Structures and Algorithms (DSA) problem involving a tree-like data structure to represent hierarchical place data (e.g., India \u2192 Karnataka \u2192 Bangalore) and display the structure in a hierarchical format.",
+      "content": "Solve a Data Structures and Algorithms (DSA) problem involving a tree-like data structure to represent hierarchical place data (e.g., India → Karnataka → Bangalore) and display the structure in a hierarchical format.",
       "question_type": "CODING",
       "topic": "PROGRAMMING_LANGUAGES",
       "sub_topic": "LANGUAGE_PREFERENCE",
@@ -12931,7 +12823,7 @@
     },
     {
       "id": "15bda40f-e197-4364-9a16-7568bf56e52d",
-      "content": "What security measures would you implement to ensure one event manager cannot access or modify another event manager\u2019s data?",
+      "content": "What security measures would you implement to ensure one event manager cannot access or modify another event manager’s data?",
       "question_type": "THEORY",
       "topic": "FULL_STACK_DEVELOPMENT",
       "sub_topic": "MERN_STACK",
