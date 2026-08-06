@@ -72,7 +72,7 @@ class TestCoverageAgreesWithTheReport:
         st = _state(contents=["What are the core components of an AI agent?",
                               "Tell me about yourself"])
         assert tool_check_outcome_coverage(st)["coverage_pct"] == pytest.approx(
-            round(_outcome_coverage(st), 2), abs=0.01)
+            round(_outcome_coverage(st)[0], 2), abs=0.01)
 
     def test_no_outcomes_is_reported_honestly(self):
         from src.tools import tool_check_outcome_coverage
@@ -82,7 +82,7 @@ class TestCoverageAgreesWithTheReport:
     def test_empty_set_with_outcomes_is_zero_not_perfect(self):
         """A run that lost its context and produced nothing used to report perfect coverage."""
         from src.pipeline import _outcome_coverage
-        assert _outcome_coverage(_state(contents=())) == 0.0
+        assert _outcome_coverage(_state(contents=()))[0] == 0.0
 
 
 class TestTrimDoesNotMutateSourcedText:
@@ -126,12 +126,16 @@ class TestGithubHarvestIsGated:
 
 class TestSheetsExportHonesty:
     def test_source_site_is_not_exported_as_a_company(self):
-        """`attribution` falls back to the source site for in-app provenance ("GeeksforGeeks").
-        Writing that into asked_in_company asserted a company that never asked the question."""
+        """A content site must not appear as the asking company anywhere — sheet column OR app field.
+
+        The sheet column was already safe (it reads `asked_in_company`), but `attribution` used to
+        fall back to the site, which is the field the review UI shows in its company tag. So the
+        reviewer saw "Indeed" presented exactly like "ANTHROPIC". Both must now be clean."""
         q = QuestionDetail(category="GEN_AI", content="What is RAG?", topic="Gen AI", source="web",
                            source_url="https://www.geeksforgeeks.org/llm-interview")
-        assert q.attribution == "GeeksforGeeks"          # fine in the app
-        assert not (q.asked_in_company or "")           # nothing to claim in the sheet column
+        assert q.attribution == "NIAT"                   # not a claimed employer
+        assert q.source_site == "GeeksforGeeks"           # provenance, on its own field
+        assert not (q.asked_in_company or "")            # nothing to claim in the sheet column
 
     def test_verified_company_is_still_exported(self):
         q = QuestionDetail(category="GEN_AI", content="What is RAG?", topic="Gen AI",

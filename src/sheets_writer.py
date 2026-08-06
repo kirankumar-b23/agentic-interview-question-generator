@@ -164,9 +164,10 @@ def write_to_sheets(
             q.difficulty or "",
             q.language or "", cat, q.tool or "",
             # Only a VERIFIED company belongs in a column the portal reads as "the company that asked
-            # this". `attribution` deliberately falls back to the source site ("GeeksforGeeks") for
-            # provenance in the app — uppercasing that into this column asserted a company that never
-            # asked the question. Blank is the honest value.
+            # this", so this reads `asked_in_company` and not `attribution`. `attribution` used to
+            # fall back to the source site ("GeeksforGeeks"), which would have asserted a company that
+            # never asked the question; it now yields NIAT instead, and provenance lives on
+            # `source_site`. Blank stays the honest value for this column either way.
             (q.asked_in_company or "").strip().upper(),
         ])
 
@@ -277,8 +278,7 @@ def write_to_sheets(
             cq_rows.append([
                 q.id, q.category, q.title, strip_question_prefix(q.content[:1000]), q.code_id or "",
                 cat, q.sub_topic or "", (q.difficulty or "").upper(), q.language,
-                # Only a VERIFIED company, matching the theory tab. `attribution` falls back to the
-                # source site for in-app provenance, which would assert a company that never asked it.
+                # Only a VERIFIED company, matching the theory tab — never the computed `attribution`.
                 cat, q.tool or "", (q.asked_in_company or "").strip().upper(),
             ])
         ws_cq.update(range_name="A1", values=cq_rows)

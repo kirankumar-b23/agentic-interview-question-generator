@@ -63,14 +63,21 @@ def _site_name_from_url(source_url: str | None) -> str | None:
 
 def attribution_label(asked_in_company: str | None, source: str | None = None,
                       source_url: str | None = None) -> str:
-    """Attribution for output: the real company in UPPERCASE if known; otherwise the SOURCE SITE
-    (e.g. "GeeksforGeeks") derived from the source URL; else the placeholder "NIAT".
-    Fabricated/garbage company values are filtered upstream (tavily `_valid_company`)."""
+    """WHO ASKED this question: the real company in UPPERCASE if known, else the placeholder "NIAT".
+
+    This deliberately does NOT fall back to the source site. It used to, and a real run shipped a set
+    attributed to "Analytics Vidhya", "Indeed", "Edureka" and "DataCamp" — content sites, sitting in
+    the same column and the same UI tag as a genuine "ANTHROPIC". A reviewer reads that as "Indeed
+    asked this in an interview", when the question was in fact a bullet scraped from an Indeed
+    job-description page. One of those two claims is a company attribution and the other is
+    provenance; merging them makes the honest case indistinguishable from the misleading one.
+
+    Provenance is not lost — it moves to `source_site` (below), which the review UI shows as a
+    separate "via <site>" tag. Fabricated/garbage company values are filtered upstream by tavily's
+    `_valid_company`.
+    """
     if asked_in_company and asked_in_company.strip():
         return asked_in_company.strip().upper()
-    site = _site_name_from_url(source_url)
-    if site:
-        return site
     return NIAT
 
 
@@ -159,6 +166,18 @@ class QuestionDetail(BaseModel):
     # reading material), set by the session-grounded pre-gate. Used to rank candidates before the
     # LLM relevance pass and to tier the review UI. None when embeddings are unavailable.
     session_fit: float | None = None
+    # The question EXACTLY as sourced, kept only when the post-relevance scope trim shortened it
+    # (`tools._scope_trim` dropped an off-syllabus sub-clause — "…improve prompts and guards" →
+    # "…improve prompts"). Storing the original rather than a bare `adapted` boolean is deliberate:
+    # the edit is auditable, so a reviewer can see exactly what was removed from a question that
+    # still carries a company's name.
+    original_content: str | None = None
+    # A concept this question requires that appears NOWHERE in its session's reading material, set by
+    # `tools._syllabus_audit`. On-domain and on-syllabus are different things: a real run shipped four
+    # questions the gate called "on-domain" that tested guardrails, production debugging, hallucination
+    # and ambiguous-intent fallbacks — none of which either session teaches. Flagged, not rejected: the
+    # reviewer decides whether to keep a question that goes beyond the material.
+    off_syllabus_concept: str | None = None
 
     @field_validator("expected_answer", mode="before")
     @classmethod
@@ -169,9 +188,24 @@ class QuestionDetail(BaseModel):
 
     @computed_field
     @property
+    def adapted(self) -> bool:
+        """True when `content` is no longer verbatim from the source (scope-trimmed)."""
+        return bool(self.original_content and self.original_content.strip() != self.content.strip())
+
+    @computed_field
+    @property
     def attribution(self) -> str:
-        """Real company if known, else honest source label (never fabricated)."""
+        """WHO ASKED it — real company in UPPERCASE, or NIAT. Never a website (see attribution_label)."""
         return attribution_label(self.asked_in_company, self.source, self.source_url)
+
+    @computed_field
+    @property
+    def source_site(self) -> str | None:
+        """WHERE IT WAS FOUND (e.g. "GeeksforGeeks") — provenance, kept strictly separate from
+        `attribution` so a content site is never presented as the asking company. Populated whenever
+        there is a URL, including for company-attributed questions (the site is where the claim came
+        from, which is worth keeping); None when there is no URL."""
+        return _site_name_from_url(self.source_url)
 
 
 class CodingQuestion(BaseModel):
@@ -221,12 +255,9 @@ class CodeAnalysisQuestion(BaseModel):
 
 # --- Pipeline Output Models ---
 
-class LocalPool(BaseModel):
-    curriculum_questions: list[QuestionDetail] = Field(default_factory=list)
-    interview_questions: list[QuestionDetail] = Field(default_factory=list)
-    coding_questions: list[CodingQuestion] = Field(default_factory=list)
-    code_snippets: list[CodeSnippet] = Field(default_factory=list)
-    local_count: int = 0
+# `LocalPool` was removed here. It declared a `curriculum_questions` pool and was instantiated
+# nowhere — a model implying the pipeline has a curriculum question source, which it does not and
+# must not (see the note in config.py).
 
 
 class WebPool(BaseModel):

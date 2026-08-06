@@ -528,16 +528,32 @@ def _outcome_coverage_detail(state: AgentState) -> tuple[list[str], list[str]]:
         return [], outcomes
 
 
-def _outcome_coverage(state: AgentState) -> float:
-    """Fraction of learning outcomes at least one question in the final set addresses."""
+def _outcome_coverage(state: AgentState) -> tuple[float, str]:
+    """(fraction of outcomes genuinely examined, method used).
+
+    Prefers `state.judged_coverage` — the syllabus audit's read of which outcomes each question
+    actually EXAMINES — over the embedding proximity measure, which was demonstrably crediting
+    outcomes it should not: a hallucination question was credited with covering "Integrate multiple
+    Google APIs (Docs, Calendar, Drive)" at 0.38, and "when does agent reasoning go off the rails?"
+    with "Design system prompts that orchestrate agent reasoning" at 0.69. A higher threshold cannot
+    separate those: legitimate credits measured 0.52–0.83 and false ones 0.38–0.69, overlapping, and
+    shared-distinctive-term counts overlap too (0–2 vs 0–1). Since this is 35% of the composite, the
+    method that produced it is reported alongside the number.
+    """
     ctx = state.session_context
     outcomes = ctx.learning_outcomes if ctx else []
     if not outcomes:
         # Nothing to cover is vacuously covered — but only if there IS a set. A run that lost its
         # session context and produced nothing used to report perfect coverage on zero questions.
-        return 1.0 if (state.questions or state.coding_questions) else 0.0
+        return (1.0 if (state.questions or state.coding_questions) else 0.0), "no-outcomes"
+    judged = getattr(state, "judged_coverage", None) or {}
+    if judged.get("method") and (judged.get("covered") or judged.get("missing")):
+        n_cov = len(judged.get("covered") or [])
+        total = n_cov + len(judged.get("missing") or [])
+        if total:
+            return n_cov / total, judged["method"]
     covered, _ = _outcome_coverage_detail(state)
-    return len(covered) / len(outcomes)
+    return len(covered) / len(outcomes), "embedding-proximity"
 
 
 def _human_agreement(state: AgentState):
@@ -568,7 +584,8 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     # rejected most of the set (corr(composite, approved) was 0.16 over 36 runs).
     rels = [q.relevance_score for q in state.questions.values() if q.relevance_score is not None]
     self_relevance = round(sum(rels) / len(rels), 3) if rels else None
-    coverage_score = round(_outcome_coverage(state), 3)
+    _cov_raw, coverage_method = _outcome_coverage(state)
+    coverage_score = round(_cov_raw, 3)
     # Mean grounding in THIS session's outcomes + reading material (set by the session-fit gate).
     # Independent of any LLM judgement — it compares questions to the curriculum, not to itself.
     fits = [q.session_fit for q in state.questions.values() if q.session_fit is not None]
@@ -628,6 +645,40 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
                      f"questions available for this session were limited (kept on-topic over padding).")
     if coverage_score < 0.6:
         notes.append("Some learning outcomes are not covered by the available questions.")
+    # Which method produced the coverage number, and — when judged — the outcome↔question pairing, so
+    # a spurious credit is visible instead of silently scored at 35% of the composite.
+    _judged = getattr(state, "judged_coverage", None) or {}
+    if coverage_method == "embedding-proximity":
+        notes.append("Outcome coverage measured by embedding proximity (the syllabus audit did not "
+                     "run) — it credits an outcome for a NEARBY question, not necessarily one that "
+                     "tests it. Treat it as an upper bound.")
+    elif _judged.get("pairs"):
+        notes.append("Outcome coverage judged against the reading material; each covered outcome is "
+                     "listed with the question credited for it.")
+    # On-domain is not on-syllabus. The gate judges domain; this judges the session's own material.
+    if state.off_syllabus:
+        _c = "; ".join(f"“{o['concept']}”" for o in state.off_syllabus[:4])
+        notes.append(
+            f"{len(state.off_syllabus)} question(s) test a concept that appears nowhere in this "
+            f"session's reading material ({_c}). They are on-domain but beyond the syllabus — keep "
+            f"them only if you want candidates stretched past what was taught."
+        )
+    # Per-session representation, and the honest version of a session with nothing to offer.
+    _rep = getattr(state, "session_representation", None) or {}
+    if _rep.get("no_candidates"):
+        notes.append("No questions could be found at all for: "
+                     + ", ".join(_rep["no_candidates"])
+                     + " — a source-coverage gap, not a selection choice.")
+    elif _rep.get("per_session") and len(_rep["per_session"]) > 1:
+        notes.append("Per-session split: "
+                     + ", ".join(f"{k} = {v}" for k, v in _rep["per_session"].items()))
+    # An edit to a sourced question must never be silent — these still carry a company's name.
+    if state.scope_trims:
+        notes.append(
+            f"{len(state.scope_trims)} question(s) were trimmed to this session's scope (an "
+            f"off-syllabus clause was removed); they are marked 'adapted' in review and keep their "
+            f"original text for comparison."
+        )
     if grounding_score is not None and grounding_score < 0.30:
         notes.append(f"Weak grounding (mean session fit {grounding_score:.2f}) — these questions are "
                      f"only loosely tied to this session's outcomes and reading material.")

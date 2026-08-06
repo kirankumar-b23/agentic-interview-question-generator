@@ -55,6 +55,16 @@ class AgentState:
     # Phases that died on an API error. A phase used to fail silently and let the run continue with a
     # partial pool, so a retrieval outage looked like "this session just has few questions".
     phase_errors: list[str] = field(default_factory=list)
+    # Questions the post-relevance scope trim shortened: {question_id, before, after}. Surfaced in the
+    # quality report so an edit to a company-attributed question is never silent.
+    scope_trims: list[dict] = field(default_factory=list)
+    # Per-session counts in the FINAL set + which configured sessions retrieval found nothing for.
+    # {'per_session': {...}, 'no_candidates': [...], 'swapped': n}
+    session_representation: dict = field(default_factory=dict)
+    # Selected questions testing a concept absent from their session's material, and the LLM-judged
+    # outcome coverage that replaces the proximity measure. See `tools._syllabus_audit`.
+    off_syllabus: list[dict] = field(default_factory=list)
+    judged_coverage: dict = field(default_factory=dict)
     dedup_removed: int = 0
     removed: list[dict] = field(default_factory=list)  # rejected questions {content, reason, stage, ...}
     removed_by_relevance: int = 0
@@ -341,12 +351,25 @@ def _summarize_result(tool_name: str, result: dict) -> str:
         "search_question_bank": lambda r: f"Found {r.get('found', 0)} relevant (total: {r.get('total_accumulated', 0)}, bank quota left: {r.get('bank_remaining', '?')})",
         "validate_relevance": lambda r: f"Kept {r.get('kept', 0)}, removed {r.get('removed', 0)} irrelevant",
         "deduplicate_questions": lambda r: f"Kept {r.get('kept', 0)}, removed {r.get('removed', 0)} duplicates",
-        "check_difficulty_balance": lambda r: f"E:{r.get('counts',{}).get('Easy',0)} M:{r.get('counts',{}).get('Medium',0)} H:{r.get('counts',{}).get('Hard',0)} {'OK' if r.get('balanced') else 'Fix'}",
+        # "Fix" is only actionable when the pool can actually supply the missing difficulty; otherwise
+        # say so, or the transcript shows three identical "Fix" rounds with no explanation.
+        "check_difficulty_balance": lambda r: (
+            f"E:{r.get('counts',{}).get('Easy',0)} M:{r.get('counts',{}).get('Medium',0)} "
+            f"H:{r.get('counts',{}).get('Hard',0)} "
+            + ("OK" if r.get("balanced")
+               else "Fix" if r.get("achievable", True)
+               else "off-target (no candidates available to fix it)")),
         "check_outcome_coverage": lambda r: f"{r.get('covered',0)}/{r.get('total_outcomes',0)} outcomes covered",
         "generate_expected_answers": lambda r: f"Generated {r.get('generated', 0)} answers",
         "generate_interview_questions": lambda r: f"Generated {r.get('generated', 0)} interview questions (total: {r.get('total_accumulated', '?')})",
         "generate_coding_questions": lambda r: f"Generated {r.get('generated', 0)} coding questions",
-        "remove_question": lambda r: f"Removed — {r.get('remaining', '?')} left",
+        # `tool_remove_question` legitimately REFUSES when the set is already at min_questions with
+        # nothing in the reserve to backfill — it returns {"removed": False, "warning": …}. This label
+        # used to print "Removed — N left" either way, so a real run showed two successful removals
+        # while the gate-flagged duplicate stayed in the shipped set. Read the flag.
+        "remove_question": lambda r: (
+            f"Removed — {r.get('remaining', '?')} left" if r.get("removed")
+            else f"NOT removed — {r.get('warning') or r.get('error') or 'refused'}"),
         "submit_question_set": lambda r: f"Submitted {r.get('total_questions',0)} ({r.get('theory',0)}T + {r.get('coding',0)}C)",
     }
 

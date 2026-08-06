@@ -15,6 +15,7 @@ refusal rather than an "unknown tool" error.
 
 from __future__ import annotations
 import json
+import re
 import uuid
 from typing import TYPE_CHECKING
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -232,11 +233,23 @@ def tool_understand_session(state: AgentState) -> dict:
     state.session_context = context
     state.learning_outcomes = context.learning_outcomes
 
-    # Per-session profile text (multi-session topics) for attributing each question to the
-    # session it best matches — enables per-session representation in final selection.
+    # Per-session profile (multi-session topics) for attributing each question to the session it best
+    # matches — which is what enables per-session representation in final selection.
+    #
+    # This used to store ONE reading-material blob per session truncated to 4000 chars. Two problems,
+    # both measured on a real run of "Introduction to AI Agents + Building a Learning Path Generator":
+    #   * truncation — the second session's material is 8,806 chars, so 55% of it was discarded;
+    #   * a single blob DILUTES any specific match, which is exactly what `_session_profile`'s own
+    #     docstring warns about ("LISTS of short texts, not one blob … so long reading material cannot
+    #     dilute a short, precise outcome statement").
+    # The result: every LearnPath score collapsed to 0.17–0.41 and all 12 questions in that run were
+    # labelled with the first session. Reproduced: blob → 12/0, chunked → 6/6. Reusing
+    # `_session_profile` means attribution and the session-fit gate now agree by construction.
     if len(state.config.session_names) > 1:
+        from src.pipeline import _session_profile   # local: pipeline imports this module
         for name in state.config.session_names:
-            state.session_profiles[name] = (state.data_store.get_session_content(name) or name)[:4000]
+            curated, rm_chunks = _session_profile([name], None)
+            state.session_profiles[name] = {"curated": curated, "rm": rm_chunks}
 
     # Ground retrieval queries in what the READING MATERIAL actually teaches — the
     # key_concepts / scope_in extracted from the RM — not the loosely-mapped global KP
@@ -702,7 +715,7 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
         dup_threshold = DEDUP_THRESHOLD
 
     # Keep the BEST representative of a duplicate cluster: highest relevance, then a REAL company
-    # (over a source-site/NIAT label), then a sensible source order (curated/seed > web > generated).
+    # (over an unattributed NIAT row), then a sensible source order (curated/seed > web > generated).
     source_priority = {"seed": 0, "nxtmock": 0, "interview_db": 0, "curriculum": 1, "web": 2, "generated": 3}
 
     def _real_company(q):
@@ -776,6 +789,47 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
     }
 
 
+# How far a level's share may sit from its target before the mix counts as unbalanced. Shared by the
+# `balanced` verdict and the achievability check so the two can never disagree about what "balanced"
+# means — they did, and the stricter one reported satisfiable mixes as impossible.
+DIFFICULTY_TOLERANCE = 0.25
+
+
+def _difficulty_feasible(total: int, target: dict[str, float],
+                         available: dict[str, int]) -> tuple[bool, dict]:
+    """Can a set of `total` questions drawn from `available` land inside every tolerance band?
+
+    Returns (feasible, shortfall). Each band allows a count in
+    [ceil((share − tol)·total), floor((share + tol)·total)]. The mix is reachable when every band's
+    minimum can be supplied AND the per-level maxima, capped by what exists, still total `total`.
+    The second half is what catches an EXCESS: the live run had 4 Medium in a 3-Medium band with no
+    Easy or spare Hard to swap in, so the set was stuck despite no level being individually short.
+    """
+    import math
+
+    if total <= 0:
+        return True, {}
+    lower, upper, shortfall = {}, {}, {}
+    for level, share in target.items():
+        lower[level] = max(0, math.ceil((share - DIFFICULTY_TOLERANCE) * total))
+        upper[level] = max(0, math.floor((share + DIFFICULTY_TOLERANCE) * total))
+        have = available.get(level, 0)
+        if have < lower[level]:
+            shortfall[level] = {"need": lower[level], "available": have}
+
+    if sum(lower.values()) > total:          # bands cannot coexist at this set size
+        return False, shortfall
+    capacity = sum(min(upper[lvl], available.get(lvl, 0)) for lvl in target)
+    if capacity < total:
+        # No single level is necessarily short — the set simply cannot be re-mixed into the bands.
+        for level in target:
+            have = available.get(level, 0)
+            if have < upper[level] and level not in shortfall:
+                shortfall[level] = {"need": upper[level], "available": have}
+        return False, shortfall
+    return not shortfall, shortfall
+
+
 def tool_check_difficulty_balance(state: AgentState) -> dict:
     """Difficulty mix against the target for THIS session's type.
 
@@ -796,9 +850,39 @@ def tool_check_difficulty_balance(state: AgentState) -> dict:
         counts[q.difficulty or "Medium"] = counts.get(q.difficulty or "Medium", 0) + 1
     total = sum(counts.values())
     actual = {k: round(v / max(total, 1), 2) for k, v in counts.items()}
-    balanced = total > 0 and all(abs(actual.get(k, 0) - v) < 0.25 for k, v in target.items())
-    return {"total": total, "counts": counts, "actual_pct": actual, "balanced": balanced,
-            "session_type": session_type, "target_pct": target}
+    balanced = total > 0 and all(
+        abs(actual.get(k, 0) - v) < DIFFICULTY_TOLERANCE for k, v in target.items())
+
+    # ACHIEVABILITY. "Unbalanced" alone tells the agent to fix something it may have no material to
+    # fix with. A real code_heavy run reported E:0 M:4 H:1 against a 20/50/30 target and returned
+    # "Fix" on all three revision rounds, because the pool held zero Easy candidates — the agent
+    # burned both revisions on an impossible instruction. Say what is actually available so the agent
+    # can stop, and so the report can record the shortfall as a corpus gap rather than a set defect.
+    available = dict(counts)
+    for qid, q in state.reserve.items():
+        if qid in state.excluded:
+            continue
+        d = q.difficulty or "Medium"
+        available[d] = available.get(d, 0) + 1
+
+    # Feasibility is judged against the SAME tolerance band that defines `balanced` — not against the
+    # exact target share. Demanding the exact proportion called a satisfiable set unachievable
+    # (code_heavy wants 30% Hard, which at 5 questions rounds to 2, yet 1 Hard is already inside the
+    # band). A set of `total` questions can be balanced iff every band's minimum can be met and the
+    # bands' maxima, capped by what actually exists, can still add up to `total`.
+    achievable, shortfall = _difficulty_feasible(total, target, available)
+
+    out = {"total": total, "counts": counts, "actual_pct": actual, "balanced": balanced,
+           "session_type": session_type, "target_pct": target,
+           "available_by_difficulty": available, "achievable": achievable}
+    if not balanced and not achievable:
+        out["note"] = (
+            "Target NOT achievable from the available pool — "
+            + "; ".join(f"{lvl}: need {v['need']}, only {v['available']} exist"
+                        for lvl, v in sorted(shortfall.items()))
+            + ". Do not spend revision rounds on this; the shortfall is a source-coverage limit."
+        )
+    return out
 
 
 def tool_check_outcome_coverage(state: AgentState) -> dict:
@@ -817,13 +901,25 @@ def tool_check_outcome_coverage(state: AgentState) -> dict:
         return {"total_outcomes": 0, "covered": 0, "missing_count": 0, "missing": [],
                 "coverage_pct": 1.0, "note": "This session has no resolved learning outcomes."}
 
-    from src.pipeline import _outcome_coverage_detail
-    covered, missing = _outcome_coverage_detail(state)
+    # Prefer the syllabus audit's judged coverage, exactly as the report does, so the agent and the
+    # report can never disagree. It is only available from the second round onward (the audit runs
+    # inside submit), so the measure in use is always stated.
+    judged = getattr(state, "judged_coverage", None) or {}
+    if judged.get("method") and (judged.get("covered") or judged.get("missing")):
+        covered, missing = list(judged["covered"]), list(judged["missing"])
+        measure = ("judged against the reading material — an outcome counts only when a question "
+                   "actually examines it (same as the quality report)")
+    else:
+        from src.pipeline import _outcome_coverage_detail
+        covered, missing = _outcome_coverage_detail(state)
+        measure = ("semantic similarity to each outcome (same as the quality report); credits NEARBY "
+                   "questions, so treat it as an upper bound")
+    total = len(covered) + len(missing) or len(outcomes)
     return {
-        "total_outcomes": len(outcomes), "covered": len(covered),
+        "total_outcomes": total, "covered": len(covered),
         "missing_count": len(missing), "missing": missing,
-        "coverage_pct": round(len(covered) / len(outcomes), 2),
-        "measure": "semantic similarity to each outcome (same as the quality report)",
+        "coverage_pct": round(len(covered) / max(total, 1), 2),
+        "measure": measure,
     }
 
 
@@ -1205,7 +1301,7 @@ def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None
     def _rel(q):
         return q.relevance_score if q.relevance_score is not None else 0.0
 
-    def _attr(q):  # True if backed by a credible real company (not NIAT/source-labeled)
+    def _attr(q):  # True if backed by a credible real company (an unattributed row reads NIAT)
         c = q.asked_in_company
         return bool(c) and str(c).strip().upper() != "NIAT"
 
@@ -1311,8 +1407,18 @@ def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None
 
 
 def _attribute_sessions(questions: list, profiles: dict) -> None:
-    """Tag each question with the session profile it most resembles (TF-IDF cosine).
-    Single-session topics tag all with that session; enables per-session representation."""
+    """Tag each question with the session it most resembles. Single-session topics tag all with it.
+
+    Scores against CHUNKS and takes the max per session — never one concatenated blob. A blob makes
+    the comparison a function of how long each session's reading material is rather than how well it
+    matches: on a real two-session run every question landed on the first session (12/0) because the
+    second session's 8.8k-char blob diluted every specific match to 0.17–0.41. The same questions
+    split 6/6 once chunked. `_session_profile` produces the chunks, so this and `_score_session_fit`
+    now use the same grounding.
+
+    Reading-material prose is discounted the same way the fit gate discounts it: a setup walkthrough
+    about pasting an API key otherwise out-matches a precise outcome statement.
+    """
     names = list(profiles.keys())
     if not names:
         return
@@ -1322,16 +1428,557 @@ def _attribute_sessions(questions: list, profiles: dict) -> None:
         return
     if not questions:
         return
-    prof_texts = [profiles[n] for n in names]
-    qtexts = [q.content for q in questions]
     from src import embeddings
-    sims = embeddings.cosine_matrix(qtexts, prof_texts)   # [nq x n_sessions], semantic
-    if sims is None:
+    from src.config import SESSION_PROFILE_RM_WEIGHT
+
+    qtexts = [q.content for q in questions]
+
+    def _texts(name) -> tuple[list[str], list[str]]:
+        prof = profiles[name]
+        if isinstance(prof, dict):
+            return list(prof.get("curated") or []), list(prof.get("rm") or [])
+        return ([prof] if isinstance(prof, str) else list(prof or [])), []   # legacy/cached shape
+
+    # [n_questions x n_sessions] best weighted similarity.
+    scores = [[0.0] * len(names) for _ in qtexts]
+    embeddings_ok = False
+    for s_idx, name in enumerate(names):
+        curated, rm = _texts(name)
+        for texts, weight in ((curated, 1.0), (rm, SESSION_PROFILE_RM_WEIGHT)):
+            if not texts:
+                continue
+            sim = embeddings.cosine_matrix(qtexts, texts)
+            if sim is None:
+                continue
+            embeddings_ok = True
+            for q_idx in range(len(qtexts)):
+                scores[q_idx][s_idx] = max(scores[q_idx][s_idx], float(max(sim[q_idx])) * weight)
+
+    if not embeddings_ok:
+        # TF-IDF fallback. Still per-session, but a bag of chunks joined per session is all TF-IDF can
+        # compare, so length bias returns here — acceptable only because embeddings are unavailable.
+        joined = [" ".join(sum(_texts(n), [])) or n for n in names]
         vec = TfidfVectorizer(stop_words="english", max_features=5000)
-        mat = vec.fit_transform(prof_texts + qtexts)
+        mat = vec.fit_transform(joined + qtexts)
         sims = cosine_similarity(mat[len(names):], mat[:len(names)])
+        for i, q in enumerate(questions):
+            q.session = names[int(sims[i].argmax())]
+        return
+
     for i, q in enumerate(questions):
-        q.session = names[int(sims[i].argmax())]
+        q.session = names[max(range(len(names)), key=lambda s: scores[i][s])]
+
+
+# ── Post-relevance scope trim ────────────────────────────────────────────────
+#
+# Drops an off-syllabus sub-clause from an otherwise on-topic question:
+#   "how you would iteratively improve prompts and guards to increase reliability."
+#     → "how you would iteratively improve prompts"          (guards are not taught in the session)
+#
+# WHY THIS RUNS AFTER THE RELEVANCE GATE, on the selected set only.
+#
+# The tempting version — "at retrieval time, cut any trailing conjunct not grounded in the session" —
+# was measured across the 1400-row GenAI bank and fires on **155 rows**, destroying the entire
+# comparison class:
+#   "…the difference between supervised and unsupervised learning?"  → cuts "unsupervised"
+#   "What is the difference between top-k and top-p sampling?"       → cuts "top-p"
+#   "What are the trade-offs between RAG and fine-tuning?"           → cuts "fine-tuning"
+#   "Explain self-attention and multi-head attention."               → cuts "multi-head"
+#   "how do you detect and reduce them?" / "Design and conduct …"    → cuts a VERB, not a topic
+# The same rule applied to the FINAL SELECTED set fires on 1 of 5 questions — exactly the intended
+# one. The reason is simple: a supervised-vs-unsupervised question is rejected as off-topic for this
+# session long before any trim, so it never reaches the trimmer. An off-topic question must be
+# REJECTED, never surgically edited into a different question.
+#
+# This is NOT `_trim_to_topic`. That one splits COMPOUND questions at clause boundaries between
+# separate asks and deliberately never rewrites a single ask (`and guards` is a noun, so
+# `split_into_clauses` correctly returns one clause). Both are kept; they solve different problems.
+
+# Frames where both sides of the "and" are constitutive — the largest hazard measured. Never trim.
+_COMPARISON_FRAME = re.compile(
+    r"\b(?:difference|differences|distinction|trade-?offs?|compare|comparison|versus|vs\.?|"
+    r"pros and cons|advantages and disadvantages|similarities)\b", re.IGNORECASE)
+
+# Fixed pairs that are one idea, not two. Splitting these produces nonsense ("What are the pros").
+_IDIOM_PAIR = re.compile(
+    r"\b(?:pros and cons|advantages and disadvantages|benefits and (?:drawbacks|limitations|risks)|"
+    r"strengths and weaknesses|inputs? and outputs?|read and write|trial and error|"
+    r"question and answer|terms and conditions|risks and (?:benefits|mitigations))\b", re.IGNORECASE)
+
+# A backstop against a "trim" that guts the question. Kept low (0.4) because the real discriminator is
+# the shared-head-noun rule below, not length: "Explain chain-of-thought prompting and vector store
+# indexing." is a legitimate trim that keeps only 3 of 7 words (0.43).
+_TRIM_MIN_WORD_RATIO = 0.4
+
+_CONJUNCTIONS = {"and", "or"}
+# Verb stems that appear as the second half of a verb pair SHARING one object ("detect and reduce
+# them"). Cutting one leaves the object dangling from a single verb. Narrow on purpose — see
+# `_shares_object` — because "design a prompt and evaluate BLEU scores" is a genuinely separate ask
+# where the second verb has its own object, and blocking that was over-broad.
+_VERB_CONJUNCT_HINTS = {
+    "reduce", "mitigate", "detect", "prevent", "conduct", "optimize", "optimise", "evaluate",
+    "deploy", "monitor", "measure", "validate", "test", "debug", "maintain", "scale", "improve",
+    "handle", "manage", "explain", "describe", "implement", "design", "build", "create", "compare",
+}
+# A cut ending in one of these has no object of its own — it borrowed the head's.
+_OBJECT_PRONOUNS = {"them", "it", "this", "that", "these", "those", "one", "both", "each"}
+
+# A trim must not stop on a function word. Without this, a model that cut one word too late produced
+# "How would you iteratively improve prompts and?" — a prefix, above the word ratio, and accepted by
+# the form gate because it starts with "How" and ends with "?". Grammatically it is broken.
+_DANGLING_TAIL = {
+    "and", "or", "but", "nor", "the", "a", "an", "to", "of", "in", "on", "at", "for", "with",
+    "from", "by", "as", "into", "about", "between", "across", "over", "under", "than", "then",
+    "when", "while", "if", "is", "are", "was", "were", "do", "does", "did", "how", "what", "why",
+    "using", "via", "per", "vs", "versus",
+}
+
+
+def _shares_object(cut: list[str]) -> bool:
+    """True when the cut span is a verb sharing the head's object ("… and reduce them?").
+
+    Distinguishes that from a second ask carrying its own object ("… and evaluate BLEU scores?"),
+    which is exactly the off-syllabus tail this pass is meant to remove.
+    """
+    return (len(cut) >= 2 and cut[0] in _CONJUNCTIONS and cut[1] in _VERB_CONJUNCT_HINTS
+            and len(cut) <= 3 and cut[-1] in _OBJECT_PRONOUNS)
+
+
+def _shares_head_noun(kept: list[str], cut: list[str]) -> bool:
+    """True when the cut repeats a noun from the kept part — an ELIDED comparison, never a trim.
+
+    "Explain self-attention | and multi-head attention." names two kinds of the same thing, so the
+    second half is constitutive even though no "difference between" frame is present. Measured as the
+    one hazard that survived every other guard. Contrast "…prompting | and vector store indexing",
+    which shares nothing and is a real off-syllabus tail.
+    """
+    kept_long = [w for w in kept if len(w) >= 4]
+    for c in cut:
+        if len(c) < 4 or c in _CONJUNCTIONS:
+            continue
+        for k in kept_long:
+            if c in k or k in c:
+                return True
+    return False
+
+_TRIM_SYSTEM = """You remove OFF-SYLLABUS sub-clauses from real interview questions.
+
+You are given a session's scope and a list of questions already judged relevant to it. For each
+question decide whether it asks about an extra thing that this session does NOT teach, tacked on to
+something it does teach.
+
+Rules you MUST follow:
+- Return the question TRIMMED BY DELETING A TRAILING PORTION ONLY. Never reword, reorder, add or
+  substitute a single word. The result must be a prefix of the original.
+- If both sides of an "and" are part of the same comparison or contrast, or the question is about the
+  relationship between them, return it UNCHANGED. Comparisons need both halves.
+- If the conjunction joins two VERBS applied to the same object ("detect and reduce them"), return it
+  UNCHANGED.
+- If everything in the question is within scope, return it UNCHANGED.
+- The trimmed result must still read as a complete, answerable question or task.
+- Prefer UNCHANGED whenever you are unsure. A missed trim is far cheaper than a mangled question.
+
+Respond with JSON: {"results": [{"n": 1, "text": "<trimmed or unchanged>"}, ...]} — one entry per
+question, in the order given."""
+
+
+def _norm_words(text: str) -> list[str]:
+    """Lowercased word list, punctuation stripped — the unit the prefix check compares."""
+    return [w for w in re.findall(r"[a-z0-9][a-z0-9'&/-]*", (text or "").lower()) if w]
+
+
+def _accept_trim(original: str, candidate: str) -> str | None:
+    """The trimmed text if it is a legitimate trim of `original`, else None (caller keeps original).
+
+    Every check here is mechanical and runs in OUR code, not in the model's. The model is asked for a
+    prefix; whether it returned one is verified, because a reworded question attributed to a real
+    company is precisely the failure this whole path has to avoid.
+    """
+    cand = (candidate or "").strip()
+    orig = (original or "").strip()
+    if not cand or cand == orig:
+        return None
+    if _COMPARISON_FRAME.search(orig) or _IDIOM_PAIR.search(orig):
+        return None                       # both sides constitutive → never trim
+    if len(cand) >= len(orig):
+        return None                       # a "trim" that grew is a rewrite
+
+    ow, cw = _norm_words(orig), _norm_words(cand)
+    if not cw or len(cw) < 3:
+        return None
+    if cw != ow[:len(cw)]:
+        return None                       # not a contiguous prefix → reworded or reordered
+    if len(cw) / len(ow) < _TRIM_MIN_WORD_RATIO:
+        return None                       # gutted rather than trimmed
+    if cw[-1] in _DANGLING_TAIL:
+        return None                       # cut one word too late — "…improve prompts and?"
+    if len(cw) >= 2 and cw[-2] == "to":
+        return None                       # cut inside an infinitive — "…prompts and guards to increase?"
+
+    # What was cut must be an off-syllabus TARGET, not the verb the question hangs on, and not the
+    # second half of an elided comparison.
+    cut = ow[len(cw):]
+    if _shares_object(cut) or _shares_head_noun(cw, cut):
+        return None
+
+    # Re-punctuate from the original: a trimmed question keeps the original's mark, not a bare cut.
+    # Strip any separator the cut left dangling FIRST. A live Haiku run cut at clause commas and this
+    # appended the mark straight onto them, shipping "Are you aware of agentic workflows,?" and
+    # "…for a fictional client,." — both of which sail through the form gate because they do end in a
+    # valid mark. The trailing comma is in the string, not in the word list `cw`, so the dangling-tail
+    # check above cannot see it.
+    cand = cand.rstrip().rstrip(",;:-–—").rstrip()
+    if not cand:
+        return None
+    if not cand.endswith(("?", ".", "!")):
+        cand += "?" if orig.rstrip().endswith("?") else "."
+    return cand if is_quality_question(cand) else None
+
+
+def _scope_trim(state: AgentState, questions: list) -> list[dict]:
+    """Trim off-syllabus trailing clauses from the SELECTED questions. Returns a log of what changed.
+
+    Fail-open: any error, unparseable reply or rejected candidate leaves the set untouched. One LLM
+    call per run, over ~5–60 questions.
+    """
+    ctx = state.session_context
+    if not ctx or not questions:
+        return []
+
+    scope_in = list(getattr(ctx, "scope_in", None) or [])[:24]
+    outcomes = list(getattr(ctx, "learning_outcomes", None) or [])[:24]
+    scope_out = list(getattr(ctx, "scope_out", None) or [])[:24]
+    if not scope_in and not outcomes:
+        return []                         # nothing to judge against
+
+    numbered = [{"n": i + 1, "q": q.content[:600]} for i, q in enumerate(questions)]
+    user = (
+        f"SESSION TEACHES (in scope):\n- " + "\n- ".join(scope_in or outcomes)
+        + f"\n\nLEARNING OUTCOMES:\n- " + "\n- ".join(outcomes)
+        + (f"\n\nEXPLICITLY NOT IN THIS SESSION:\n- " + "\n- ".join(scope_out) if scope_out else "")
+        + f"\n\nQUESTIONS:\n{json.dumps(numbered)}"
+    )
+    try:
+        result = chat_completion_json(
+            model=run_model(state),        # the run's model, never the UI global
+            system_prompt=_TRIM_SYSTEM,
+            user_prompt=user,
+            max_tokens=4096,
+            on_usage=_usage_cb(state),
+        )
+    except Exception as exc:  # noqa: BLE001 — a failed trim must not lose the question set
+        print(f"[scope_trim] skipped ({type(exc).__name__}: {exc})")
+        return []
+
+    trims: list[dict] = []
+    for row in (result.get("results") or []):
+        try:
+            idx = int(row["n"]) - 1
+            proposed = str(row.get("text") or "")
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not (0 <= idx < len(questions)):
+            continue
+        q = questions[idx]
+        accepted = _accept_trim(q.content, proposed)
+        if not accepted:
+            continue
+        trims.append({"question_id": q.question_id, "before": q.content, "after": accepted})
+        q.original_content = q.content     # keep the verbatim source for audit
+        q.content = accepted
+    if trims:
+        print(f"[scope_trim] trimmed {len(trims)} question(s) to the session's scope")
+    return trims
+
+
+# Minimum similarity to a session Knowledge Point before a question is tagged with it. Deliberately
+# permissive: the questions reaching this point have already cleared the session-fit floor, so the job
+# is picking WHICH KP, not re-deciding relevance. Below this the question is left untagged rather than
+# given the least-wrong label.
+KP_LABEL_MIN_SIM = 0.30
+
+
+def _assign_kp_labels(questions: list, context) -> int:
+    """Tag each selected question with the session Knowledge Point it best matches.
+
+    `QuestionDetail.kp_label` existed and was written by nothing: retrieved questions carry the bank's
+    own `topic`, never a KP, so every question in every exported set had `kp_label = None`. The
+    session already resolves its KPs (`SessionContext.matched_kp_ids`), so this is a local
+    embedding match, not another LLM call.
+
+    Fail-open and honest: returns 0 and leaves labels as None when embeddings are unavailable or the
+    session resolved no KPs — an untagged question is better than a confidently wrong tag.
+    """
+    kps = [kp for kp in (getattr(context, "matched_kp_ids", None) or [])
+           if (getattr(kp, "kp_label", "") or "").strip()]
+    if not questions or not kps:
+        return 0
+    from src import embeddings
+
+    labels = list(dict.fromkeys(kp.kp_label.strip() for kp in kps))
+    sim = embeddings.cosine_matrix([q.content for q in questions], labels)
+    if sim is None:
+        return 0
+    tagged = 0
+    for i, q in enumerate(questions):
+        best = int(sim[i].argmax())
+        if float(sim[i][best]) >= KP_LABEL_MIN_SIM:
+            q.kp_label = labels[best]
+            tagged += 1
+    return tagged
+
+
+# ── Syllabus audit: is the concept taught here, and which outcome does the question really test? ──
+#
+# Two problems this replaces, both measured on the "Introduction to AI Agents + Building a Learning
+# Path Generator" run:
+#
+# 1. ON-DOMAIN IS NOT ON-SYLLABUS. The quality gate said "All 12 theory questions are on-domain … no
+#    off-domain items detected" and it was right — every question was about AI agents. But four tested
+#    concepts that appear NOWHERE in either session's reading material: `fallback`/`ambiguous intent`,
+#    `guardrails`/`infinite loops`, `production`/`diagnose`, `hallucination`. All four were the Hard
+#    questions, so the set earned `difficulty_balance` 0.87 precisely by going off-syllabus. Nothing in
+#    the pipeline read the reading material to check.
+#
+# 2. PROXIMITY WAS BEING SCORED AS COVERAGE. `_outcome_coverage_detail` credits an outcome when any
+#    question is within 0.30 cosine, and that is 35% of the composite. Measured false credits:
+#      "Integrate multiple Google APIs (Docs, Calendar, Drive)"  ← the HALLUCINATION question (0.38)
+#      "Design system prompts that orchestrate agent reasoning"  ← "when does agent reasoning go off
+#                                                                  the rails?" (0.69, shared word)
+#      "Deploy a no-code automation using n8n"                   ← "deployed into production…" (0.47)
+#    Raising the threshold cannot fix this: across the 11 credited pairs, legitimate credits span
+#    0.52–0.83 and false ones 0.38–0.69 — they OVERLAP, and so does shared-distinctive-term count
+#    (0–2 vs 0–1). Neither signal separates them, so the measure needs judgement against the material,
+#    not a different cut-off.
+#
+# One LLM call over the selected set, and the reply is verified mechanically: a claimed untaught
+# concept must genuinely be absent from the session corpus, and outcome indices must be in range.
+
+_SYLLABUS_SYSTEM = """You audit interview questions against the exact material a session teaches.
+
+You get the session reading material, its numbered learning outcomes, and numbered questions already
+judged relevant to the domain. For each question report two things:
+
+1. "untaught": the single core concept the question requires that is NOT present in the reading
+   material, or null if everything it needs is there. Judge the CONCEPT, not the wording — if the
+   material teaches an idea in different words, that counts as taught. Name the concept using words
+   from the QUESTION.
+2. "covers": the numbers of the learning outcomes this question genuinely EXAMINES. Being about a
+   similar area is not enough — a question about hallucination does not examine an outcome about
+   integrating Google Docs and Calendar, even though both concern agents. Use [] when it examines
+   none of them. Most questions examine zero or one.
+
+Be strict on "covers" and conservative on "untaught": prefer null when the material arguably covers it.
+
+Respond with JSON: {"questions": [{"n": 1, "untaught": null, "covers": [2]}, ...]}"""
+
+
+def _session_corpus(session_names: list) -> str:
+    """Everything a session teaches, lowercased: its reading material plus curated outcomes.
+
+    Used to VERIFY an off-syllabus claim — a concept the model says is untaught must actually be
+    absent from here, otherwise the claim is discarded.
+    """
+    import json as _json
+    from src.config import DATA_DIR
+
+    parts: list[str] = []
+    try:
+        from src.data_loader import get_data_store
+        store = get_data_store()
+        for name in (session_names or []):
+            parts.append(store.get_session_content(name) or "")
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        so = _json.loads((DATA_DIR / "reading_materials" / "session_outcomes.json")
+                         .read_text(encoding="utf-8"))
+        for name in (session_names or []):
+            ov = so.get(name) or {}
+            parts += list(ov.get("learning_outcomes", [])) + list(ov.get("interview_topics", []))
+    except Exception:  # noqa: BLE001
+        pass
+    return " ".join(parts).lower()
+
+
+def _concept_is_absent(concept: str, corpus: str) -> bool:
+    """True when none of the concept's DISTINCTIVE words appear in the session corpus.
+
+    The guard against a fabricated off-syllabus claim: the model may only flag a concept the material
+    genuinely never mentions.
+
+    Ubiquitous domain words are filtered out first, and that filtering is load-bearing. Requiring every
+    word to be missing marked "ambiguous user intent" as taught, because "user" appears throughout any
+    agent lesson while "ambiguous" and "intent" appear nowhere. Conversely a plain majority rule would
+    let "agent guardrails" fail (1 of 2 missing). Judging only the distinctive words gets both right,
+    and a concept made entirely of ubiquitous words yields no claim at all — the conservative outcome.
+    """
+    words = [w for w in re.findall(r"[a-z][a-z-]{3,}", (concept or "").lower())
+             if w not in _SYLLABUS_STOP and w not in _UBIQUITOUS_DOMAIN]
+    if not words:
+        return False
+    return all(w not in corpus and w.rstrip("s") not in corpus for w in words)
+
+
+_SYLLABUS_STOP = {
+    "what", "how", "why", "when", "where", "which", "that", "this", "with", "from", "your", "would",
+    "could", "should", "into", "about", "their", "them", "they", "does", "have", "been", "being",
+    "such", "than", "then", "there", "these", "those", "when", "while", "using", "used", "make",
+    "made", "more", "most", "some", "each", "very", "also", "well", "like", "just", "only",
+}
+# Words so common in any GenAI lesson that their presence says nothing about whether a CONCEPT is
+# taught. Excluded from the absence check so a phrase is judged on its distinctive terms.
+_UBIQUITOUS_DOMAIN = {
+    "agent", "agents", "agentic", "llms", "model", "models", "tool", "tools", "user", "users",
+    "workflow", "workflows", "session", "sessions", "data", "system", "systems", "task", "tasks",
+    "prompt", "prompts", "input", "output", "outputs", "response", "responses", "step", "steps",
+    "example", "examples", "information", "context", "process",
+}
+
+
+def _syllabus_audit(state: AgentState, questions: list) -> dict:
+    """Flag off-syllabus questions and compute JUDGED outcome coverage for the selected set.
+
+    Returns {'off_syllabus': [...], 'coverage': {...}} — `coverage` empty when unavailable, so the
+    caller falls back to the embedding measure and reports which method produced the number.
+    Fail-open: any error leaves the set untouched and unflagged.
+    """
+    ctx = state.session_context
+    if not ctx or not questions:
+        return {"off_syllabus": [], "coverage": {}}
+    outcomes = list(getattr(ctx, "learning_outcomes", None) or [])
+    names = list(getattr(state.config, "session_names", None) or [])
+    if not outcomes:
+        return {"off_syllabus": [], "coverage": {}}
+
+    material = []
+    try:
+        from src.data_loader import get_data_store
+        store = get_data_store()
+        for name in names:
+            content = store.get_session_content(name)
+            if content:
+                material.append(f"### SESSION: {name}\n{content[:9000]}")
+    except Exception:  # noqa: BLE001
+        pass
+    if not material:
+        return {"off_syllabus": [], "coverage": {}}
+
+    numbered_o = "\n".join(f"{i+1}. {o}" for i, o in enumerate(outcomes))
+    numbered_q = json.dumps([{"n": i + 1, "q": q.content[:400]} for i, q in enumerate(questions)])
+    user = (f"READING MATERIAL:\n{chr(10).join(material)}\n\n"
+            f"LEARNING OUTCOMES:\n{numbered_o}\n\nQUESTIONS:\n{numbered_q}")
+    try:
+        result = chat_completion_json(
+            model=run_model(state),          # the run's model, never the UI global
+            system_prompt=_SYLLABUS_SYSTEM,
+            user_prompt=user,
+            max_tokens=4096,
+            on_usage=_usage_cb(state),
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"[syllabus] audit skipped ({type(exc).__name__}: {exc})")
+        return {"off_syllabus": [], "coverage": {}}
+
+    corpus = _session_corpus(names)
+    off: list[dict] = []
+    covered_idx: set[int] = set()
+    pairs: list[dict] = []
+    for row in (result.get("questions") or []):
+        try:
+            idx = int(row["n"]) - 1
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not (0 <= idx < len(questions)):
+            continue
+        q = questions[idx]
+
+        concept = (row.get("untaught") or "").strip() if isinstance(row.get("untaught"), str) else ""
+        # Verified, not trusted: the concept must really be missing from the material.
+        if concept and _concept_is_absent(concept, corpus):
+            q.off_syllabus_concept = concept
+            off.append({"question_id": q.question_id, "content": q.content, "concept": concept})
+
+        for raw in (row.get("covers") or []):
+            try:
+                o_idx = int(raw) - 1
+            except (TypeError, ValueError):
+                continue
+            if 0 <= o_idx < len(outcomes):
+                covered_idx.add(o_idx)
+                pairs.append({"outcome": outcomes[o_idx], "question": q.content[:120]})
+
+    coverage = {
+        "covered": [outcomes[i] for i in sorted(covered_idx)],
+        "missing": [o for i, o in enumerate(outcomes) if i not in covered_idx],
+        "pairs": pairs,
+        "method": "llm-judged",
+    }
+    if off:
+        print(f"[syllabus] {len(off)} question(s) test a concept absent from the session material")
+    return {"off_syllabus": off, "coverage": coverage}
+
+
+def _rank_key(q):
+    """Selection value of a candidate: judged relevance first, then session fit."""
+    return ((q.relevance_score if q.relevance_score is not None else 0.0),
+            (q.session_fit if q.session_fit is not None else 0.0))
+
+
+def _ensure_session_representation(selected: list, pool: list, session_names: list, k: int) -> dict:
+    """Guarantee every configured session that HAS candidates holds at least one slot.
+
+    `_select_final` only *nudges* toward per-session balance with a bonus, and that nudge was dead
+    whenever attribution collapsed onto one session (`sess_target` is 0 unless the pool shows >1
+    distinct session). A real run shipped 12 questions with an entire session unrepresented; the gate
+    flagged `session-gap` and the set shipped anyway. This makes representation a guarantee rather
+    than a preference — while staying honest about the case it CANNOT fix: a session with no
+    candidates at all is reported, never padded.
+
+    Mutates `selected` in place. Returns {'per_session', 'no_candidates', 'swapped'}.
+    """
+    names = [n for n in (session_names or []) if n]
+    if len(names) < 2 or not selected:
+        return {"per_session": {}, "no_candidates": [], "swapped": 0}
+
+    by_session: dict[str, list] = {n: [] for n in names}
+    for q in pool:
+        if q.session in by_session:
+            by_session[q.session].append(q)
+
+    chosen = {q.question_id for q in selected}
+    swapped = 0
+    for name in names:
+        cands = [q for q in by_session[name] if q.question_id not in chosen]
+        have = sum(1 for q in selected if q.session == name)
+        if have or not cands:
+            continue                      # already represented, or nothing to represent it with
+        # Displace the weakest question from whichever session is most over-represented, so the swap
+        # costs the set as little as possible and never drops another session to zero.
+        counts: dict[str, int] = {}
+        for q in selected:
+            counts[q.session] = counts.get(q.session, 0) + 1
+        donors = [q for q in selected if counts.get(q.session, 0) > 1]
+        if not donors:
+            break                         # every slot is the last one for its session — leave it
+        drop = min(donors, key=_rank_key)
+        add = max(cands, key=_rank_key)
+        selected[selected.index(drop)] = add
+        chosen.discard(drop.question_id)
+        chosen.add(add.question_id)
+        swapped += 1
+
+    final_counts: dict[str, int] = {n: 0 for n in names}
+    for q in selected:
+        if q.session in final_counts:
+            final_counts[q.session] += 1
+    return {
+        "per_session": final_counts,
+        # Configured sessions the RETRIEVAL never found a question for. This is a source-coverage
+        # fact, not a selection defect, and the report must say so rather than imply padding.
+        "no_candidates": [n for n in names if not by_session[n]],
+        "swapped": swapped,
+    }
 
 
 def tool_submit_question_set(state: AgentState) -> dict:
@@ -1355,6 +2002,12 @@ def tool_submit_question_set(state: AgentState) -> dict:
     selected = _select_final(list(pool.values()), keep_theory, outcomes, role_tags=role_tags,
                              session_type=(state.session_context.session_type
                                            if state.session_context else None))
+    # Representation is enforced AFTER ranking, so a session that has candidates cannot be shut out by
+    # a bonus that only nudges. Sessions with no candidates at all are reported, never padded.
+    session_rep = _ensure_session_representation(
+        selected, list(pool.values()), list(getattr(state.config, "session_names", None) or []),
+        keep_theory)
+    state.session_representation = session_rep
     selected_ids = {q.question_id for q in selected}
 
     # New selected set; everything else in the pool goes to the reserve (recoverable),
@@ -1362,11 +2015,29 @@ def tool_submit_question_set(state: AgentState) -> dict:
     state.questions = {q.question_id: q for q in selected}
     state.reserve = {qid: q for qid, q in pool.items() if qid not in selected_ids}
 
+    # Both passes act on the SELECTED set only. The reserve is re-selected each revision round, so
+    # working on it would spend embeddings and an LLM call on questions that may never ship — and for
+    # the scope trim, running before the relevance gate is actively harmful (see `_scope_trim`).
+    kp_tagged = _assign_kp_labels(selected, state.session_context) if state.session_context else 0
+    trims = _scope_trim(state, selected)
+    if trims:
+        state.scope_trims.extend(trims)
+    # Reset before re-auditing: a revision round re-selects, so last round's flags must not persist for
+    # questions that are no longer in the set.
+    for q in selected:
+        q.off_syllabus_concept = None
+    audit = _syllabus_audit(state, selected)
+    state.off_syllabus = audit["off_syllabus"]
+    state.judged_coverage = audit["coverage"]
+
     total = len(state.questions) + len(state.coding_questions)
     state.submitted = True
     return {"submitted": True, "total_questions": total,
             "theory": len(state.questions), "coding": len(state.coding_questions),
-            "reserve": len(state.reserve)}
+            "reserve": len(state.reserve), "kp_tagged": kp_tagged,
+            "scope_trimmed": len(trims), "off_syllabus": len(state.off_syllabus),
+            "per_session": session_rep.get("per_session") or {},
+            "sessions_without_candidates": session_rep.get("no_candidates") or []}
 
 
 # ── Dispatch ────────────────────────────────────────────────────────────────

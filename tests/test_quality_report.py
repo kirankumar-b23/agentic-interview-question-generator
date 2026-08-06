@@ -139,15 +139,15 @@ class TestOutcomeCoverage:
         """Nothing to cover → vacuously covered, not a zero that reads as failure."""
         st = _state(ON_TOPIC)
         st.session_context.learning_outcomes = []
-        assert _outcome_coverage(st) == 1.0
+        assert _outcome_coverage(st)[0] == 1.0
 
     def test_no_questions_is_zero_coverage(self):
-        assert _outcome_coverage(_state([])) == 0.0
+        assert _outcome_coverage(_state([]))[0] == 0.0
 
     @needs_embeddings
     def test_relevant_questions_cover_outcomes(self):
-        assert _outcome_coverage(_state(ON_TOPIC)) > 0.0
+        assert _outcome_coverage(_state(ON_TOPIC))[0] > 0.0
 
     @needs_embeddings
     def test_coverage_is_a_fraction(self):
-        assert 0.0 <= _outcome_coverage(_state(OFF_TOPIC)) <= 1.0
+        assert 0.0 <= _outcome_coverage(_state(OFF_TOPIC))[0] <= 1.0
