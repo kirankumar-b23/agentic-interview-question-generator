@@ -177,6 +177,30 @@ Rejection reasons matter: each one maps to a rule the relevance judge reads on t
 (`src/rejection_rules.py`). Rejecting without a reason still suppresses the question, but teaches
 nothing.
 
+## Evaluating a change
+
+`eval/run_eval.py` runs the pipeline over sessions from `eval/eval_sets.json` and scores them
+**per session type**, because the two types are not comparable:
+
+```bash
+python eval/run_eval.py --n 3                    # stratified across types
+python eval/run_eval.py --type code_heavy --n 3  # one segment
+python eval/run_eval.py --all
+```
+
+A code-heavy session is scored against banks that hold almost no implementation questions, so it
+scores lower on coverage and grounding for reasons about **source coverage**, not question quality.
+It therefore has its own bars (`config.EVAL_THRESHOLDS_BY_TYPE`) — one global bar either failed every
+code session or set theory's too low. As implementation questions reach the banks, raise the
+code-heavy bars; that rise is the signal the gap is closing.
+
+Predicted reviewer acceptance is scored only against decisions from the **same** session type, and
+reports `n/a` when that type has none rather than borrowing another type's taste. Each run prints a
+per-type label inventory so you can see which types are measurable.
+
+Sessions with no reading material are skipped and counted (they'd otherwise exercise the fallback
+resolution path and be reported as a curriculum result).
+
 ## Usage
 
 1. In the sidebar pick a **Course**, a **Topic**, a **Model**, and the **max questions** (default 7).

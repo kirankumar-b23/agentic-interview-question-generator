@@ -33,7 +33,7 @@ def _usage_cb(state: "AgentState"):
     return _cb
 
 
-from src.config import DEDUP_THRESHOLD
+from src.config import DEDUP_THRESHOLD, normalize_session_type
 from src.quality import is_quality_question, strip_artifacts
 from src.sources.base import split_into_clauses, looks_like_question
 
@@ -386,6 +386,33 @@ def tool_search_question_bank(state: AgentState, query: str, difficulty: str = N
     }
 
 
+# What a strong question looks like depends on the KIND of session. Hand-written domain guidance, kept
+# separate from the reviewer's examples: it applies even for a session type with no labels yet.
+_TYPE_GUIDANCE = {
+    "code_heavy": """## This is a CODE-HEAVY session — weight questions accordingly
+Candidates score HIGH when they ask the candidate to build, debug, choose between implementations, or
+explain a design decision: writing the code, wiring an API, handling a failure mode, picking a data
+structure or a chunking strategy, reasoning about latency or cost, reading code and saying what it does.
+Score a purely definitional question ("What is X?") LOWER here even when X is on-topic — this session
+taught the candidate to *do* the thing, so recall alone under-tests it.
+Still reject: questions about the candidate's own past projects, and anything from another domain.""",
+    "theory_heavy": """## This is a THEORY-HEAVY session — weight questions accordingly
+Candidates score HIGH when they test understanding of a concept, a comparison, a trade-off, or a
+mechanism: what something is, how it works, why one approach beats another, what breaks and why.
+Score deep implementation minutiae LOWER here — API signatures, config flags, framework-specific
+plumbing — because this session did not teach them; a concept question is the on-target form.
+Still reject: questions about the candidate's own past projects, and anything from another domain.""",
+    "mixed": """## This is a MIXED session — both forms are on-target
+Concept questions and implementation questions both score well provided the subject is taught in the
+reading material. Judge on subject matter, not on form.
+Still reject: questions about the candidate's own past projects, and anything from another domain.""",
+}
+
+
+def _type_guidance(session_type: str | None) -> str:
+    return _TYPE_GUIDANCE[normalize_session_type(session_type)]
+
+
 def _feedback_examples_block(state: AgentState, per_side: int = 12) -> str:
     """Prompt block of the reviewer's own past accept/reject decisions, or "" if there are none.
 
@@ -402,40 +429,52 @@ def _feedback_examples_block(state: AgentState, per_side: int = 12) -> str:
     if not examples:
         return ""
 
+    from src.session_types import type_for_run
+
     session = state.session_context.session_name if state.session_context else None
+    session_type = normalize_session_type(
+        state.session_context.session_type if state.session_context else None)
 
-    def pick(decision: str) -> list[str]:
-        same = [e["question"] for e in examples
-                if e.get("decision") == decision and (e.get("question") or "").strip()
-                and e.get("session") == session]
-        other = [e["question"] for e in examples
-                 if e.get("decision") == decision and (e.get("question") or "").strip()
-                 and e.get("session") != session]
-        seen, out = set(), []
-        for q in same + other:                      # this session's decisions first
-            k = q.strip().lower()
-            if k not in seen:
-                seen.add(k)
-                out.append(q.strip())
-        return out[:per_side]
+    def tier(decision: str) -> tuple[list[str], str]:
+        """Narrowest useful pool of decisions: this session → this session TYPE → everything.
 
-    accepted, rejected = pick("good"), pick("bad")
+        The type tier is the one that matters. Pooling types mis-calibrates both: an implementation
+        question resembles the "too specific, not conceptual" pattern the reviewer established on
+        THEORY material, so a code-heavy session judged on theory decisions is judged wrongly.
+        """
+        rows = [e for e in examples
+                if e.get("decision") == decision and (e.get("question") or "").strip()]
+        same_session = [e["question"].strip() for e in rows
+                        if (e.get("session") or "").strip() == (session or "").strip()]
+        if len(same_session) >= 3:
+            return same_session[:per_side], "this session"
+        same_type = [e["question"].strip() for e in rows
+                     if type_for_run(e.get("session") or "") == session_type]
+        if len(same_type) >= 3:
+            return same_type[:per_side], f"{session_type} sessions"
+        return [e["question"].strip() for e in rows][:per_side], "all session types"
+
+    accepted, acc_pool = tier("good")
+    rejected, rej_pool = tier("bad")
     if not accepted and not rejected:
         return ""
     # Balance the two sides so neither dominates the judge's impression of the reviewer's bar.
     n = min(per_side, max(len(accepted), len(rejected)))
     accepted, rejected = accepted[:n], rejected[:n]
 
-    block = ("## Reviewer's past decisions on questions for this course — calibrate to this taste\n"
-             "These are real accept/reject decisions by the human who will review your output.\n")
+    pool = acc_pool if acc_pool == rej_pool else f"{acc_pool} / {rej_pool}"
+    block = ("## Reviewer's past decisions — calibrate to this taste\n"
+             f"Real accept/reject decisions by the human who will review your output, drawn from "
+             f"**{pool}**. This session is **{session_type}**.\n")
     if accepted:
-        block += ("\nACCEPTED (score these kinds generously — note they are often short and "
-                  "conceptual):\n" + "\n".join(f"- {q[:200]}" for q in accepted) + "\n")
+        block += ("\nACCEPTED (score these kinds generously):\n"
+                  + "\n".join(f"- {q[:200]}" for q in accepted) + "\n")
     if rejected:
-        block += ("\nREJECTED (score anything of this kind ≤0.3, including rewordings — they tend to "
-                  "be generic 'describe your experience' asks, cross-topic architecture questions, or "
-                  "questions not grounded in what this session teaches):\n"
+        block += ("\nREJECTED (score anything of this kind ≤0.3, including rewordings):\n"
                   + "\n".join(f"- {q[:200]}" for q in rejected) + "\n")
+    if pool == "all session types":
+        block += ("\nNOTE: no decisions exist yet for this session type, so the examples above mix "
+                  "types. Weigh the session-type guidance below more heavily than these examples.\n")
     return block + "\n"
 
 
@@ -463,6 +502,8 @@ def tool_validate_relevance(state: AgentState) -> dict:
     concepts_str = ", ".join(state.session_context.key_concepts)
     topics_str = ", ".join(getattr(state.session_context, "interview_topics", None) or []) or "(same as key concepts)"
     scope_out_str = ", ".join(state.session_context.scope_out) if state.session_context.scope_out else "none"
+    # What counts as a strong question differs by session kind — see _TYPE_GUIDANCE.
+    type_guidance = _type_guidance(state.session_context.session_type)
 
     # Ground the judge in the ACTUAL reading material (the outcomes list alone is too thin —
     # it lets keyword overlap masquerade as relevance). Include a bounded excerpt of each
@@ -499,6 +540,8 @@ Key Concepts: {concepts_str}
 Interview Topics (transferable concepts this session prepares a candidate for — a question testing one of
 these IS on-topic, even if it doesn't name the specific tool/product used in the session): {topics_str}
 Out of Scope (score these ≤0.2): {scope_out_str}
+
+{type_guidance}
 
 Give EACH question a relevance score from 0.0 to 1.0 for how well it tests a concept the session teaches
 (any concept present in the reading material above OR one of the Interview Topics):
@@ -734,6 +777,18 @@ def tool_deduplicate_questions(state: AgentState) -> dict:
 
 
 def tool_check_difficulty_balance(state: AgentState) -> dict:
+    """Difficulty mix against the target for THIS session's type.
+
+    The target used to be one global 30/50/20 literal. A code-heavy session's questions are
+    implementation and design work, which sits higher on the scale than recall, so a global target
+    reported a correctly-weighted code set as unbalanced (and vice versa for theory).
+    """
+    from src.config import difficulty_targets, normalize_session_type
+
+    session_type = normalize_session_type(
+        state.session_context.session_type if state.session_context else None)
+    target = difficulty_targets(session_type)
+
     counts = {"Easy": 0, "Medium": 0, "Hard": 0}
     for q in state.questions.values():
         counts[q.difficulty or "Medium"] = counts.get(q.difficulty or "Medium", 0) + 1
@@ -741,8 +796,9 @@ def tool_check_difficulty_balance(state: AgentState) -> dict:
         counts[q.difficulty or "Medium"] = counts.get(q.difficulty or "Medium", 0) + 1
     total = sum(counts.values())
     actual = {k: round(v / max(total, 1), 2) for k, v in counts.items()}
-    balanced = total > 0 and all(abs(actual.get(k, 0) - v) < 0.25 for k, v in {"Easy": 0.30, "Medium": 0.50, "Hard": 0.20}.items())
-    return {"total": total, "counts": counts, "actual_pct": actual, "balanced": balanced}
+    balanced = total > 0 and all(abs(actual.get(k, 0) - v) < 0.25 for k, v in target.items())
+    return {"total": total, "counts": counts, "actual_pct": actual, "balanced": balanced,
+            "session_type": session_type, "target_pct": target}
 
 
 def tool_check_outcome_coverage(state: AgentState) -> dict:
@@ -1129,7 +1185,8 @@ def _feedback_penalty(texts: list[str]) -> list[float]:
         return zeros
 
 
-def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None = None) -> list:
+def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None = None,
+                  session_type: str | None = None) -> list:
     """Order/pick k questions balancing relevance, diversity, outcome coverage, difficulty, and role.
 
     Greedy per-step score for candidate c given the already-selected set S:
@@ -1187,8 +1244,11 @@ def _select_final(questions: list, k: int, outcomes: list, role_tags: set | None
     # drop, so a session with a thin pool still fills.
     reject_penalty = _feedback_penalty(texts)
 
-    # Difficulty target counts for k (Easy 30% / Medium 50% / Hard 20%).
-    diff_target = {"Easy": round(k * 0.3), "Medium": round(k * 0.5), "Hard": round(k * 0.2)}
+    # Difficulty target counts for k, weighted for THIS session's type — code-heavy sessions skew
+    # harder because implementation and design questions sit above recall on the scale.
+    from src.config import difficulty_targets
+    _mix = difficulty_targets(session_type)
+    diff_target = {level: round(k * share) for level, share in _mix.items()}
 
     # Per-session target (multi-session topics): aim for balanced representation.
     sessions = [q.session for q in questions if q.session]
@@ -1292,7 +1352,9 @@ def tool_submit_question_set(state: AgentState) -> dict:
     keep_theory = max(0, target - len(state.coding_questions))
     role_tags = target_roles(getattr(state.config, "category", None)).get("bonus_tags", set())
 
-    selected = _select_final(list(pool.values()), keep_theory, outcomes, role_tags=role_tags)
+    selected = _select_final(list(pool.values()), keep_theory, outcomes, role_tags=role_tags,
+                             session_type=(state.session_context.session_type
+                                           if state.session_context else None))
     selected_ids = {q.question_id for q in selected}
 
     # New selected set; everything else in the pool goes to the reserve (recoverable),

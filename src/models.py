@@ -83,7 +83,11 @@ class GenerationConfig(BaseModel):
     model: str | None = None          # runtime-selected LLM (OpenRouter id); None → configured default
     preview: bool = False             # TESTING: pause after Validation to inspect picked questions
     category: str = "GEN_AI"          # course category → drives sheet branding (Tags/framework)
-    course_type: str | None = None    # theory_heavy | code_heavy | mixed (from the selected course)
+    # Declared type of the COURSE (theory_heavy | code_heavy | mixed), carried for provenance only.
+    # Nothing reads it, and per-type behaviour must not key off it: the authoritative value is the
+    # per-session `SessionContext.session_type`, resolved from that session's reading material. A
+    # course-level label would flatten a mixed course to one type.
+    course_type: str | None = None
     difficulty_bias: dict[str, float] = Field(
         default_factory=lambda: {"easy": 0.3, "medium": 0.5, "hard": 0.2}
     )

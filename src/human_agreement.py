@@ -46,6 +46,9 @@ class AgreementReport:
     n_bad_labels: int                     # rejected examples that informed the estimate
     repeats_rejected: int                 # candidates near-identical to an already-rejected question
     per_question: dict[str, bool]         # question text → predicted acceptable
+    # WHICH labels produced this number: "this session", "code_heavy sessions", "all sessions".
+    # Reported because a score from the wrong type must not be indistinguishable from a right one.
+    label_pool: str = "all sessions"
 
     @property
     def label_count(self) -> int:
@@ -54,7 +57,7 @@ class AgreementReport:
     def summary(self) -> str:
         return (f"predicted_accept={self.predicted_accept_rate:.2f} "
                 f"({self.n_scored} scored vs {self.n_good_labels} good / {self.n_bad_labels} bad "
-                f"labels; {self.repeats_rejected} repeat-rejections)")
+                f"labels from {self.label_pool}; {self.repeats_rejected} repeat-rejections)")
 
 
 def split_labels(examples: list[dict], holdout_fraction: float = 0.5) -> tuple[list[dict], list[dict]]:
@@ -77,26 +80,70 @@ def split_labels(examples: list[dict], holdout_fraction: float = 0.5) -> tuple[l
     return inform, holdout
 
 
-def _label_texts(examples: list[dict], session: str | None) -> tuple[list[str], list[str]]:
-    """(accepted, rejected) question texts. Restricted to `session` when that leaves enough of both
-    sides to be meaningful, since taste is session-specific; otherwise all labels are used."""
-    def pick(rows):
-        good = [e["question"] for e in rows
-                if e.get("decision") == "good" and (e.get("question") or "").strip()]
-        bad = [e["question"] for e in rows
-               if e.get("decision") == "bad" and (e.get("question") or "").strip()]
-        return good, bad
+MIN_LABELS_PER_SIDE = 3   # below this a pool is too thin to prefer over a broader one
+
+
+def _split(rows: list[dict]) -> tuple[list[str], list[str]]:
+    good = [e["question"] for e in rows
+            if e.get("decision") == "good" and (e.get("question") or "").strip()]
+    bad = [e["question"] for e in rows
+           if e.get("decision") == "bad" and (e.get("question") or "").strip()]
+    return good, bad
+
+
+def _label_texts(examples: list[dict], session: str | None,
+                 session_type: str | None = None,
+                 allow_pooled: bool = True) -> tuple[list[str], list[str], str]:
+    """(accepted, rejected, pool_name) — the narrowest label pool that is thick enough to be useful.
+
+    Three tiers, narrowest first, because reviewer taste is specific before it is general:
+
+      1. **this session** — the same session name, folded so ordering differences don't miss
+         (`session_types.type_for_run` handles the " + "-joined names labels are keyed on);
+      2. **this session type** — a code-heavy session judged by code-heavy decisions. This is the tier
+         that matters: an implementation question resembles the "too specific, not conceptual" pattern
+         the reviewer established on THEORY material, so pooling the two mis-calibrates both;
+      3. **everything** — only when `allow_pooled`, and the caller is told which tier was used.
+
+    Returning the pool name is the point: a score computed against the wrong type must not look
+    identical to one computed against the right type.
+    """
+    from src.session_types import type_for_run
+
+    rows = [e for e in (examples or []) if (e.get("question") or "").strip()]
 
     if session:
-        s_good, s_bad = pick([e for e in examples if e.get("session") == session])
-        if len(s_good) >= 3 and len(s_bad) >= 3:
-            return s_good, s_bad
-    return pick(examples)
+        target = type_for_run(session)
+        same_session = [e for e in rows if type_for_run(e.get("session") or "") is not None
+                        and (e.get("session") or "").strip() == (session or "").strip()]
+        s_good, s_bad = _split(same_session)
+        if len(s_good) >= MIN_LABELS_PER_SIDE and len(s_bad) >= MIN_LABELS_PER_SIDE:
+            return s_good, s_bad, "this session"
+        # Fall through to the type tier, resolving the session's type from the name if not given.
+        session_type = session_type or target
+
+    if session_type:
+        same_type = [e for e in rows if type_for_run(e.get("session") or "") == session_type]
+        t_good, t_bad = _split(same_type)
+        if len(t_good) >= MIN_LABELS_PER_SIDE and len(t_bad) >= MIN_LABELS_PER_SIDE:
+            return t_good, t_bad, f"{session_type} sessions"
+        if not allow_pooled:
+            # The caller asked for a type-specific score and there isn't one. Say so with empty
+            # sides; predict_accept turns that into None rather than a number from the wrong pool.
+            return t_good, t_bad, f"{session_type} sessions (insufficient)"
+
+    good, bad = _split(rows)
+    return good, bad, "all sessions"
 
 
 def predict_accept(questions: list[str], examples: list[dict],
-                   session: str | None = None) -> AgreementReport | None:
+                   session: str | None = None, session_type: str | None = None,
+                   allow_pooled: bool = True) -> AgreementReport | None:
     """Predict which `questions` the reviewer would accept, from their past decisions.
+
+    `session_type` narrows the label pool to decisions made on sessions of the same type. With
+    `allow_pooled=False` a type that lacks labels returns None instead of borrowing another type's
+    taste — which is what an honest per-type eval needs.
 
     Returns None when the estimate cannot be made (no questions, one-sided or empty label set, or
     embeddings unavailable) — callers must report "unknown" rather than substitute a number.
@@ -107,7 +154,7 @@ def predict_accept(questions: list[str], examples: list[dict],
     if not questions:
         return None
 
-    good, bad = _label_texts(examples or [], session)
+    good, bad, pool = _label_texts(examples or [], session, session_type, allow_pooled)
     # Both sides are required: with only accepted examples every candidate looks acceptable, and
     # with only rejected ones every candidate looks rejectable. Either way the number is meaningless.
     if not good or not bad:
@@ -144,4 +191,5 @@ def predict_accept(questions: list[str], examples: list[dict],
         n_bad_labels=len(bad),
         repeats_rejected=repeats,
         per_question=per_question,
+        label_pool=pool,
     )

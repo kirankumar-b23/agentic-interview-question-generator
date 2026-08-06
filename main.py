@@ -669,8 +669,16 @@ def api_approve(run_id: str, body: ReviewRequest):
             log.error("FAILED to persist reviewer feedback for run %s: %s", run_id, e)
         _learn_from_reasons(session_name, rejected_feedback)
 
-        # Preserve course identity on regeneration (category drives branding, course_type steers
-        # session handling) — otherwise a non-GenAI course re-runs with default GEN_AI branding.
+        # Preserve course identity on regeneration: `category` drives the sheet branding, so without
+        # it a non-GenAI course re-exports as GenAI.
+        #
+        # `course_type` is carried for provenance only. It is NOT what steers per-type behaviour — an
+        # earlier comment here claimed it did, which was never true: nothing reads
+        # GenerationConfig.course_type. The authoritative type is the one the pipeline resolves from the
+        # reading material (SessionContext.session_type), and that is what
+        # config.difficulty_targets / eval_thresholds and the relevance judge's per-type guidance key
+        # off. Carrying the course's declared type here would let a stale course-level label override a
+        # per-session resolution.
         # Reuse the ORIGINAL run's model rather than whatever the picker currently shows, so a
         # regeneration reproduces the run being corrected instead of inheriting another tab's choice.
         prior_usage = (result.quality_report.api_usage if result.quality_report else {}) or {}

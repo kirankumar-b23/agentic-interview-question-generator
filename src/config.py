@@ -131,6 +131,58 @@ DEFAULT_TARGET_ROLES = TARGET_ROLES["GEN_AI"]
 def target_roles(category: str | None) -> dict:
     return TARGET_ROLES.get((category or "").upper(), DEFAULT_TARGET_ROLES)
 
+
+# ── Per-session-type tuning ──────────────────────────────────────────────────
+# `session_type` (theory_heavy | code_heavy | mixed) was computed, stored, printed into two prompt
+# headers, and acted on NOWHERE. These two tables are what make it mean something.
+
+SESSION_TYPES = ("theory_heavy", "code_heavy", "mixed")
+
+
+def normalize_session_type(value: str | None) -> str:
+    """Coerce anything to a known session type. Unknown/None → 'mixed' (the neutral default)."""
+    v = (value or "").strip().lower()
+    return v if v in SESSION_TYPES else "mixed"
+
+
+# Difficulty mix per type. A code-heavy session's questions are implementation and design work, which
+# sits higher on the scale than recall; a theory session legitimately has more Easy definitional
+# questions. One global 30/50/20 penalised whichever type it didn't describe.
+#
+# IMPORTANT: read via `difficulty_targets()` at the two places that actually decide the mix —
+# `tools.tool_check_difficulty_balance` and `tools._select_final`. Do NOT route this through
+# `SessionContext.difficulty_distribution`: that field is hardcoded at every construction site and read
+# by nothing, so setting it looks like a fix and changes no behaviour.
+DIFFICULTY_BY_TYPE = {
+    "theory_heavy": {"Easy": 0.35, "Medium": 0.50, "Hard": 0.15},
+    "code_heavy":   {"Easy": 0.20, "Medium": 0.50, "Hard": 0.30},
+    "mixed":        {"Easy": 0.30, "Medium": 0.50, "Hard": 0.20},
+}
+
+
+def difficulty_targets(session_type: str | None) -> dict[str, float]:
+    """Target Easy/Medium/Hard proportions for this session type."""
+    return DIFFICULTY_BY_TYPE[normalize_session_type(session_type)]
+
+
+# Eval pass/fail bars per type. A code-heavy session is scored against banks that hold almost no
+# implementation questions (`interview_questions.json` is project/auth/Python; the GenAI bank is
+# conceptual), so it scores systematically lower on coverage and grounding for reasons that are about
+# SOURCE COVERAGE, not question quality. A single bar therefore either fails every code session or
+# sets theory's bar too low — neither tells you anything.
+#
+# Raise the code-heavy bars as implementation questions actually reach the banks; that rise is the
+# signal that the source gap is closing.
+EVAL_THRESHOLDS_BY_TYPE = {
+    "theory_heavy": {"accept": 0.60, "coverage": 0.60, "grounding": 0.45},
+    "code_heavy":   {"accept": 0.55, "coverage": 0.45, "grounding": 0.35},
+    "mixed":        {"accept": 0.60, "coverage": 0.55, "grounding": 0.40},
+}
+
+
+def eval_thresholds(session_type: str | None) -> dict[str, float]:
+    return EVAL_THRESHOLDS_BY_TYPE[normalize_session_type(session_type)]
+
 # Semantic embeddings (free, local sentence-transformers) for redundancy/coverage/attribution.
 # Falls back to TF-IDF automatically if the model/library is unavailable.
 EMBEDDINGS_ENABLED = os.getenv("EMBEDDINGS_ENABLED", "1") == "1"

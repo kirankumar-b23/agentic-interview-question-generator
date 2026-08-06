@@ -195,6 +195,34 @@ The happy path is not the risky part. These are load-bearing:
 - Every page uses `<TopBar>` (it renders the `<h1>`). Inline `<header className="topbar">` should stay
   at zero; there were seven after the component was first written.
 
+## Session type is load-bearing now
+
+`session_type` (theory_heavy | code_heavy | mixed) used to be computed, stored, printed into two prompt
+headers, and acted on nowhere. It now drives real behaviour, so keep these straight:
+
+- **The authoritative value is `SessionContext.session_type`** — the LLM's read of the session's own
+  reading material. There are three other, worse sources; do not use them for behaviour:
+  the knowledge graph's **title-substring** guess (`build_knowledge_graph.py:infer_session_type` —
+  `'mastering'`/`'kaggle'`/`'journey'` count as theory signals), `prepare_data.py`'s hardcodes, and the
+  stale copy that used to live in `eval_sets.json`. They disagreed with the pipeline on 9 of 22 sessions.
+- **`src/session_types.py`** resolves a type from a session NAME for the cases with no SessionContext
+  (labelling a historical reviewer decision, an eval session with no reading material). It prefers the
+  LLM-derived `session_outcomes.review.json` over the knowledge graph, and folds `" + "`-joined run
+  names with the pipeline's own rule. `type_for_run` returns **None** for a wholly unknown name —
+  "unknown" is not "mixed", and callers need that difference to know whether a score is measurable.
+- **What varies by type:** `config.difficulty_targets()` (read at `tools.tool_check_difficulty_balance`
+  and `tools._select_final`), `config.eval_thresholds()` (read by `eval/run_eval.py`), the relevance
+  judge's `_TYPE_GUIDANCE` block, and which reviewer labels calibrate the judge
+  (`tools._feedback_examples_block` → this session → this session TYPE → all, and it states which).
+- **Do NOT route per-type behaviour through `SessionContext.difficulty_distribution` or
+  `GenerationConfig.course_type`.** Both are hardcoded/written and read by nothing — changing them
+  looks like a fix and does nothing. `course_type` is course-level anyway, so it would flatten a mixed
+  course to one type.
+- **`predict_accept(..., session_type=..., allow_pooled=False)`** returns `None` rather than scoring a
+  code-heavy set against theory decisions. That substitution is not conservative: an implementation
+  question matches the "too specific, not conceptual" pattern the reviewer established on theory
+  material, so the pooled number looks measured and is wrong.
+
 ## Dormant: coding questions
 
 Nothing assigns `state.coding_questions`. Generation is blocked and no retrieval path produces them,
@@ -203,13 +231,16 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 280 tests, no LLM or network required. Beyond unit coverage:
+`pytest tests/ -q` — 331 tests, no LLM or network required. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,
   including each outage above. This is the cheapest way to check a pipeline change.
 - `tests/test_failure_paths.py` and `tests/test_audit_fixes.py` pin the silent-failure classes.
 - `tests/test_data_integrity.py` checks the shipped `data/` files (missing reading material, bank
   form-garbage, implausible company attribution).
 - A guard that `REJECT_REASONS` in `Review.jsx` matches `src/rejection_rules.py`.
+- `tests/test_session_types.py` asserts the *observable* consequences of a session type (the selected
+  difficulty mix actually differs, the same metrics pass one type's bars and fail another's), not that
+  a constant exists — because the decorative version of this passed every structural check.
 - `tests/test_audit_fixes.py::TestFixesThatSilentlyDidNotLand` asserts *observable behaviour* for
   fixes that were once reported as done but never applied (a no-op string replace fails silently, and
   a commit message is not evidence). Prefer that style over asserting a line of code exists.

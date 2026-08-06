@@ -159,50 +159,35 @@ def main():
             all_sessions.append(session)
             print(f"  Preserved orphan eval: {ex_name}")
 
-    # ── Count totals ──
-    tgt = sum(len(s["good_questions"]["theory"]) for s in all_sessions)
-    tbt = sum(len(s["bad_questions"]["theory"]) for s in all_sessions)
-    tgc = sum(len(s["good_questions"].get("coding", [])) for s in all_sessions)
-    tbc = sum(len(s["bad_questions"].get("coding", [])) for s in all_sessions)
+    # ── Emit ONLY what is consumed ──
+    #
+    # This script used to write 342 `good_questions`/`bad_questions` exemplars plus a `format_rules`
+    # block. Nothing ever read any of it, and the exemplars were machine-templated:
+    #   "Explain {KP_LABEL} and its practical applications."   with   why_good: "Directly tests KP: …"
+    #   "What is programming?"  (verbatim, 41 times)
+    #   an off-topic distractor chosen by  other_sessions[len(name) % len(other_sessions)]
+    # 342 authoritative-looking fake questions invite someone to calibrate on them — which is exactly
+    # the mistake per-type calibration is meant to avoid. The real reviewer decisions live in
+    # eval/feedback_examples.json and are the only labels any code should use.
+    #
+    # `session_type` is also dropped. It was a pass-through of the knowledge graph's title-substring
+    # heuristic, and it disagreed with the pipeline's own (reading-material) resolution on 9 of the 22
+    # sessions where both existed. eval/run_eval.py now resolves the type per run instead, so the two
+    # cannot drift apart. See src/session_types.py.
+    for session in all_sessions:
+        for dead in ("good_questions", "bad_questions", "session_type"):
+            session.pop(dead, None)
 
     output = {
         "metadata": {
-            "version": "3.0",
+            "version": "4.0",
             "built_at": datetime.now().strftime("%Y-%m-%d"),
-            "description": "Eval sets for all 45 sessions: theory + coding, good + bad, format rules",
+            "description": ("Eval session list: names + KPs + expected outcomes. Question exemplars "
+                            "and session_type were removed in v4 — see the comment in "
+                            "scripts/build_eval_sets.py. Reviewer labels: eval/feedback_examples.json."),
             "total_sessions": len(all_sessions),
-            "total_good_theory": tgt,
-            "total_bad_theory": tbt,
-            "total_good_coding": tgc,
-            "total_bad_coding": tbc,
-            "total_questions": tgt + tbt + tgc + tbc,
         },
         "eval_sessions": all_sessions,
-        "format_rules": {
-            "theory_question": {
-                "required_fields": ["content", "difficulty", "topic", "source"],
-                "content_rules": "Plain text question, clear and specific, tests one learning outcome",
-                "difficulty_values": ["Easy", "Medium", "Hard"],
-                "source_values": ["interview_db", "web", "generated"],
-            },
-            "coding_question": {
-                "required_fields": ["title", "content", "code_id", "difficulty", "language"],
-                "content_rules": "Plain text problem (1-4 sentences). NO markdown headers. Include sample I/O as plain text.",
-                "starter_code_rules": "Separate CodeSnippet linked by code_id. Function signature + '# Write your code here'.",
-                "category_format": "{LANGUAGE}_CODING (e.g., PYTHON_CODING)",
-                "bad_format_examples": [
-                    "Using ## headers in content",
-                    "Embedding starter code inside content",
-                    "Missing function signature",
-                    "Category as LLM_APP_CODING instead of PYTHON_CODING",
-                ],
-            },
-            "session_type_rules": {
-                "theory_heavy": "0 coding questions expected",
-                "code_heavy": "2-4 coding questions expected",
-                "mixed": "1-2 coding questions expected",
-            },
-        },
     }
 
     with open(EVAL_PATH, "w", encoding="utf-8") as f:

@@ -152,6 +152,19 @@ THEORY_SIGNALS  = ['introduction', 'understanding', 'overview', 'explore', 'insi
                    'mastering', 'how llms work', 'evaluation']
 
 def infer_session_type(session_name, topic):
+    """Guess a session's type from its TITLE. A last-resort fallback, NOT ground truth.
+
+    It reads no content, so it gets titles wrong in predictable ways: `Building a Learning Path
+    Generator` comes out theory_heavy (no code signal in the words), and `mastering` / `kaggle` /
+    `journey` / `in the real world` are treated as theory signals regardless of what the session does.
+    It disagreed with the pipeline's reading-material resolution on 9 of the 22 sessions where both
+    existed.
+
+    The authoritative type is `SessionContext.session_type`, resolved by the LLM from the session's
+    reading material. This value only fills the gap for sessions that have no reading material at all.
+    Anything selecting per-type behaviour or scoring should go through `src/session_types.py`, which
+    prefers the LLM-derived table over this one.
+    """
     n = (session_name + " " + topic).lower()
     code_hits   = sum(1 for s in CODE_SIGNALS  if s in n)
     theory_hits = sum(1 for s in THEORY_SIGNALS if s in n)
