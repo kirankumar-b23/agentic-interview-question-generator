@@ -209,6 +209,12 @@ class AgentPipeline:
         # rejected question never resurfaces on re-generation and doesn't take a slot. Matched by
         # normalized content (question_ids regenerate each run).
         self._drop_rejected(state, emit)
+        # Drop questions that cannot be ANSWERED in a conversational interview ("Write a Python program
+        # to…"). Here, before session-fit embeddings and long before the LLM relevance judge, so no spend
+        # goes on candidates that can never ship. Any shortfall this creates reaches
+        # `_top_up_from_open_web` at the end of this method, which already backfills below 60% of the
+        # requested count — so the filter needs no wiring of its own.
+        self._drop_hands_on(state, emit)
         # SESSION-grounded scoring first: score every candidate against THIS session's own outcomes +
         # reading material, drop the unrelated tail, and rank the pool best-first. This is the check
         # that was missing — the cross-topic gate below never filtered WITHIN a course topic.
@@ -307,6 +313,41 @@ class AgentPipeline:
             tool_deduplicate_questions(state)
         emit("open_web", "done",
              f"{len(state.questions)} question(s) after judging the open-web additions.")
+
+    def _drop_hands_on(self, state, emit):
+        """Remove questions that cannot be ANSWERED out loud — see `interview_format`.
+
+        The mock interview is conversational, so "Write a Python program to generate the Fibonacci
+        series" is not a hard question, it is an impossible one. Two real runs shipped such prompts
+        ("Implement an input box to interact with the Gemini API…", "Build and integrate LLM
+        applications.") and each wasted a slot in a set of 9.
+
+        Policy, not a data defect: gated on `config.CONVERSATIONAL_ONLY` and applied to the POOL, so the
+        corpus keeps the 217 real coding questions it holds. "Design a news aggregator system" is
+        deliberately NOT caught — it is answerable by talking through the architecture.
+        """
+        from src.config import CONVERSATIONAL_ONLY
+        if not CONVERSATIONAL_ONLY or not state.questions:
+            return
+        from src.interview_format import is_hands_on_task
+
+        drop = [qid for qid, q in state.questions.items() if is_hands_on_task(q.content)]
+        for qid in drop:
+            q = state.questions.pop(qid, None)
+            if q is None:
+                continue
+            state.excluded.add(qid)
+            state.removed.append({
+                "content": q.content,
+                "reason": "Requires writing code or building something — not answerable in a "
+                          "conversational interview",
+                "stage": "hands_on", "difficulty": q.difficulty, "company": q.attribution,
+            })
+        if drop:
+            emit("hands_on", "done",
+                 f"Dropped {len(drop)} hands-on task prompt(s) that cannot be answered out loud; "
+                 f"{len(state.questions)} remain.",
+                 dropped=len(drop), kept=len(state.questions))
 
     def _drop_rejected(self, state, emit):
         """Remove questions whose normalized content was previously rejected for this session."""
@@ -958,6 +999,14 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
             f"off-syllabus clause was removed); they are marked 'adapted' in review and keep their "
             f"original text for comparison."
         )
+    # Say what the conversational filter cost. A pool filter that silently shrinks the supply reads as
+    # "this session has few questions", which is the misdiagnosis the yield harness exists to prevent.
+    _hands_on = sum(1 for r in (state.removed or []) if r.get("stage") == "hands_on")
+    if _hands_on:
+        notes.append(
+            f"{_hands_on} hands-on task prompt(s) were skipped as unanswerable in a conversational "
+            f"interview (they asked the candidate to write or build something). Set "
+            f"CONVERSATIONAL_ONLY=0 to include them.")
     # A duplicate the set could not drop must be said out loud. Run 8fb9fcb3 shipped one silently: the
     # critique named it, the set held exactly MIN_QUESTIONS, and `remove_question` had to refuse.
     _dupes = [q for q in state.questions.values() if getattr(q, "duplicate_of", None)]

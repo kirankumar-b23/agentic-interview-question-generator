@@ -238,6 +238,16 @@ MAX_EVAL_RETRIES = 2
 # actually applies. A module-level MAX_TOOL_CALLS used to sit here reading an env var that nothing
 # consumed, so setting it appeared to work and did nothing.
 
+# The mock interview is CONVERSATIONAL — answered out loud, with no keyboard, IDE or whiteboard. So a
+# question demanding a produced artifact ("Write a Python program to…", "Implement an input box…") cannot
+# be answered at all and only burns a slot. `interview_format.is_hands_on_task` decides; the pool filter
+# lives in `pipeline._drop_hands_on`.
+#
+# This is POLICY, not a data defect, which is why it is a runtime flag and not a `quality.py` rule: the
+# form gate feeds `scripts/clean_bank.py`, so putting it there would permanently delete 217 real
+# company-attributed coding questions the LMS coding tabs exist for. Set to 0 to ship them again.
+CONVERSATIONAL_ONLY = os.getenv("CONVERSATIONAL_ONLY", "1") == "1"
+
 # Live question harvesting (tools 12 & 13 — search_github_questions / search_web_questions)
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")   # optional; raises GitHub API rate limit from 60→5000/hr

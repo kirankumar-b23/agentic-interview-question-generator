@@ -67,6 +67,8 @@ src/
   question_bank.py                  # Hybrid (embedding + TF-IDF) retriever; corpus vectors disk-cached in .cache/
   embeddings.py                     # Local sentence-transformers (MiniLM); degrades to TF-IDF if absent
   quality.py                        # FORM gate — is this a well-formed standalone question?
+  interview_format.py               # Is it answerable OUT LOUD? (hands-on task prompts; CONVERSATIONAL_ONLY)
+  assessment_items.py               # MCQ / glued-answer shapes — a data assertion, NOT a form gate
   human_agreement.py                # Predicted reviewer acceptance from past accept/reject decisions
   rejection_rules.py                # Rejection-reason key → canonical learned rule (matches Review.jsx)
   orchestrator.py                   # Per-run SSE fan-out WITH replay history + heartbeats
@@ -402,6 +404,46 @@ The gate's critique named them; semantic dedup measured them at **0.767** agains
 - **At `MIN_QUESTIONS` it FLAGS instead of removing** (`QuestionDetail.duplicate_of`, a `same as another`
   tag in Review, and the report names the count). That floor case is exactly why the duplicate shipped
   last time: the critique flagged it, the set held exactly 5, and `remove_question` correctly refused.
+
+## The interview is CONVERSATIONAL — hands-on prompts are unanswerable
+
+Students answer out loud: no keyboard, no IDE, no whiteboard. So *"Write a Python program to generate the
+Fibonacci series"* is not a hard question, it is an impossible one. Two real runs shipped such prompts
+(*"Implement an input box to interact with the Gemini API…"*, *"Build and integrate LLM applications."*),
+each burning a slot in a set of 9. `interview_format.is_hands_on_task` decides; `pipeline._drop_hands_on`
+filters the pool; `config.CONVERSATIONAL_ONLY=0` turns it off.
+
+- **"Design" is deliberately NOT hands-on.** It is the one do-verb answerable in conversation — *"Design a
+  news aggregator system"* means "talk me through the architecture". Measured, treating it as hands-on
+  pushed **2 of the last 6 runs UNDER the 5-question minimum** (6→4, 5→4) and dropped *"Design an RSS News
+  Feed Service"*, one of only three tool-specific questions the n8n work recovered. The compound
+  **`"design and implement"` IS caught** — it reads like discussion and demands an artifact.
+- **A wh-opener is never hands-on**, and that single exemption carries the whole distinction:
+  *"How did you implement JWT authentication in your project?"* is a strong question about a candidate's
+  own work; *"Implement JWT authentication"* is a task. Same verb, opposite verdicts.
+- **Verb alone is not enough — the FRAME matters.** *"Can you create a DataFrame in Python…?"* is
+  keyboard work despite the polite frame, so the rule also matches `can/could/would you`,
+  `your task is to`, `I want you to`.
+- **This is NOT in `quality.py`, and that is deliberate.** A hands-on task IS a well-formed question; the
+  form gate answers shape, this answers format-suitability. Concretely, `scripts/clean_bank.py` deletes
+  every row failing the form gate, so putting it there would **permanently destroy 217 real
+  company-attributed coding questions** that the LMS coding tabs exist for. Same separation-of-concerns
+  reason `src/assessment_items.py` is its own module.
+- **It filters the POOL, right after `_drop_rejected`** — before session-fit embeddings and long before
+  the LLM relevance judge, so nothing is spent on candidates that cannot ship. A shortfall it creates
+  needs no new wiring: `_top_up_from_open_web` runs at the end of `_pick_questions` and already fires
+  below 60% of the requested count.
+- **The same predicate runs in `add_open_web_records`.** The tier fires precisely when the set is short,
+  and the open web is full of "write a function to…" — without it the backfill hands straight back what
+  the pool filter just removed, and the filter looks broken.
+- Measured: rejects **217 of 2,828 rows (7.7%)**; a 14-row random audit of the rejects found no false
+  positives; **no run in the last 6 falls under the minimum** because of it (worst single loss 9→7).
+- **`removed[].stage == "hands_on"` is counted by `scripts/yield_report.py` and named in the report.** A
+  pool filter that shrinks supply silently gets misread as "this session has few questions" — the exact
+  misdiagnosis the yield harness exists to prevent.
+- **A test asserting only "it isn't in the shipped set" is VACUOUS here**, and a mutation check is what
+  caught it: `_select_final` trims ~150 candidates to 8, so an injected question misses the cut whether or
+  not the filter ran, and the assertion passed with the filter unwired. Assert the **removal record**.
 
 ## Two different "slicing" mechanisms — do not merge them
 

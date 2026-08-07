@@ -2228,9 +2228,13 @@ def add_open_web_records(state: AgentState, records: list) -> int:
     is the full candidate pool). Every question added here is `unvetted_source=True` and has no company
     attribution — `fetch_open_web` forces `company=None`, so `attribution` reads NIAT.
     """
+    from src.config import CONVERSATIONAL_ONLY
+    from src.interview_format import is_hands_on_task
+
     ctx = state.session_context
     if not records or not ctx:
         return 0
+    hands_on_filtered = CONVERSATIONAL_ONLY
     topic_keywords = _topic_keywords(ctx)
     session_topic = (ctx.key_concepts[0] if getattr(ctx, "key_concepts", None) else "Interview")
     added = 0
@@ -2241,6 +2245,11 @@ def add_open_web_records(state: AgentState, records: list) -> int:
             if not content:
                 continue
         if not is_quality_question(content):
+            continue
+        # The open web is full of "write a function to…" content, and this tier fires precisely when the
+        # set is short — so without this check the backfill would hand straight back what
+        # `pipeline._drop_hands_on` just removed, and the pool filter would look broken.
+        if hands_on_filtered and is_hands_on_task(content):
             continue
         q_id = str(uuid.uuid4())
         state.questions[q_id] = QuestionDetail(

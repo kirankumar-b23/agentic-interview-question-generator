@@ -320,3 +320,76 @@ class TestConcurrentRuns:
         for q in b.curated_output.question_details:
             if q.question_id in a_by_id:
                 assert q is not a_by_id[q.question_id], "runs must not share question INSTANCES"
+
+
+class TestConversationalOnlyRunsInTheRealPipeline:
+    """The hands-on filter has to be WIRED, not merely correct.
+
+    `tests/test_interview_format.py` proves `_drop_hands_on` behaves; it cannot prove
+    `_pick_questions` calls it. A live run would have shown that, and the run intended for it died on a
+    401 (the OpenRouter key in .env lost its `sk-` prefix), so this closes the gap with the LLM boundary
+    stubbed instead — the same trick the rest of this file uses.
+    """
+
+    # ON-TOPIC for the stubbed session (agents / memory / planning) ON PURPOSE. The first version of
+    # this test injected "Write a Python program to reverse a linked list", which the session-fit gate
+    # dropped on its own — so the test passed even with the filter unwired and proved nothing. It has to
+    # be a candidate that ONLY the hands-on filter has a reason to remove.
+    HANDS_ON = ("Write a Python function that gives an AI agent short-term memory using a list, and "
+                "explain how the agent's planning loop reads from it.")
+
+    def _inject(self, monkeypatch, text):
+        """Force one hands-on candidate into the pool the bank returns."""
+        import src.tools as tools_mod
+        real = tools_mod.tool_search_question_bank
+
+        def _with_hands_on(state, *a, **kw):
+            out = real(state, *a, **kw)
+            from src.models import QuestionDetail
+            q = QuestionDetail(question_id="injected-hands-on", category="GEN_AI", content=text,
+                               topic="Gen AI", difficulty="Medium", source="interview_db")
+            state.questions[q.question_id] = q
+            return out
+
+        monkeypatch.setattr(tools_mod, "tool_search_question_bank", _with_hands_on)
+
+    def test_a_hands_on_candidate_is_removed_from_the_pool_and_never_ships(self, stub_llm, monkeypatch):
+        """Asserts the POOL removal, not just absence from the final set.
+
+        "It isn't in the shipped set" is a vacuous claim here and it took a mutation check to notice:
+        `_select_final` trims ~150 candidates to 8, so an injected question misses the cut whether or not
+        the filter ran, and the assertion passed with the filter unwired. The removal record is the part
+        only this filter can produce.
+        """
+        stub_llm()
+        self._inject(monkeypatch, self.HANDS_ON)
+
+        result, events = _run(max_questions=8)
+        assert result.error is None
+        dropped = [r for r in (result.removed or [])
+                   if r.get("stage") == "hands_on" and r.get("content") == self.HANDS_ON]
+        assert dropped, "the injected hands-on candidate must be removed AT the hands_on stage"
+        shipped = result.curated_output.question_details
+        assert "injected-hands-on" not in {q.question_id for q in shipped}
+
+    def test_the_drop_is_reported_on_its_own_step(self, stub_llm, monkeypatch):
+        """A pool filter that shrinks supply silently gets misread as 'this session has few
+        questions' — the exact misdiagnosis scripts/yield_report.py exists to prevent."""
+        stub_llm()
+        self._inject(monkeypatch, self.HANDS_ON)
+
+        result, events = _run(max_questions=8)
+        steps = [e for e in events if e["step"] == "hands_on"]
+        assert steps, "the filter must emit its own step so a run is debuggable"
+        assert steps[0].get("dropped", 0) >= 1
+        assert any(r.get("stage") == "hands_on" for r in (result.removed or []))
+
+    def test_with_the_flag_off_the_same_candidate_survives_the_filter(self, stub_llm, monkeypatch):
+        """Proves the flag governs real pipeline behaviour, not just the helper."""
+        import src.config as cfg
+        monkeypatch.setattr(cfg, "CONVERSATIONAL_ONLY", False)
+        stub_llm()
+        self._inject(monkeypatch, self.HANDS_ON)
+
+        result, events = _run(max_questions=8)
+        assert not any(r.get("stage") == "hands_on" for r in (result.removed or []))

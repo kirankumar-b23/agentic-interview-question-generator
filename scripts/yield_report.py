@@ -67,6 +67,8 @@ def _funnel(d: dict) -> dict:
         "prefilter": stages.get("off_topic_prefilter", 0),
         "relevance": stages.get("relevance", 0),
         "suppressed": stages.get("suppressed", 0),
+        # Counted explicitly: a filter that silently shrinks the pool reads as "nothing was dropped".
+        "hands_on": stages.get("hands_on", 0),
     }
 
 
@@ -81,7 +83,7 @@ def main() -> int:
         print("No persisted runs matched. (run_results is written by main.py on each completed run.)")
         return 1
 
-    print(f"{'run':<10}{'raw':>7}{'pool':>7}{'fit-':>6}{'pre-':>6}{'rel-':>6}{'FINAL':>7}"
+    print(f"{'run':<10}{'raw':>7}{'pool':>7}{'hand-':>7}{'fit-':>6}{'pre-':>6}{'rel-':>6}{'FINAL':>7}"
           f"{'verdict':>9}  topic")
     print("-" * 104)
     finals, starved, approved_finals = [], 0, []
@@ -96,7 +98,7 @@ def main() -> int:
             approved_finals.append(f["final"])
         if f["final"] <= MIN_QUESTIONS:
             starved += 1
-        print(f"{run_id[:8]:<10}{f['raw']:>7}{f['pool']:>7}{f['session_fit']:>6}{f['prefilter']:>6}"
+        print(f"{run_id[:8]:<10}{f['raw']:>7}{f['pool']:>7}{f['hands_on']:>7}{f['session_fit']:>6}{f['prefilter']:>6}"
               f"{f['relevance']:>6}{f['final']:>7}{(rep.get('pass_fail') or '?'):>9}"
               f"  {name}{'  [APPROVED]' if was_approved else ''}")
 
