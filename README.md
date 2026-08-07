@@ -85,7 +85,11 @@ src/
   session_understanding.py # Per-session reading material → SessionContext (+ KG fallback)
   question_bank.py         # Hybrid (embedding + keyword) retriever over the question banks
   human_agreement.py       # Predicted reviewer acceptance from past accept/reject decisions
+  embeddings.py            # Local sentence-transformers (MiniLM); falls back to TF-IDF
   quality.py               # Form gate — is this a well-formed standalone question?
+  interview_format.py      # Is it answerable OUT LOUD? (skips hands-on "write a program" prompts)
+  assessment_items.py      # MCQ / glued-answer shapes — a data assertion, not a form gate
+  session_types.py         # theory_heavy | code_heavy | mixed from a session NAME
   rejection_rules.py       # Rejection-reason key → the rule the next run's judge reads
   sources/                 # tavily_search.py (web) + github_repo.py
   llm_client.py            # OpenRouter client + runtime model + credit balance
@@ -97,7 +101,8 @@ src/
   orchestrator.py          # Per-run SSE fan-out with replay history + heartbeats
 frontend/                  # React SPA (Vite). Pages: SessionSelector, AddCourse, Progress, Review, History
 data/
-  interview_questions.json           # ~1,500 company-attributed questions (TF-IDF bank)
+  interview_questions.json           # 1,447 company-attributed questions (general SWE/Python)
+  genai_question_bank.json           # 1,381 curated GenAI questions
   knowledge_graph.json               # KPs + sessions + prerequisites
   course_structure.json              # Topic → sessions (drives the UI + topic labels)
   reading_materials/session_map.json # Per-session reading material (built)
@@ -124,10 +129,20 @@ TAVILY_API_KEY=tvly-...
 GITHUB_TOKEN=github_pat_...        # optional
 Client_ID=...apps.googleusercontent.com   # Google OAuth (Sheets)
 Client_Secret=...
+COMPOSIO_API_KEY=...               # optional; referenced by .mcp.json as ${COMPOSIO_API_KEY}
 # optional overrides:
 ENV=development                    # development | staging | production
 LLM_MODEL=anthropic/claude-haiku-4-5
 ```
+
+**The OpenRouter key must keep its `sk-` prefix.** A truncated `or-...` value (73 chars → 70) is the
+single most common way a run dies here: every stage returns `401 Missing Authentication header`, and
+because each phase is fail-open the run completes and reports "few questions were available" rather than
+an auth error. It has happened twice. If a run yields nothing, check the key length first.
+
+`COMPOSIO_API_KEY` lives in `.env` so it is not inline in `.mcp.json`, but **Claude Code expands
+`${VAR}` from its own process environment and does not read `.env`** — so it also needs exporting from
+your shell profile for the MCP server to authenticate.
 
 ### 2. Install & build
 ```bash
@@ -181,6 +196,23 @@ Rejection reasons matter: each one maps to a rule the relevance judge reads on t
 (`src/rejection_rules.py`). Rejecting without a reason still suppresses the question, but teaches
 nothing.
 
+## Tests, and the yield harness
+
+```bash
+pytest tests/ -q                 # 573 tests. Stop the server first — it holds the memory.db lock
+python scripts/yield_report.py   # how many questions actually reach the reviewer
+```
+
+**The suite costs nothing to run, and that is enforced, not hoped for.** `tests/conftest.py` blocks
+outbound sockets and *records* every attempt, failing the test that made one. Recording matters because
+the LLM/Tavily call sites are deliberately fail-open: a version of this guard that only raised let the
+whole suite pass while reporting zero leaks. Real leaks had been spending OpenRouter credit and exhausted
+a Tavily plan. If a test genuinely needs the network, mark it `@pytest.mark.allow_network`.
+
+Before changing any threshold, filter or gate, run `scripts/yield_report.py` and compare. **Median final
+set size is the number to watch** — a change that improves a single metric while lowering it is a
+regression, which is how a 5-question topic once became a 3.
+
 ## Evaluating a change
 
 `eval/run_eval.py` runs the pipeline over sessions from `eval/eval_sets.json` and scores them
@@ -224,9 +256,12 @@ OpenRouter credit balance is shown in the sidebar footer.
 |-------|---------|
 | `src/config.py` → `MODEL_OPTIONS` | Models offered in the UI dropdown |
 | `src/config.py` → `MODEL_CONFIG` / `ENV` | Default model per environment |
-| `src/config.py` → `MIN_QUESTIONS` / `MAX_QUESTIONS` | Set size bounds (5–15) |
+| `src/config.py` → `MIN_QUESTIONS` / `MAX_QUESTIONS` | Set size bounds (5–60; the UI slider's range) |
 | `src/config.py` → `INTERVIEW_SOURCE_ALLOWLIST` | Tavily web domains |
 | `src/config.py` → `INTERVIEW_GITHUB_REPOS` | GitHub source repos |
+| `CONVERSATIONAL_ONLY` (env, default on) | Skip hands-on prompts ("Write a Python program to…") that a candidate cannot answer out loud. Set `0` to include them |
+| `OPEN_WEB_ENABLED` / `OPEN_WEB_TRIGGER_RATIO` (env) | The last-resort unrestricted web search, and how short a set must be before it engages (default 0.6 × requested) |
+| `RELEVANCE_THRESHOLD` / `RELEVANCE_FLOOR` (env) | Keep-bar and the absolute floor for the back-fill. The floor is never crossed: a thin on-topic pool returns fewer questions, not filler |
 
 ---
 
