@@ -72,7 +72,7 @@ class TestCoverageAgreesWithTheReport:
         st = _state(contents=["What are the core components of an AI agent?",
                               "Tell me about yourself"])
         assert tool_check_outcome_coverage(st)["coverage_pct"] == pytest.approx(
-            round(_outcome_coverage(st)[0], 2), abs=0.01)
+            round(_outcome_coverage(st).topic_coverage, 2), abs=0.01)
 
     def test_no_outcomes_is_reported_honestly(self):
         from src.tools import tool_check_outcome_coverage
@@ -82,7 +82,7 @@ class TestCoverageAgreesWithTheReport:
     def test_empty_set_with_outcomes_is_zero_not_perfect(self):
         """A run that lost its context and produced nothing used to report perfect coverage."""
         from src.pipeline import _outcome_coverage
-        assert _outcome_coverage(_state(contents=()))[0] == 0.0
+        assert _outcome_coverage(_state(contents=())).topic_coverage == 0.0
 
 
 class TestTrimDoesNotMutateSourcedText:

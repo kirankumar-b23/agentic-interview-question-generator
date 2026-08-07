@@ -178,6 +178,19 @@ class QuestionDetail(BaseModel):
     # and ambiguous-intent fallbacks — none of which either session teaches. Flagged, not rejected: the
     # reviewer decides whether to keep a question that goes beyond the material.
     off_syllabus_concept: str | None = None
+    # True when this came from the LAST-RESORT open-web tier — a domain outside the 67-entry
+    # INTERVIEW_SOURCE_ALLOWLIST. Measured on real searches, only 29 of 71 open-web candidates sat on a
+    # genuine interview-question page, so these get filtered harder upstream AND flagged here: the
+    # reviewer decides whether to trust an unvetted source. Such records never carry a company.
+    unvetted_source: bool = False
+    # Set by `tools._same_thing_pass` when another question in the SAME shipped set tests the same
+    # thing — holds the other question's text. Semantic dedup measured this pair at 0.767 against its
+    # 0.82 bar, and the threshold cannot be lowered to catch it: 209 pairs in 900 bank rows sit in
+    # [0.74, 0.82) and the band mixes real duplicates ("What is a neural network?" /
+    # "What is a Neural Network and ANN?") with legitimately distinct ones ("What is fine-tuning in
+    # LLMs?" / "best practices for LLM fine-tuning?"). Flagged rather than removed when the set is at
+    # `MIN_QUESTIONS`, because dropping one there would push the set under the floor.
+    duplicate_of: str | None = None
 
     @field_validator("expected_answer", mode="before")
     @classmethod
@@ -305,6 +318,10 @@ class QualityReport(BaseModel):
     composite_score: float = 0.0
     metric_scores: dict[str, float] = Field(default_factory=dict)
     pass_fail: Literal["pass", "fail"] = "fail"
+    # Every gate condition with its value and bar: [{name, value, bar, ok}]. The report used to carry
+    # `pass_fail` alone, so a failed set gave a reviewer no way to tell a thin corpus from a bad set —
+    # three runs failed in a row and the only way to learn why was to read the scoring code.
+    gate_checks: list[dict] = Field(default_factory=list)
     flagged_questions: list[FlaggedQuestion] = Field(default_factory=list)
     critique: list[str] = Field(default_factory=list)
     loops_used: int = 0

@@ -896,10 +896,14 @@ def tool_check_outcome_coverage(state: AgentState) -> dict:
     """
     if not state.session_context:
         return {"error": "Call understand_session first"}
-    outcomes = state.session_context.learning_outcomes
+    # The SAME yardstick the report uses: interview topics, not lesson steps. Scoring outcomes meant
+    # measuring questions against things like "Set up a Kaggle account with phone verification" —
+    # 44% of one topic's outcomes were environment mechanics no interview question can cover.
+    from src.pipeline import coverage_targets
+    outcomes = coverage_targets(state.session_context)
     if not outcomes:
         return {"total_outcomes": 0, "covered": 0, "missing_count": 0, "missing": [],
-                "coverage_pct": 1.0, "note": "This session has no resolved learning outcomes."}
+                "coverage_pct": 1.0, "note": "This session has no resolved interview topics."}
 
     # Prefer the syllabus audit's judged coverage, exactly as the report does, so the agent and the
     # report can never disagree. It is only available from the second round onward (the audit runs
@@ -915,10 +919,16 @@ def tool_check_outcome_coverage(state: AgentState) -> dict:
         measure = ("semantic similarity to each outcome (same as the quality report); credits NEARBY "
                    "questions, so treat it as an upper bound")
     total = len(covered) + len(missing) or len(outcomes)
+    n_q = len(state.questions) + len(state.coding_questions)
+    achievable = max(1, min(total, n_q)) if n_q else 1
     return {
         "total_outcomes": total, "covered": len(covered),
         "missing_count": len(missing), "missing": missing,
         "coverage_pct": round(len(covered) / max(total, 1), 2),
+        # What the GATE scores: did each question earn its place against a distinct topic. Reported so
+        # the agent optimises the thing it is judged on rather than a supply-bounded ratio.
+        "coverage_efficiency": round(min(1.0, len(covered) / achievable), 2),
+        "supply_capped": n_q < total,
         "measure": measure,
     }
 
@@ -1024,16 +1034,133 @@ _QUERY_STOPWORDS = {
 }
 
 
+# Product/tool names look like this: a letter-digit mix (n8n, Automatic1111, GPT-4), internal caps
+# (SerpAPI, SplitInBatches), or a capitalised proper noun. Multi-word names are caught by the
+# capitalised-run pattern ("Google Sheets", "Stable Diffusion", "HTTP Request").
+_TOOL_TOKEN = re.compile(r"\b(?:[a-z]+\d+[a-z\d]*|[A-Z][a-z]+[A-Z][A-Za-z]*|[A-Z]{2,}[A-Za-z]*)\b")
+_PROPER_RUN = re.compile(r"\b(?:[A-Z][a-z0-9]+)(?:\s+[A-Z][a-z0-9]+)*\b")
+# Capitalised words that are not products — they open sentences or name generic concepts, and querying
+# them wastes a Tavily call on nothing specific.
+_NOT_A_TOOL = {
+    "understand", "identify", "explain", "recognize", "recognise", "apply", "design", "build",
+    "configure", "integrate", "compare", "evaluate", "manage", "create", "implement", "use", "using",
+    "learn", "generate", "define", "describe", "set", "setup", "master", "the", "and", "for", "with",
+    "how", "what", "why", "when", "workflow", "workflows", "automation", "content", "data", "model",
+    "models", "prompt", "prompts", "api", "apis", "ai", "llm", "llms", "node", "nodes", "types",
+    "type", "tools", "tool", "session", "sessions", "questions", "interview", "key", "core", "based",
+    "multi", "step", "end", "real", "time", "best", "practices", "different", "various", "cloud",
+    "python", "code", "text", "image", "images", "video", "audio", "email", "system", "systems",
+    "decompose", "schedule", "optimize", "optimise", "test", "validate", "deploy", "execute", "install",
+}
+
+
+def _tool_terms(ctx, limit: int = 4) -> list[str]:
+    """Concrete product/tool names this session teaches, for RETRIEVAL queries.
+
+    `interview_topics` are deliberately tool-agnostic — the extraction prompt requires "the transferable
+    GenAI skills/concepts, NOT the specific tool/product/UI" — which is right for judging relevance and
+    coverage but leaves retrieval searching for abstractions. On the No-Code sessions the first six query
+    terms were "Workflow automation with LLMs", "Designing multi-step AI processes", "Chaining LLM calls
+    in workflows"; the string "n8n" never entered a query, even though `scope_in` says "n8n node types
+    (Chat Trigger, Google Sheets, Slack, HTTP Request, SplitInBatches, Social Media)". Measured:
+    "n8n workflow automation interview questions" returns 0 records, while "n8n node types interview
+    questions" returns 14 — from the EXISTING allowlist. The trusted sources had the content; nothing
+    ever asked them for it.
+
+    Parenthesised lists are read too, since that is where the curated scope puts tool enumerations.
+    """
+    if ctx is None:
+        return []
+    sources = (list(getattr(ctx, "scope_in", None) or [])
+               + list(getattr(ctx, "key_concepts", None) or [])
+               + list(getattr(ctx, "learning_outcomes", None) or []))
+    counts: dict[str, int] = {}
+    for text in sources:
+        if not isinstance(text, str):
+            continue
+        # Split parenthesised enumerations into their own candidates.
+        segments = [text] + [p for p in re.findall(r"\(([^)]*)\)", text) for p in p.split(",")]
+        for seg in segments:
+            for m in list(_TOOL_TOKEN.finditer(seg)) + list(_PROPER_RUN.finditer(seg)):
+                # Strip leading/trailing generic words so a sentence-initial verb does not become part
+                # of the product name: "Manage Kaggle" -> "Kaggle", "Use Gemini" -> "Gemini".
+                words = m.group(0).split()
+                while words and words[0].lower() in _NOT_A_TOOL:
+                    words.pop(0)
+                while words and words[-1].lower() in _NOT_A_TOOL:
+                    words.pop()
+                term = " ".join(words).strip()
+                low = term.lower()
+                if len(term) < 3 or low in _NOT_A_TOOL:
+                    continue
+                counts[term] = counts.get(term, 0) + 1
+    # Most-mentioned first: a tool the session keeps naming is the one worth querying.
+    return [t for t, _ in sorted(counts.items(), key=lambda kv: (-kv[1], len(kv[0])))][:limit]
+
+
+# A product token carrying its own identity: a letter+digit mix (n8n, Automatic1111, GPT-4). These are
+# unambiguous on the open web; bare English words are not.
+_PLATFORM_TOKEN = re.compile(r"^(?=[^\d]*\d)(?=\d*[A-Za-z])[A-Za-z0-9.\-]{3,}$")
+
+
+def _qualify_tool_terms(terms: list) -> list:
+    """Prefix ambiguous tool terms with the session's PLATFORM, for open-web queries.
+
+    `_tool_terms` returns single tokens, because the reading material writes multi-word node names with
+    a lowercase head — "Merge and Aggregate nodes", "RSS Feed Read Node" — so `_PROPER_RUN` only ever
+    captures "Merge", "Aggregate", "RSS". Queried bare, those retrieve the wrong universe entirely.
+    Measured on a live run that searched "RSS, n8n, Merge":
+
+        "What was your interview with Merge like?"            → Merge, the company
+        "What is the purpose of the merge() function in pandas?"
+        "Given two sorted lists, write a function to merge them into one sorted list."
+        "What is the purpose of the ServiceNow RSS web service?"
+        "Design an RSS Feed website LOL"
+
+    The relevance judge correctly rejected all of them, so the tier fired, spent its calls and added
+    nothing on-topic. Qualifying with the platform ("n8n Merge", "n8n RSS") asks the question that was
+    actually meant.
+
+    The platform is the highest-ranked `_tool_terms` entry with letter-digit identity — `_tool_terms`
+    is already ordered most-mentioned-first, so on an n8n session that is "n8n". With no such token
+    (a theory session, or one whose tools are all plain words) the terms are returned unchanged rather
+    than qualified by a guess.
+    """
+    cleaned = [t.strip() for t in (terms or []) if t and t.strip()]
+    platform = next((t for t in cleaned if _PLATFORM_TOKEN.match(t)), None)
+    if not platform:
+        return cleaned
+    low = platform.lower()
+    return [t if low in t.lower() else f"{platform} {t}" for t in cleaned]
+
+
 def _topic_keywords(ctx) -> set:
-    """Salient (>=4-char) keywords from the session's RM-derived scope — used to trim
-    compound questions to their on-topic clause. Shared by web + github + bank paths."""
+    """Salient keywords from the session's RM-derived scope — used to trim compound questions to their
+    on-topic clause. Shared by the web, github and bank paths.
+
+    The >=4-character floor silently excluded exactly the terms that identify a session's subject:
+    `n8n` (3), `RAG`, `GPU`, `IF`. Measured consequence on a real run — "n8n" was not a keyword, so
+    every retrieved n8n question either failed the on-topic test outright or got amputated by
+    `_trim_to_topic` ("What are nodes in N8N and how are they categorized?" became "What are nodes in
+    N8N?"). Zero n8n candidates reached the pool. So short tokens are kept when they carry identity:
+    a letter-digit mix (n8n, GPT-4, Automatic1111) or an acronym written in caps (RAG, GPU, API, IF).
+    """
     kws: set = set()
     if not ctx:
         return kws
     interview_topics = getattr(ctx, "interview_topics", None) or []
     for term in (ctx.scope_in + ctx.key_concepts + ctx.learning_outcomes + list(interview_topics)):
-        for w in term.lower().split():
-            if len(w) >= 4 and w not in _QUERY_STOPWORDS:
+        for raw in term.split():
+            w = raw.strip("()[],.;:\"'").lower()
+            if not w or w in _QUERY_STOPWORDS:
+                continue
+            # A short token counts when it is a product/acronym, not a stray English word.
+            short_but_identifying = (
+                len(w) >= 2
+                and (any(c.isdigit() for c in w) and any(c.isalpha() for c in w)   # n8n, GPT-4
+                     or (raw.strip("()[],.;:\"'").isupper() and len(w) >= 2))       # RAG, GPU, IF
+            )
+            if len(w) >= 4 or short_but_identifying:
                 kws.add(w)
     return kws
 
@@ -1051,6 +1178,28 @@ def _trim_to_topic(text: str, topic_keywords: set) -> str:
     if len(clauses) <= 1:                        # single ask → keep or drop, never rewrite
         low = text.lower()
         return text if any(k in low for k in topic_keywords) else ""
+
+    # A clause without a keyword is NOT evidence the clause is off-topic — it may just use words the
+    # curated scope happens not to list. Measured damage: with "n8n" missing from the keyword set,
+    # "What are nodes in N8N and how are they categorized?" was cut to "What are nodes in N8N?" and
+    # "What is the HTTP Request node and when do you use it?" to "What is the HTTP Request node?".
+    # Both were clean, on-syllabus questions arriving mangled.
+    #
+    # So only trim when the FIRST clause is on-topic AND the tail is positively off-topic — it matches
+    # a DIFFERENT session's vocabulary, not merely none of ours. Absent that evidence, keep the whole
+    # question: the LLM `_scope_trim` runs post-relevance with the reading material in hand and is the
+    # right place to make this judgement.
+    # The positive evidence: does the tail introduce a NAMED subject of its own that the session never
+    # mentions? "…and how do you deploy a Flask app?" names Flask — a different subject, so trim.
+    # "…and how are they categorized?" / "…and when do you use it?" name nothing new; they elaborate the
+    # head, so the question is whole and must be left alone.
+    _tail = " ".join(clauses[1:])
+    _tail_names_new_subject = any(
+        w.strip("()[],.;:\"'").lower() not in topic_keywords
+        for w in re.findall(r"\b(?:[A-Z][A-Za-z0-9-]{2,}|[a-z]+\d+[a-z\d]*)\b", _tail)
+    )
+    if any(k in clauses[0].lower() for k in topic_keywords) and not _tail_names_new_subject:
+        return text
     last_hit = -1
     for i, c in enumerate(clauses):
         if any(k in c.lower() for k in topic_keywords):
@@ -1096,9 +1245,17 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
     # questions about the underlying skills, not the tool UI), and the first term also carries the
     # role/job-title queries in TavilyConnector.fetch. Then key_concepts + scope_in + agent-passed.
     interview_topics = (ctx.interview_topics if ctx and getattr(ctx, "interview_topics", None) else [])
+    # The concrete tools the session teaches, queried BY NAME and placed after the first few
+    # transferable topics so they survive the term cap. Without this, `interview_topics[:6]` consumed
+    # six of the eight slots with abstractions and `scope_in` — which is where "n8n node types" lives —
+    # never made it into a query. Measured: "n8n workflow automation interview questions" returns 0
+    # records; "n8n node types interview questions" returns 14, from the SAME allowlist.
+    tool_terms = _tool_terms(ctx)
     seen_terms: set[str] = set()
     search_terms: list[str] = []
-    for t in (list(interview_topics[:6])
+    for t in (list(interview_topics[:4])
+              + list(tool_terms)
+              + list(interview_topics[4:6])
               + (ctx.key_concepts[:4] if ctx and ctx.key_concepts else [])
               + (ctx.scope_in[:4] if ctx and ctx.scope_in else [])
               + list(outcomes)):
@@ -1107,8 +1264,9 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
             seen_terms.add(tl)
             search_terms.append(t)
     # Cap terms for latency — each term costs a couple of Tavily calls (plus role queries on the
-    # first term). Raised from 4 → 8 so multi-outcome sessions get broader recall.
-    search_terms = search_terms[:8]
+    # first term). Raised from 4 → 8 so multi-outcome sessions get broader recall, then to 10 to make
+    # room for the tool names without displacing the transferable topics.
+    search_terms = search_terms[:10]
     records, tavily_calls, tavily_error = TavilyConnector().fetch(search_terms or outcomes)
     state.api_usage["tavily_calls"] += tavily_calls
 
@@ -1170,6 +1328,10 @@ def tool_search_web_questions(state: AgentState, outcomes: list) -> dict:
             source="web",
             asked_in_company=rec.company,
             source_url=rec.source_url,
+            # Everything from the open-web tier is flagged. It came from a domain nobody vetted, so a
+            # reviewer must be able to see that at a glance rather than trust it like an allowlisted
+            # source. `fetch_open_web` also forces company=None, so attribution reads NIAT.
+            unvetted_source=rec.source_type.startswith("open_web:"),
         )
         state.questions[q_id] = qd
         added.append({
@@ -1561,6 +1723,134 @@ def _shares_head_noun(kept: list[str], cut: list[str]) -> bool:
                 return True
     return False
 
+# ── Same-thing pass over the SELECTED set ────────────────────────────────────────────────────────
+# Run 8fb9fcb3 shipped both "How would you modify a system prompt to ensure the model always responds
+# in structured JSON format?" and "How do you write effective prompts for consistent JSON output?".
+# The quality gate's critique caught them; semantic dedup did not, because they measure 0.767 against
+# its 0.82 bar.
+#
+# LOWERING THAT BAR IS NOT AN OPTION, and this was measured before writing the pass. Across 900 GenAI
+# bank rows, 209 pairs sit in [0.74, 0.82) and the band holds BOTH classes:
+#   real duplicates      "What is a neural network?" / "What is a Neural Network and ANN?"      (0.815)
+#   legitimately distinct "What is fine-tuning in LLMs?" / "best practices for LLM fine-tuning?" (0.819)
+# The distributions overlap, exactly as they do for `_outcome_coverage`'s proximity threshold, so no
+# cutoff separates them. Judgement is the only separator — and it is affordable HERE and nowhere else:
+# one call over the 5-60 SELECTED questions, never over the corpus. Moving it to retrieval time is the
+# mistake `_scope_trim` documents at length.
+_SAME_THING_LOW = 0.62          # below this a pair is not plausibly the same ask; do not spend a call
+_SAME_THING_MAX_PAIRS = 12      # bound the prompt; pairs are considered closest-first
+
+
+def _near_duplicate_pairs(questions: list) -> list[tuple]:
+    """(i, j, similarity) for pairs close enough to be worth judging but UNDER the dedup bar.
+
+    Pairs at or above the bar were already removed by `tool_deduplicate_questions`, so re-judging them
+    would spend a call on a decision already made.
+    """
+    from src import embeddings
+    from src.config import DEDUP_SEMANTIC_THRESHOLD
+
+    if len(questions) < 2:
+        return []
+    sim = embeddings.cosine_matrix([q.content for q in questions])
+    if sim is None:
+        return []
+    pairs = []
+    for i in range(len(questions)):
+        for j in range(i + 1, len(questions)):
+            s = float(sim[i][j])
+            if _SAME_THING_LOW <= s < DEDUP_SEMANTIC_THRESHOLD:
+                pairs.append((i, j, s))
+    pairs.sort(key=lambda t: -t[2])
+    return pairs[:_SAME_THING_MAX_PAIRS]
+
+
+_SAME_THING_SYSTEM = """You decide whether two interview questions TEST THE SAME THING.
+
+Same thing = a candidate who answers one well has already demonstrated what the other measures. Judge
+the SKILL being probed, not the wording.
+
+SAME (true):
+- "What is a neural network?" / "What is a Neural Network and Artificial Neural Network (ANN)?"
+- "What is the Transformer architecture?" / "Give a high-level overview of Transformers' architecture."
+
+DIFFERENT (false) — these are the ones people get wrong:
+- a DEFINITION vs a PRACTICE: "What is fine-tuning?" / "What are best practices for fine-tuning?"
+- a CONCEPT vs a TRADE-OFF: "What is RAG?" / "When would you choose RAG over fine-tuning?"
+- a WHAT vs a HOW/DEBUG: "What is prompt injection?" / "How would you detect prompt injection?"
+- different depth of the same topic is still DIFFERENT if one requires reasoning the other does not.
+
+Default to false when unsure — dropping a distinct question costs the set more than keeping a near-miss.
+
+Reply JSON only: {"pairs": [{"n": <pair number>, "same": true|false}]}"""
+
+
+def _same_thing_pass(state: AgentState, questions: list) -> dict:
+    """Flag/remove questions in the SELECTED set that test the same thing as another.
+
+    Removes the weaker of a confirmed pair by `_rank_key` while the set stays above `MIN_QUESTIONS`;
+    at the floor it sets `duplicate_of` and leaves the decision to the reviewer, because removing there
+    would push the set under the minimum. That floor case is not hypothetical — it is exactly why run
+    8fb9fcb3 shipped its duplicate: the critique flagged it, the set held exactly 5, and
+    `remove_question` correctly refused.
+
+    Fail-open: any error or unparseable reply leaves the set untouched. One LLM call per run.
+    """
+    from src.config import MIN_QUESTIONS
+
+    pairs = _near_duplicate_pairs(questions)
+    if not pairs:
+        return {"pairs_judged": 0, "removed": 0, "flagged": 0}
+
+    numbered = [{"n": k + 1, "a": questions[i].content[:400], "b": questions[j].content[:400]}
+                for k, (i, j, _) in enumerate(pairs)]
+    try:
+        result = chat_completion_json(
+            model=run_model(state),           # the run's model, never the UI global
+            system_prompt=_SAME_THING_SYSTEM,
+            user_prompt=f"PAIRS:\n{json.dumps(numbered)}",
+            max_tokens=1024,
+            on_usage=_usage_cb(state),
+        )
+    except Exception as exc:  # noqa: BLE001 — a failed pass must never lose the question set
+        print(f"[same_thing] skipped ({type(exc).__name__}: {exc})")
+        return {"pairs_judged": 0, "removed": 0, "flagged": 0}
+
+    # VERIFY IN CODE: only a pair we actually asked about, by its own index, can be acted on.
+    confirmed = []
+    for row in (result.get("pairs") or []):
+        try:
+            k = int(row["n"]) - 1
+        except (KeyError, TypeError, ValueError):
+            continue
+        if 0 <= k < len(pairs) and bool(row.get("same")):
+            confirmed.append(pairs[k])
+
+    removed = flagged = 0
+    dropped_ids: set = set()
+    for i, j, sim in confirmed:
+        a, b = questions[i], questions[j]
+        if a.question_id in dropped_ids or b.question_id in dropped_ids:
+            continue                       # one of the pair already went; the cluster is resolved
+        weak, strong = sorted((a, b), key=_rank_key)
+        budget = (len(questions) - len(dropped_ids)) - MIN_QUESTIONS
+        if budget > 0:
+            dropped_ids.add(weak.question_id)
+            state.questions.pop(weak.question_id, None)
+            state.removed.append({
+                "content": weak.content,
+                "reason": f"Tests the same thing as another selected question (similarity {sim:.2f})",
+                "stage": "duplicate", "difficulty": weak.difficulty, "company": weak.attribution,
+            })
+            removed += 1
+        else:
+            weak.duplicate_of = strong.content
+            flagged += 1
+    if dropped_ids:
+        questions[:] = [q for q in questions if q.question_id not in dropped_ids]
+    return {"pairs_judged": len(pairs), "removed": removed, "flagged": flagged}
+
+
 _TRIM_SYSTEM = """You remove OFF-SYLLABUS sub-clauses from real interview questions.
 
 You are given a session's scope and a list of questions already judged relevant to it. For each
@@ -1709,13 +1999,20 @@ def _assign_kp_labels(questions: list, context) -> int:
     Fail-open and honest: returns 0 and leaves labels as None when embeddings are unavailable or the
     session resolved no KPs — an untagged question is better than a confidently wrong tag.
     """
-    kps = [kp for kp in (getattr(context, "matched_kp_ids", None) or [])
-           if (getattr(kp, "kp_label", "") or "").strip()]
-    if not questions or not kps:
+    # Prefer the session's OWN interview topics. `matched_kp_ids` is the old KP_GLOBAL_* catalog built
+    # from the curriculum MCQ files, and it does not describe these sessions: a run on "Build Your Own
+    # AI News Summarizer" matched "Role assignment in prompt engineering" and nothing about RSS feeds,
+    # n8n nodes, Gmail or SERP API. Those labels no longer steer retrieval, but they were still the
+    # label stamped on every exported question. The KP catalog stays as the fallback.
+    labels = [t.strip() for t in (getattr(context, "interview_topics", None) or []) if t and t.strip()]
+    if not labels:
+        labels = [kp.kp_label.strip() for kp in (getattr(context, "matched_kp_ids", None) or [])
+                  if (getattr(kp, "kp_label", "") or "").strip()]
+    if not questions or not labels:
         return 0
     from src import embeddings
 
-    labels = list(dict.fromkeys(kp.kp_label.strip() for kp in kps))
+    labels = list(dict.fromkeys(labels))
     sim = embeddings.cosine_matrix([q.content for q in questions], labels)
     if sim is None:
         return 0
@@ -1756,14 +2053,14 @@ def _assign_kp_labels(questions: list, context) -> int:
 
 _SYLLABUS_SYSTEM = """You audit interview questions against the exact material a session teaches.
 
-You get the session reading material, its numbered learning outcomes, and numbered questions already
+You get the session reading material, its numbered interview topics, and numbered questions already
 judged relevant to the domain. For each question report two things:
 
 1. "untaught": the single core concept the question requires that is NOT present in the reading
    material, or null if everything it needs is there. Judge the CONCEPT, not the wording — if the
    material teaches an idea in different words, that counts as taught. Name the concept using words
    from the QUESTION.
-2. "covers": the numbers of the learning outcomes this question genuinely EXAMINES. Being about a
+2. "covers": the numbers of the INTERVIEW TOPICS this question genuinely EXAMINES. Being about a
    similar area is not enough — a question about hallucination does not examine an outcome about
    integrating Google Docs and Calendar, even though both concern agents. Use [] when it examines
    none of them. Most questions examine zero or one.
@@ -1846,7 +2143,11 @@ def _syllabus_audit(state: AgentState, questions: list) -> dict:
     ctx = state.session_context
     if not ctx or not questions:
         return {"off_syllabus": [], "coverage": {}}
-    outcomes = list(getattr(ctx, "learning_outcomes", None) or [])
+    # Judge coverage against the session's INTERVIEW TOPICS — the same targets the gate scores. Using
+    # learning outcomes asked the model whether questions cover lesson steps like "Use Ngrok to create
+    # secure tunnels", which no interview question can, capping coverage below the pass bar.
+    from src.pipeline import coverage_targets
+    outcomes = coverage_targets(ctx)
     names = list(getattr(state.config, "session_names", None) or [])
     if not outcomes:
         return {"off_syllabus": [], "coverage": {}}
@@ -1864,10 +2165,10 @@ def _syllabus_audit(state: AgentState, questions: list) -> dict:
     if not material:
         return {"off_syllabus": [], "coverage": {}}
 
-    numbered_o = "\n".join(f"{i+1}. {o}" for i, o in enumerate(outcomes))
+    numbered_o = "\n".join(f"{i+1}. {o}" for i, o in enumerate(outcomes))   # interview topics
     numbered_q = json.dumps([{"n": i + 1, "q": q.content[:400]} for i, q in enumerate(questions)])
     user = (f"READING MATERIAL:\n{chr(10).join(material)}\n\n"
-            f"LEARNING OUTCOMES:\n{numbered_o}\n\nQUESTIONS:\n{numbered_q}")
+            f"INTERVIEW TOPICS:\n{numbered_o}\n\nQUESTIONS:\n{numbered_q}")
     try:
         result = chat_completion_json(
             model=run_model(state),          # the run's model, never the UI global
@@ -1917,6 +2218,40 @@ def _syllabus_audit(state: AgentState, questions: list) -> dict:
     if off:
         print(f"[syllabus] {len(off)} question(s) test a concept absent from the session material")
     return {"off_syllabus": off, "coverage": coverage}
+
+
+def add_open_web_records(state: AgentState, records: list) -> int:
+    """Add open-web records to the candidate pool through the same gates. Returns how many landed.
+
+    Split out of the retrieval tool so the pipeline can call it AFTER validation, which is the only
+    point where "this session came up short" is a true statement (inside retrieval, `state.questions`
+    is the full candidate pool). Every question added here is `unvetted_source=True` and has no company
+    attribution — `fetch_open_web` forces `company=None`, so `attribution` reads NIAT.
+    """
+    ctx = state.session_context
+    if not records or not ctx:
+        return 0
+    topic_keywords = _topic_keywords(ctx)
+    session_topic = (ctx.key_concepts[0] if getattr(ctx, "key_concepts", None) else "Interview")
+    added = 0
+    for rec in records:
+        content = strip_artifacts(rec.question_text)
+        if topic_keywords:
+            content = _trim_to_topic(content, topic_keywords)
+            if not content:
+                continue
+        if not is_quality_question(content):
+            continue
+        q_id = str(uuid.uuid4())
+        state.questions[q_id] = QuestionDetail(
+            question_id=q_id, category=getattr(state.config, "category", "GEN_AI"),
+            content=content, topic=session_topic, difficulty="Medium", source="web",
+            asked_in_company=None, source_url=rec.source_url, unvetted_source=True,
+        )
+        added += 1
+    state.raw_fetched["open_web"] = state.raw_fetched.get("open_web", 0) + len(records)
+    state.added_by_source["web"] = state.added_by_source.get("web", 0) + added
+    return added
 
 
 def _rank_key(q):
@@ -2026,6 +2361,11 @@ def tool_submit_question_set(state: AgentState) -> dict:
     # questions that are no longer in the set.
     for q in selected:
         q.off_syllabus_concept = None
+        q.duplicate_of = None
+    # AFTER the trim, because trimming can pull two questions onto the same core ask, and the pass
+    # should judge the text that will actually ship. Mutates `selected` and `state.questions` together.
+    same = _same_thing_pass(state, selected)
+    state.questions = {q.question_id: q for q in selected}
     audit = _syllabus_audit(state, selected)
     state.off_syllabus = audit["off_syllabus"]
     state.judged_coverage = audit["coverage"]
@@ -2036,6 +2376,7 @@ def tool_submit_question_set(state: AgentState) -> dict:
             "theory": len(state.questions), "coding": len(state.coding_questions),
             "reserve": len(state.reserve), "kp_tagged": kp_tagged,
             "scope_trimmed": len(trims), "off_syllabus": len(state.off_syllabus),
+            "same_thing_removed": same["removed"], "same_thing_flagged": same["flagged"],
             "per_session": session_rep.get("per_session") or {},
             "sessions_without_candidates": session_rep.get("no_candidates") or []}
 

@@ -27,7 +27,7 @@ function CompactQuestion({
   // so "Indeed" looked like an employer that had asked the question.
   // `original` is set only when the scope trim shortened the question: it still carries the company's
   // name, so the edit has to be visible and the source text inspectable.
-  company, site, original, offSyllabus, role, topic, subTopic, language, source, sourceUrl,
+  company, site, original, offSyllabus, unvetted, duplicateOf, role, topic, subTopic, language, source, sourceUrl,
   snippet, decision, onDecide, index, fit, reason, focused, onFocus,
 }) {
   const [open, setOpen] = useState(false)
@@ -68,9 +68,17 @@ function CompactQuestion({
             <span className="cq-adapted"
                   title={`Trimmed to this session's scope. As sourced: "${original}"`}>adapted</span>
           )}
+          {unvetted && (
+            <span className="cq-unvetted"
+                  title="From a domain outside the trusted source list — the open-web fallback ran because the bank and allowlisted sites came up short. No company attribution.">unvetted source</span>
+          )}
           {offSyllabus && (
             <span className="cq-offsyllabus"
                   title={`Tests "${offSyllabus}", which does not appear in this session's reading material. On-domain, but beyond the syllabus.`}>off-syllabus</span>
+          )}
+          {duplicateOf && (
+            <span className="cq-duplicate"
+                  title={`Tests the same thing as: "${duplicateOf}" — it could not be dropped without taking the set under the minimum, so pick one.`}>same as another</span>
           )}
           {typeof fit === 'number' && (
             <span
@@ -609,6 +617,8 @@ export default function Review() {
                     site={q.source_site}
                     original={q.original_content}
                     offSyllabus={q.off_syllabus_concept}
+                    unvetted={q.unvetted_source}
+                    duplicateOf={q.duplicate_of}
                     role={q.role}
                     topic={q.topic}
                     subTopic={q.sub_topic}

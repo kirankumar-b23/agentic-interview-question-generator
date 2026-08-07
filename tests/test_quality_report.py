@@ -99,7 +99,7 @@ class TestScoresTrackQuality:
     def test_on_topic_set_has_higher_coverage(self):
         on = _build_quality_report(_state(ON_TOPIC), 0)
         off = _build_quality_report(_state(OFF_TOPIC), 0)
-        assert on.metric_scores["outcome_coverage"] > off.metric_scores["outcome_coverage"]
+        assert on.metric_scores["topic_coverage"] > off.metric_scores["topic_coverage"]
 
 
 class TestSizeFloor:
@@ -126,7 +126,7 @@ class TestReportHonesty:
 
     def test_all_metrics_present(self):
         scores = _build_quality_report(_state(ON_TOPIC), 0).metric_scores
-        for key in ("outcome_coverage", "session_grounding", "predicted_accept", "set_size",
+        for key in ("coverage_efficiency", "topic_coverage", "session_grounding", "predicted_accept", "set_size",
                     "self_relevance", "source_diversity", "difficulty_balance"):
             assert key in scores, f"missing metric: {key}"
 
@@ -139,15 +139,15 @@ class TestOutcomeCoverage:
         """Nothing to cover → vacuously covered, not a zero that reads as failure."""
         st = _state(ON_TOPIC)
         st.session_context.learning_outcomes = []
-        assert _outcome_coverage(st)[0] == 1.0
+        assert _outcome_coverage(st).topic_coverage == 1.0
 
     def test_no_questions_is_zero_coverage(self):
-        assert _outcome_coverage(_state([]))[0] == 0.0
+        assert _outcome_coverage(_state([])).topic_coverage == 0.0
 
     @needs_embeddings
     def test_relevant_questions_cover_outcomes(self):
-        assert _outcome_coverage(_state(ON_TOPIC))[0] > 0.0
+        assert _outcome_coverage(_state(ON_TOPIC)).topic_coverage > 0.0
 
     @needs_embeddings
     def test_coverage_is_a_fraction(self):
-        assert 0.0 <= _outcome_coverage(_state(OFF_TOPIC))[0] <= 1.0
+        assert 0.0 <= _outcome_coverage(_state(OFF_TOPIC)).topic_coverage <= 1.0

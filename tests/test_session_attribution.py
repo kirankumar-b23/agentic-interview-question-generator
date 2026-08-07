@@ -305,7 +305,7 @@ class TestCoverageMethodIsReported:
         st = _audit_state([_q("What are the core components of an AI Agent?")], self.OUTCOMES)
         st.judged_coverage = {"covered": [self.OUTCOMES[0]], "missing": [self.OUTCOMES[1]],
                               "pairs": [], "method": "llm-judged"}
-        frac, method = _outcome_coverage(st)
+        cov = _outcome_coverage(st); frac, method = cov.topic_coverage, cov.method
         assert method == "llm-judged"
         assert frac == pytest.approx(0.5)
 
@@ -315,7 +315,7 @@ class TestCoverageMethodIsReported:
 
         st = _audit_state([_q("What are the core components of an AI Agent?")], self.OUTCOMES)
         st.judged_coverage = {}
-        frac, method = _outcome_coverage(st)
+        cov = _outcome_coverage(st); frac, method = cov.topic_coverage, cov.method
         assert method == "embedding-proximity"
         assert 0.0 <= frac <= 1.0
 
@@ -328,4 +328,4 @@ class TestCoverageMethodIsReported:
         st.judged_coverage = {"covered": [self.OUTCOMES[0]], "missing": [self.OUTCOMES[1]],
                               "pairs": [], "method": "llm-judged"}
         assert tool_check_outcome_coverage(st)["coverage_pct"] == pytest.approx(
-            round(_outcome_coverage(st)[0], 2), abs=0.01)
+            round(_outcome_coverage(st).topic_coverage, 2), abs=0.01)

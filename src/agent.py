@@ -64,6 +64,9 @@ class AgentState:
     # Selected questions testing a concept absent from their session's material, and the LLM-judged
     # outcome coverage that replaces the proximity measure. See `tools._syllabus_audit`.
     off_syllabus: list[dict] = field(default_factory=list)
+    # Did the last-resort open-web tier run, and how many questions did it contribute.
+    open_web_used: bool = False
+    open_web_added: int = 0
     judged_coverage: dict = field(default_factory=dict)
     dedup_removed: int = 0
     removed: list[dict] = field(default_factory=list)  # rejected questions {content, reason, stage, ...}

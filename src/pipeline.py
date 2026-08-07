@@ -9,7 +9,10 @@ Flow:
 """
 
 from __future__ import annotations
+import math
+import re
 import uuid
+from dataclasses import dataclass
 from typing import Callable
 
 from src.agent import AgentState, PipelineResult, _critique_question_set
@@ -150,6 +153,51 @@ def _current_model(state) -> str:
     return run_model(state)
 
 
+def _unrepresented_terms(terms, questions) -> list:
+    """Which of this session's tool names NO surviving question mentions.
+
+    Word-boundary matched, so "n8n" does not match inside another token and "RSS" does not match
+    "across". Cheap on purpose — a substring pass over ≤300 candidates, no embeddings — because it runs
+    on every run whether or not the tier fires.
+    """
+    if not terms:
+        return []
+    blob = " ".join((q.content or "") for q in questions)
+    missing = []
+    for term in terms:
+        t = (term or "").strip()
+        if not t:
+            continue
+        if not re.search(r"\b" + re.escape(t) + r"\b", blob, re.IGNORECASE):
+            missing.append(t)
+    return missing
+
+
+def _open_web_shortfall(surviving: int, requested: int, missing_tools=None):
+    """Why the open web is warranted, or None to skip it. See `config.OPEN_WEB_TRIGGER_RATIO`.
+
+    Two independent triggers, because a count and a coverage gap are different failures:
+
+    * **materially short** of the requested count — not merely under `MIN_QUESTIONS`. The old guard was
+      `surviving >= MIN_QUESTIONS`, and run 8fb9fcb3 asked for 15, survived with EXACTLY 5 and skipped
+      the tier entirely. The `<= MIN_QUESTIONS` clause is kept SEPARATE from the ratio: with
+      `requested == MIN_QUESTIONS` the ratio floors to 5 and `surviving < 5` would reintroduce the very
+      off-by-one this exists to fix.
+    * **a tool this session teaches that nothing asks about** — fires at ANY count. A full set of 15 on
+      an n8n session that never says "n8n" is still the wrong set, and no count test can see it.
+    """
+    from src.config import MIN_QUESTIONS, OPEN_WEB_TRIGGER_RATIO
+
+    threshold = max(MIN_QUESTIONS, math.ceil(OPEN_WEB_TRIGGER_RATIO * max(0, requested)))
+    if surviving < threshold or surviving <= MIN_QUESTIONS:
+        return (f"Only {surviving} question(s) from trusted sources, against {requested} requested "
+                f"(top-up threshold {threshold})")
+    if missing_tools:
+        return (f"{surviving} question(s), but nothing asks about "
+                f"{', '.join(missing_tools[:3])} — which this session teaches")
+    return None
+
+
 class AgentPipeline:
 
     # ── Reusable stages ───────────────────────────────────────────────────
@@ -189,6 +237,76 @@ class AgentPipeline:
             tool_deduplicate_questions(state)
             emit("deduplicate_questions", "done",
                  f"Deduplicated: {before} → {len(state.questions)} distinct question(s).")
+        # LAST RESORT, and it has to be HERE. The first attempt put this inside
+        # `tool_search_web_questions`, where `state.questions` is the raw CANDIDATE POOL (~270) — so the
+        # "are we short?" test was never true and the tier was dead code that never once ran. Only after
+        # relevance filtering and dedup is the shortfall real.
+        self._top_up_from_open_web(state, emit)
+
+    def _top_up_from_open_web(self, state, emit):
+        """Search the open web when the trusted sources left this session short OR off its own tools.
+
+        The banks and the 67-domain allowlist hold nothing on n8n nodes, Gemini configuration or
+        Automatic1111 — which is what several sessions actually teach. Measured: an unrestricted search
+        for "n8n workflow automation interview questions" returns 24 usable candidates where the
+        allowlisted search returns 0, including "What is the Merge node and what merge modes does it
+        support?", which matches a session outcome verbatim.
+
+        Everything it adds is flagged `unvetted_source` and carries no company attribution, and it still
+        faces the relevance judge and the session-fit gate — both re-run below, because a candidate that
+        skipped scoring would bypass the only stages that read the question against the session.
+        """
+        from src.config import OPEN_WEB_ENABLED
+
+        if not OPEN_WEB_ENABLED or not state.session_context:
+            return
+        from src.sources.tavily_search import fetch_open_web
+        from src.tools import _qualify_tool_terms, _tool_terms, add_open_web_records
+
+        surviving = len(state.questions) + len(state.coding_questions)
+        requested = getattr(state.config, "max_questions", None) or 12
+        tool_terms = _tool_terms(state.session_context)
+        # Tools this session teaches that NO surviving question mentions. Run 8fb9fcb3's topic named
+        # n8n, RSS Feed Read Node, Schedule Trigger and Gmail Send Node across 10 of 22 outcomes and
+        # shipped 5 questions, none of which mentioned any of them. Count alone cannot see that.
+        missing_tools = _unrepresented_terms(tool_terms, state.questions.values())
+        reason = _open_web_shortfall(surviving, requested, missing_tools)
+        if not reason:
+            return
+
+        # Ask for what is actually MISSING first; fall back to the session's tools, then its topics.
+        terms = missing_tools or tool_terms or (
+            list(getattr(state.session_context, "interview_topics", None) or [])[:2])
+        if not terms:
+            return
+        # Qualify with the platform before querying the OPEN web, where a bare "Merge" or "RSS" means
+        # something else entirely. See `_qualify_tool_terms` for the measured noise this removes.
+        terms = _qualify_tool_terms(terms)
+        emit("open_web", "running",
+             f"{reason} — searching the open web for {', '.join(terms[:3])}…")
+        records, calls, err = fetch_open_web(terms)
+        state.api_usage["tavily_calls"] += calls
+        state.open_web_used = True
+        before_ids = set(state.questions)
+        added = add_open_web_records(state, records)
+        state.open_web_added = added
+        emit("open_web", "done",
+             f"Added {added} unvetted question(s) from {len({r.source_type for r in records})} "
+             f"domain(s)" + (f" — {err}" if err else ""))
+        if not added:
+            return
+        # New candidates must be judged like every other one. Session-fit FIRST and scoped to just the
+        # new ids: without it they keep `session_fit = None`, which drops them out of the
+        # `session_grounding` mean (it averages non-None only) and sinks them in Review's fit ranking
+        # (`_rank_key` reads None as 0.0) — a metric that silently measured only the vetted subset.
+        new_ids = set(state.questions) - before_ids
+        self._score_session_fit(state, emit, only_ids=new_ids)
+        from src.tools import tool_deduplicate_questions, tool_validate_relevance
+        tool_validate_relevance(state)
+        if len(state.questions) > 1:
+            tool_deduplicate_questions(state)
+        emit("open_web", "done",
+             f"{len(state.questions)} question(s) after judging the open-web additions.")
 
     def _drop_rejected(self, state, emit):
         """Remove questions whose normalized content was previously rejected for this session."""
@@ -212,7 +330,7 @@ class AgentPipeline:
         if drop:
             emit("suppress_rejected", "done", f"Suppressed {len(drop)} previously-rejected question(s).")
 
-    def _score_session_fit(self, state, emit):
+    def _score_session_fit(self, state, emit, only_ids=None):
         """SESSION-grounded scoring + gate.
 
         The cross-topic pre-gate below only removes candidates belonging to a DIFFERENT course
@@ -221,6 +339,12 @@ class AgentPipeline:
         (curated learning outcomes + interview topics + its reading material), stores the score on
         the question as `session_fit`, drops the clearly-unrelated tail, and re-orders the pool
         best-first so the batched LLM relevance pass sees the strongest candidates first.
+
+        `only_ids` scores and gates JUST those candidates, for the open-web top-up. It is deliberately
+        not a plain re-run: the floor is relative to the pool's best fit, so re-running over a pool that
+        just grew by up to 60 open-web candidates could move the bar and drop VETTED questions whose
+        place was already decided correctly. With `only_ids` the floor is still computed across the whole
+        pool — the session's real bar, not the new batch's own — but only the named ids can be dropped.
 
         Fail-open: no-op when embeddings are unavailable or no profile can be built.
         """
@@ -235,14 +359,16 @@ class AgentPipeline:
         if not curated and not rm_chunks:
             return
 
-        items = list(state.questions.items())
+        items = [(qid, q) for qid, q in state.questions.items()
+                 if only_ids is None or qid in only_ids]
+        if not items:
+            return
         contents = [q.content for _, q in items]
         cur_sim = embeddings.cosine_matrix(contents, curated) if curated else None
         rm_sim = embeddings.cosine_matrix(contents, rm_chunks) if rm_chunks else None
         if cur_sim is None and rm_sim is None:   # embeddings unavailable → leave the pool untouched
             return
 
-        scored = []
         for i, (qid, q) in enumerate(items):
             # Curated intent counts at full weight; reading-material prose is discounted, so an
             # RM-only match must be distinctly stronger to keep a candidate.
@@ -250,20 +376,28 @@ class AgentPipeline:
             best_rm = float(max(rm_sim[i])) * SESSION_PROFILE_RM_WEIGHT if rm_sim is not None else 0.0
             fit = max(best_curated, best_rm)
             q.session_fit = round(fit, 4)
-            scored.append((fit, qid, q))
+
+        # Rank across EVERY scored candidate, not just the ones scored on this call, so a subset run
+        # measures the new batch against the session's real bar.
+        scored = [(q.session_fit, qid, q) for qid, q in state.questions.items()
+                  if q.session_fit is not None]
         scored.sort(key=lambda t: t[0], reverse=True)
 
         # Floor is the stricter of an absolute bar and a fraction of THIS session's best fit, so the
         # gate filters comparably whether the banks cover the session well or barely at all.
         best_fit = scored[0][0] if scored else 0.0
         floor = max(SESSION_FIT_FLOOR, SESSION_FIT_RELATIVE * best_fit)
-        keep = [t for t in scored if t[0] >= floor]
+        droppable = {qid for _, qid, _ in scored} if only_ids is None else set(only_ids)
+        keep = [t for t in scored if t[0] >= floor or t[1] not in droppable]
         # Guard against a mis-tuned floor starving the pool: the LLM relevance pass drops more
         # candidates still, so always leave it a workable pool. Restores the highest-fit rejects only.
         floor_applied = True
         if len(keep) < _MIN_POOL_AFTER_FIT:
-            keep = scored[:_MIN_POOL_AFTER_FIT]
+            kept_ids = {t[1] for t in keep}
+            spare = [t for t in scored if t[1] not in kept_ids]
+            keep = keep + spare[:_MIN_POOL_AFTER_FIT - len(keep)]
             floor_applied = False
+        keep.sort(key=lambda t: t[0], reverse=True)
         keep_ids = {qid for _, qid, _ in keep}
 
         for fit, qid, q in scored:
@@ -277,8 +411,13 @@ class AgentPipeline:
             })
 
         # Re-insert best-first so relevance batching and any downstream truncation favour good fits.
+        # Anything the scoring could not reach (no `session_fit`) is carried over rather than dropped —
+        # clearing the dict and refilling it from `scored` alone would silently delete it.
+        carried = [(qid, q) for qid, q in state.questions.items() if qid not in keep_ids]
         state.questions.clear()
         for _, qid, q in keep:
+            state.questions[qid] = q
+        for qid, q in carried:
             state.questions[qid] = q
 
         # Report the rule that was ACTUALLY applied — saying "below fit X" when the pool guard
@@ -286,8 +425,9 @@ class AgentPipeline:
         basis = (f"below fit {floor:.2f}" if floor_applied
                  else f"outside the top {_MIN_POOL_AFTER_FIT} (fit floor {floor:.2f} would have left "
                       f"too few to score)")
+        scope = "" if only_ids is None else f" (open-web batch of {len(items)} only)"
         emit("session_fit", "done",
-             f"Session-fit scored {len(scored)} candidate(s) against this session's outcomes + "
+             f"Session-fit scored {len(items)} candidate(s){scope} against this session's outcomes + "
              f"reading material; dropped {len(scored) - len(keep)} {basis}, "
              f"{len(state.questions)} remain (best {best_fit:.2f}).",
              kept=len(keep), dropped=len(scored) - len(keep), floor=round(floor, 3),
@@ -317,13 +457,29 @@ class AgentPipeline:
         if cur_sim is None or oth_sim is None:            # embeddings unavailable → skip
             return
 
+        # A question that NAMES a tool this session teaches is on-syllabus by construction, and this
+        # comparative gate is structurally wrong for it. Run 8fb9fcb3 retrieved exactly one real n8n
+        # question — "What kind of workflows have you built with n8n before…" — and this stage dropped
+        # it, because pooled across the whole GenAI course an n8n question resembles "the course" less
+        # than a prompt-engineering question does. The exemption is narrow: `_tool_terms` returns
+        # concrete product names and `[]` for a theory-only session, `_score_session_fit` already ran
+        # BEFORE this stage (so the "interviewing at RSS Security" false positives stay dropped and
+        # cannot be resurrected here), and the LLM relevance judge and syllabus audit still follow.
+        from src.tools import _tool_terms
+        tool_res = [re.compile(r"\b" + re.escape(t.strip()) + r"\b", re.IGNORECASE)
+                    for t in (_tool_terms(ctx) or []) if t and t.strip()]
+
         drop = []
-        for i, (qid, _) in enumerate(items):
+        exempt = 0
+        for i, (qid, q) in enumerate(items):
             cur = max(cur_sim[i])
             oth = max(oth_sim[i])
             # Never drop a candidate that STRONGLY matches this session's topic — guards against the
             # max-over-many-other-topics inflation bias (oth is a max over far more texts than cur).
             if cur >= SEMANTIC_CUR_KEEP:
+                continue
+            if tool_res and any(rx.search(q.content or "") for rx in tool_res):
+                exempt += 1
                 continue
             # Otherwise: drop if it clearly belongs to another topic (beats this one by a margin),
             # or is unrelated to everything.
@@ -336,9 +492,11 @@ class AgentPipeline:
                     "content": q.content, "reason": "Belongs to a different topic (semantic pre-filter)",
                     "stage": "off_topic_prefilter", "difficulty": q.difficulty, "company": q.attribution,
                 })
-        if drop:
+        if drop or exempt:
+            kept_note = f" ({exempt} kept for naming a tool this session teaches)" if exempt else ""
             emit("prefilter", "done",
-                 f"Pre-filtered {len(drop)} off-topic candidate(s); {len(state.questions)} remain for scoring.")
+                 f"Pre-filtered {len(drop)} off-topic candidate(s){kept_note}; "
+                 f"{len(state.questions)} remain for scoring.")
 
     def _enforce_submission(self, state, emit) -> bool:
         """Guarantee the final set has actually been SELECTED. Returns True if we had to force it.
@@ -496,14 +654,41 @@ class AgentPipeline:
         return result
 
 
+def coverage_targets(ctx) -> list[str]:
+    """WHAT a question set is expected to cover: the session's interview topics.
+
+    Not its learning outcomes. Outcomes describe the LESSON, setup steps included, and a large
+    fraction of them cannot be examined in an interview at all. Measured on the Image-Generation
+    topic, 8 of 18 outcomes (44%) were environment mechanics — "Set up a Kaggle account with phone
+    verification", "Manage Kaggle session duration and GPU quota", "Use Ngrok to create secure
+    tunnels", "Install and configure Automatic1111 WebUI". No real interview question can cover those,
+    so the maximum coverage an interview set could reach was 0.56, already under the 0.60 pass bar,
+    with unlimited questions. Every set failed and the sets were not the problem.
+
+    `interview_topics` is the field built from the same reading material for exactly this purpose —
+    its extraction prompt requires "the transferable GenAI skills/concepts, NOT the specific
+    tool/product/UI". For the very same Kaggle session it yields "GPU resource allocation and VRAM
+    requirements", "Cost-performance tradeoffs in cloud computing", "API authentication and secure
+    token management". It was already feeding retrieval, the session-fit profile and the relevance
+    judge; coverage was the one place that ignored it.
+
+    Falls back to learning outcomes when a session has no interview topics, so a session that predates
+    the curated field still gets measured rather than silently scoring 1.0.
+    """
+    if ctx is None:
+        return []
+    topics = [t for t in (getattr(ctx, "interview_topics", None) or []) if t and t.strip()]
+    return topics or [o for o in (getattr(ctx, "learning_outcomes", None) or []) if o and o.strip()]
+
+
 def _outcome_coverage_detail(state: AgentState) -> tuple[list[str], list[str]]:
-    """(covered, missing) learning outcomes for the current set.
+    """(covered, missing) coverage targets for the current set — see `coverage_targets`.
 
     Semantic similarity (embeddings) when available, else TF-IDF. Shared with
     `tools.tool_check_outcome_coverage` so the agent and the report cannot disagree about coverage.
     """
     ctx = state.session_context
-    outcomes = list(ctx.learning_outcomes) if ctx else []
+    outcomes = coverage_targets(ctx)
     questions = [q.content for q in state.questions.values()]
     questions += [q.content for q in state.coding_questions.values()]
     if not outcomes or not questions:
@@ -528,32 +713,74 @@ def _outcome_coverage_detail(state: AgentState) -> tuple[list[str], list[str]]:
         return [], outcomes
 
 
-def _outcome_coverage(state: AgentState) -> tuple[float, str]:
-    """(fraction of outcomes genuinely examined, method used).
+@dataclass
+class CoverageResult:
+    """Two coverage numbers, because one cannot answer both questions honestly.
 
-    Prefers `state.judged_coverage` — the syllabus audit's read of which outcomes each question
-    actually EXAMINES — over the embedding proximity measure, which was demonstrably crediting
-    outcomes it should not: a hallucination question was credited with covering "Integrate multiple
-    Google APIs (Docs, Calendar, Drive)" at 0.38, and "when does agent reasoning go off the rails?"
-    with "Design system prompts that orchestrate agent reasoning" at 0.69. A higher threshold cannot
-    separate those: legitimate credits measured 0.52–0.83 and false ones 0.38–0.69, overlapping, and
-    shared-distinctive-term counts overlap too (0–2 vs 0–1). Since this is 35% of the composite, the
-    method that produced it is reported alongside the number.
+    * `topic_coverage` — covered / ALL the session's interview topics. The truthful statement about how
+      much of the session the set examines. REPORTED, never gated: it is bounded by supply, so on a
+      topic with 22 interview topics and only 5 real questions available it can never exceed 0.23 no
+      matter how good the questions are. Gating on it failed every set, including one that scored
+      0.227 — its exact arithmetic maximum.
+    * `coverage_efficiency` — covered / min(n_topics, n_questions). "Did each question earn its place
+      against a DISTINCT topic?" SCORED and gated, because it is achievable at any set size while still
+      punishing a set whose questions pile onto the same topic (5 questions hitting 3 topics = 0.60).
+
+    `method` says which measure produced the covered set, so a proximity-derived number is never
+    mistaken for a judged one.
+    """
+    topic_coverage: float
+    coverage_efficiency: float
+    covered: int
+    total: int
+    n_questions: int
+    method: str
+
+    @property
+    def supply_capped(self) -> bool:
+        """True when there are fewer questions than topics, so `topic_coverage` cannot reach 1.0."""
+        return self.n_questions < self.total
+
+    # NOTE: there is deliberately no `ceiling` property. A first version computed
+    # `n_questions / total` as "the best coverage this many questions could reach", and a live run
+    # disproved it — 6 questions examined 11 of 22 topics, because one question can legitimately
+    # examine several. The note that quoted that ceiling was stating a falsehood to the reviewer.
+
+
+def _outcome_coverage(state: AgentState) -> CoverageResult:
+    """Coverage of the session's INTERVIEW TOPICS by the current set.
+
+    Prefers `state.judged_coverage` — the syllabus audit's read of which topics each question actually
+    EXAMINES — over embedding proximity, which was demonstrably crediting things it should not: a
+    hallucination question was credited with "Integrate multiple Google APIs (Docs, Calendar, Drive)"
+    at 0.38. A higher threshold cannot separate those (legitimate credits measured 0.52–0.83, false
+    ones 0.38–0.69 — overlapping), which is why the judged measure exists.
     """
     ctx = state.session_context
-    outcomes = ctx.learning_outcomes if ctx else []
-    if not outcomes:
+    targets = coverage_targets(ctx)
+    n_q = len(state.questions) + len(state.coding_questions)
+    if not targets:
         # Nothing to cover is vacuously covered — but only if there IS a set. A run that lost its
         # session context and produced nothing used to report perfect coverage on zero questions.
-        return (1.0 if (state.questions or state.coding_questions) else 0.0), "no-outcomes"
+        frac = 1.0 if n_q else 0.0
+        return CoverageResult(frac, frac, 0, 0, n_q, "no-targets")
+
     judged = getattr(state, "judged_coverage", None) or {}
     if judged.get("method") and (judged.get("covered") or judged.get("missing")):
         n_cov = len(judged.get("covered") or [])
         total = n_cov + len(judged.get("missing") or [])
-        if total:
-            return n_cov / total, judged["method"]
-    covered, _ = _outcome_coverage_detail(state)
-    return len(covered) / len(outcomes), "embedding-proximity"
+        method = judged["method"]
+    else:
+        covered, missing = _outcome_coverage_detail(state)
+        n_cov, total, method = len(covered), len(covered) + len(missing), "embedding-proximity"
+    total = total or len(targets)
+
+    achievable = max(1, min(total, n_q)) if n_q else 1
+    return CoverageResult(
+        topic_coverage=round(n_cov / total, 3) if total else 0.0,
+        coverage_efficiency=round(min(1.0, n_cov / achievable), 3),
+        covered=n_cov, total=total, n_questions=n_q, method=method,
+    )
 
 
 def _human_agreement(state: AgentState):
@@ -584,8 +811,12 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     # rejected most of the set (corr(composite, approved) was 0.16 over 36 runs).
     rels = [q.relevance_score for q in state.questions.values() if q.relevance_score is not None]
     self_relevance = round(sum(rels) / len(rels), 3) if rels else None
-    _cov_raw, coverage_method = _outcome_coverage(state)
-    coverage_score = round(_cov_raw, 3)
+    cov = _outcome_coverage(state)
+    coverage_method = cov.method
+    # SCORED: efficiency. REPORTED: honest topic coverage. See `CoverageResult` for why one number
+    # cannot do both jobs without failing every supply-capped set.
+    coverage_score = cov.coverage_efficiency
+    topic_coverage = cov.topic_coverage
     # Mean grounding in THIS session's outcomes + reading material (set by the session-fit gate).
     # Independent of any LLM judgement — it compares questions to the curriculum, not to itself.
     fits = [q.session_fit for q in state.questions.values() if q.session_fit is not None]
@@ -630,10 +861,30 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     if total_q < MIN_QUESTIONS:
         composite = min(composite, 0.4)
 
-    # Honest pass/fail: covers the session, is grounded in it, meets the size floor, and — when we
-    # have enough reviewer labels to judge — would mostly survive review.
-    passed = (coverage_score >= 0.6 and total_q >= MIN_QUESTIONS and composite >= 0.6
-              and (agreement is None or agreement.predicted_accept_rate >= 0.6))
+    # Honest pass/fail: every question earns its place against a distinct interview topic, the set
+    # meets the size floor, and the composite clears the bar.
+    #
+    # `predicted_accept` deliberately has NO veto here, though it keeps its 30% composite weight. It is
+    # a 1-NN estimate over ~15 reviewer labels that `human_agreement` itself documents as an optimistic
+    # upper bound at 65% accuracy; it read 0.2 on two consecutive runs purely because those topics had
+    # few matching labels. A signal that weak must not outvote coverage, grounding and size combined.
+    GATE_BAR = 0.6
+    # The LLM critique is listed alongside the scored conditions because it is ALSO a gate: a
+    # force-passed set is failed further down regardless of the numbers. Omitting it showed three green
+    # checks beside a FAIL verdict on a real run — worse than no breakdown at all.
+    _critique_ok = not getattr(state, "gate_forced", False)
+    _n_issues = len(getattr(state, "gate_issues", None) or [])
+    gate_checks = [
+        {"name": "coverage efficiency", "value": coverage_score, "bar": GATE_BAR,
+         "ok": coverage_score >= GATE_BAR},
+        {"name": "question count", "value": total_q, "bar": MIN_QUESTIONS,
+         "ok": total_q >= MIN_QUESTIONS},
+        {"name": "composite", "value": composite, "bar": GATE_BAR, "ok": composite >= GATE_BAR},
+        {"name": "reviewer critique", "value": ("no objections" if _critique_ok
+                                                else f"{_n_issues} unresolved"),
+         "bar": "no objections", "ok": _critique_ok},
+    ]
+    passed = all(c["ok"] for c in gate_checks)
 
     # Honest, non-fabricated notes so a reviewer sees WHY a set is weak.
     notes: list[str] = []
@@ -643,8 +894,24 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     elif total_q < target:
         notes.append(f"{total_q} question(s) — fewer than the requested {target}; the on-topic real "
                      f"questions available for this session were limited (kept on-topic over padding).")
+    # Name the failing conditions with their values and bars. The report used to carry `pass_fail` and
+    # nothing else, so a failed set gave a reviewer no way to tell a thin corpus from a bad set.
+    _failed = [c for c in gate_checks if not c["ok"]]
+    if _failed:
+        notes.append("Gate not passed — "
+                     + "; ".join(f"{c['name']} {c['value']} (needs {c['bar']})" for c in _failed) + ".")
     if coverage_score < 0.6:
-        notes.append("Some learning outcomes are not covered by the available questions.")
+        notes.append(f"{cov.covered} of {cov.total} interview topics examined, and the questions do not "
+                     f"spread across distinct topics (efficiency {coverage_score}) — several are "
+                     f"testing the same thing.")
+    # A supply cap is a corpus fact, not a quality problem, and must not read like one.
+    if cov.supply_capped and cov.total:
+        notes.append(
+            f"Topic coverage {topic_coverage} ({cov.covered} of {cov.total} interview topics) is "
+            f"limited by supply, not quality — only {cov.n_questions} on-topic real question(s) were "
+            f"available. The gate scores coverage EFFICIENCY instead ({coverage_score}: distinct topics "
+            f"per question), so a thin corpus is reported here rather than counted against the set."
+        )
     # Which method produced the coverage number, and — when judged — the outcome↔question pairing, so
     # a spurious credit is visible instead of silently scored at 35% of the composite.
     _judged = getattr(state, "judged_coverage", None) or {}
@@ -655,6 +922,18 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     elif _judged.get("pairs"):
         notes.append("Outcome coverage judged against the reading material; each covered outcome is "
                      "listed with the question credited for it.")
+    # The last-resort tier reached outside the vetted allowlist — say so, with the count.
+    _unvetted = sum(1 for q in state.questions.values() if getattr(q, "unvetted_source", False))
+    if _unvetted:
+        notes.append(
+            f"{_unvetted} of {total_q} question(s) came from OUTSIDE the trusted source list — the "
+            f"open-web tier ran because the bank and the allowlisted sites could not fill this session. "
+            f"They carry no company attribution and are tagged 'unvetted source' in review; check them "
+            f"more closely than the rest."
+        )
+    elif getattr(state, "open_web_used", False):
+        notes.append("The open-web tier ran but contributed nothing that passed the filters.")
+
     # On-domain is not on-syllabus. The gate judges domain; this judges the session's own material.
     if state.off_syllabus:
         _c = "; ".join(f"“{o['concept']}”" for o in state.off_syllabus[:4])
@@ -679,6 +958,14 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
             f"off-syllabus clause was removed); they are marked 'adapted' in review and keep their "
             f"original text for comparison."
         )
+    # A duplicate the set could not drop must be said out loud. Run 8fb9fcb3 shipped one silently: the
+    # critique named it, the set held exactly MIN_QUESTIONS, and `remove_question` had to refuse.
+    _dupes = [q for q in state.questions.values() if getattr(q, "duplicate_of", None)]
+    if _dupes:
+        notes.append(
+            f"{len(_dupes)} question(s) test the same thing as another question in this set and could "
+            f"NOT be dropped without falling under the {MIN_QUESTIONS}-question minimum — they are "
+            f"flagged for the reviewer to choose between.")
     if grounding_score is not None and grounding_score < 0.30:
         notes.append(f"Weak grounding (mean session fit {grounding_score:.2f}) — these questions are "
                      f"only loosely tied to this session's outcomes and reading material.")
@@ -732,15 +1019,19 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
         flagged_questions=[FlaggedQuestion.from_gate(i) for i in gate_issues],
         metric_scores={
             # Scored into the composite (all independent of the selector):
-            "outcome_coverage": coverage_score,
+            "coverage_efficiency": coverage_score,
             "session_grounding": grounding_score if grounding_score is not None else 0.0,
             "predicted_accept": (agreement.predicted_accept_rate if agreement else 0.0),
             "set_size": round(size_score, 2),
             # Reported for transparency, NOT scored — see the composite comment above.
+            # `topic_coverage` is honest but supply-bounded: with fewer questions than topics it cannot
+            # reach 1.0, so scoring it failed every thin set (one scored its exact maximum, 0.227).
+            "topic_coverage": topic_coverage,
             "self_relevance": round(self_relevance, 2) if self_relevance is not None else 0.0,
             "source_diversity": round(diversity_score, 2),
             "difficulty_balance": round(diff_score, 2),
         },
+        gate_checks=gate_checks,
         pass_fail="pass" if passed else "fail",
         critique=notes,
         loops_used=revision_round,

@@ -511,6 +511,18 @@ ul { list-style: none; }
 .q-loops { display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--warn); }
 
 .q-notes { display: flex; flex-direction: column; padding: var(--s-2) var(--s-4); gap: 0.3rem; border-bottom: 1px solid var(--border-soft); }
+/* Gate conditions — value against bar, one row each. The panel used to show only pass/fail, so a
+   reviewer could not tell a thin corpus from a bad set without reading the scoring code. */
+.q-gate { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); padding: var(--s-3) var(--s-5); border-bottom: 1px solid var(--border); }
+.q-gate li { display: inline-flex; align-items: center; gap: var(--s-1); font-family: var(--font-mono); font-size: var(--fs-2xs); }
+.q-gate-ok { color: var(--text-3); }
+.q-gate-ok .icon { color: var(--ok); }
+.q-gate-bad { color: var(--danger); }
+.q-gate-name { text-transform: uppercase; letter-spacing: .06em; }
+.q-gate-val { color: var(--text); font-weight: 600; }
+.q-gate-bad .q-gate-val { color: var(--danger); }
+.q-gate-bar { color: var(--text-3); opacity: .8; }
+
 .q-note { display: flex; align-items: flex-start; gap: var(--s-2); font-size: var(--fs-xs); color: var(--text-2); line-height: 1.55; }
 .q-note .icon { margin-top: 0.15rem; color: var(--text-3); }
 .q-note-warn { color: var(--warn); }
@@ -613,6 +625,20 @@ p.q-note-warn { padding: var(--s-2) var(--s-4); background: var(--warn-soft); bo
   cursor: help;
 }
 
+/* "unvetted source" — from a domain outside the trusted allowlist, via the last-resort open-web tier.
+   Same weight as off-syllabus: both mean "look closer before accepting this one". */
+.cq-unvetted {
+  font-size: var(--fs-2xs);
+  font-family: var(--font-mono);
+  color: var(--warn);
+  background: var(--warn-soft);
+  border: 1px dashed var(--warn);
+  border-radius: 4px;
+  padding: 1px var(--s-1);
+  white-space: nowrap;
+  cursor: help;
+}
+
 /* "off-syllabus" — on-domain but testing something the session's reading material never covers. Loud
    enough to notice, since deciding whether to stretch candidates past the material is the reviewer's
    call; danger colour because unlike "adapted" nothing has been done about it. */
@@ -622,6 +648,21 @@ p.q-note-warn { padding: var(--s-2) var(--s-4); background: var(--warn-soft); bo
   color: var(--danger);
   background: var(--danger-soft);
   border: 1px solid var(--danger-soft);
+  border-radius: 4px;
+  padding: 1px var(--s-1);
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* "same as another" — a question that tests the same thing as another in THIS set, which the pass
+   could not drop without taking the set under the minimum. Danger weight like off-syllabus, because
+   nothing has been done about it and the reviewer has to choose between the pair. */
+.cq-duplicate {
+  font-size: var(--fs-2xs);
+  font-family: var(--font-mono);
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px dashed var(--danger);
   border-radius: 4px;
   padding: 1px var(--s-1);
   white-space: nowrap;

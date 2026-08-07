@@ -17,14 +17,18 @@ import Icon from './Icon.jsx'
 
 // Metrics that make up the composite, in the order they're weighted.
 const SCORED = [
-  ['outcome_coverage', 'Outcome coverage', 'How much of the session’s learning outcomes the set covers'],
+  ['coverage_efficiency', 'Coverage efficiency', 'Did each question earn its place against a distinct interview topic'],
   ['predicted_accept', 'Predicted acceptance', 'Estimated from your own past accept/reject decisions'],
   ['session_grounding', 'Session grounding', 'Similarity to this session’s outcomes and reading material'],
   ['set_size', 'Set size', 'How close the set is to the requested count'],
 ]
 
 // Reported for transparency but deliberately excluded from the score.
+// `topic_coverage` sits here rather than in SCORED on purpose: it is bounded by SUPPLY, so with fewer
+// real questions available than the session has interview topics it can never reach 1.0. Scoring it
+// failed every thin set — one scored 0.227, its exact arithmetic maximum, and was marked a failure.
 const REPORTED = [
+  ['topic_coverage', 'Topic coverage', 'Share of the session’s interview topics examined — bounded by how many real questions exist'],
   ['self_relevance', 'Self-relevance', 'The selector’s own confidence — not evidence of quality'],
   ['difficulty_balance', 'Difficulty mix', 'Scored against bank labels that are ~95% "Medium"'],
   ['source_diversity', 'Source diversity', 'How many distinct sources contributed'],
@@ -86,6 +90,21 @@ export default function QualityPanel({ report }) {
           </span>
         )}
       </header>
+
+      {/* Which condition decided the verdict. Without this the panel showed pass/fail and left the
+          reviewer to guess whether a failure meant a bad set or a thin corpus. */}
+      {(report.gate_checks || []).length > 0 && (
+        <ul className="q-gate" aria-label="Gate conditions">
+          {report.gate_checks.map((c) => (
+            <li key={c.name} className={c.ok ? 'q-gate-ok' : 'q-gate-bad'}>
+              <Icon name={c.ok ? 'check' : 'x'} size={11} />
+              <span className="q-gate-name">{c.name}</span>
+              <span className="q-gate-val">{c.value}</span>
+              <span className="q-gate-bar">needs {c.bar}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {webWarn && (
         <p className="q-note q-note-warn">

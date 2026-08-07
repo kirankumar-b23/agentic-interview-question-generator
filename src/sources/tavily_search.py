@@ -484,6 +484,79 @@ class TavilyConnector:
         return records[:_MAX_RECORDS], search_count, error
 
 
+def _open_web_page_ok(url: str, title: str) -> bool:
+    """Is this an interview-question PAGE, on a domain worth reading?
+
+    The single most useful gate for open-web results, and it is measured: across 71 candidates from
+    unrestricted searches, ALL 71 passed the form gate while only 29 sat on a page whose URL or title
+    said "interview question". The other 42 were forum chatter ("Are you willing to work on this?"),
+    GitHub template prose, vendor documentation ("What it does?") and tutorial headings ("What Is n8n?").
+    The form gate cannot tell documentation from a question; this can.
+    """
+    dom = domain(url)
+    if not dom:
+        return False
+    if dom in config.OPEN_WEB_BLOCKED_DOMAINS:
+        return False
+    if any(dom.startswith(p) for p in config.OPEN_WEB_BLOCKED_PREFIXES):
+        return False
+    # Also block the blocked domains reached via a subdomain (m.facebook.com, old.reddit.com).
+    if any(dom == b or dom.endswith("." + b) for b in config.OPEN_WEB_BLOCKED_DOMAINS):
+        return False
+    hay = f"{url} {title}".lower()
+    return any(tell in hay for tell in config.OPEN_WEB_PAGE_TELLS)
+
+
+def fetch_open_web(terms: List[str]) -> tuple:
+    """LAST-RESORT search with NO domain allowlist. Returns (records, search_calls, error).
+
+    Only called when the bank and the allowlisted web tier have under-delivered for a session — see
+    `tools.tool_search_web_questions`. Everything it returns is marked `unvetted_source` upstream and
+    never carries a company attribution: an unvetted page is not evidence that a company asked
+    something.
+
+    Gates, in order of how much they remove: `_open_web_page_ok` (page + domain), then the shared FORM
+    gate. Candidates still face session-fit, the LLM relevance judge and the syllabus audit downstream.
+    """
+    if not config.TAVILY_API_KEY:
+        return [], 0, "TAVILY_API_KEY not set"
+    if not config.OPEN_WEB_ENABLED:
+        return [], 0, None
+
+    from src.quality import is_quality_question, strip_artifacts
+
+    client = _client()
+    records: List[Record] = []
+    seen: set = set()
+    errors: list = []
+    calls = 0
+    for term in [t for t in (terms or []) if t and t.strip()][:config.OPEN_WEB_MAX_TERMS]:
+        results = _search(client, f"{term} interview questions and answers", include_domains=None)
+        calls += 1
+        for r in results:
+            url = r.get("url", "") or ""
+            title = r.get("title", "") or ""
+            if not _open_web_page_ok(url, title):
+                continue
+            text = r.get("raw_content") or r.get("content") or ""
+            for cand in _extract_from_text(text):
+                cand = strip_artifacts(cand)
+                if not is_quality_question(cand):
+                    continue
+                key = _dedup_key(cand)
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                # company=None ALWAYS: attribution_label turns that into NIAT, and `source_site`
+                # records where it actually came from.
+                records.append(Record(question_text=cand, source_url=url, company=None,
+                                      source_type=f"open_web:{domain(url)}"))
+        if len(records) >= config.OPEN_WEB_MAX_RECORDS or _is_terminal_error(errors):
+            break
+    error = _summarize_tavily_error(errors) if (not records and errors) else None
+    return records[:config.OPEN_WEB_MAX_RECORDS], calls, error
+
+
 def search_question(question: str) -> List[Record]:
     """Research loop helper: find more allowlisted attribution for one confirmed question."""
     if not config.TAVILY_API_KEY:

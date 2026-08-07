@@ -247,6 +247,50 @@ TAVILY_MAX_RESULTS = int(os.getenv("TAVILY_MAX_RESULTS", "10"))
 TAVILY_MAX_OUTCOMES = int(os.getenv("TAVILY_MAX_OUTCOMES", "14"))
 TAVILY_MAX_RECORDS = int(os.getenv("TAVILY_MAX_RECORDS", "800"))
 
+# ── Open-web tier: LAST RESORT only ──────────────────────────────────────────
+# Searches WITHOUT `include_domains`, so it can reach content the 67-domain allowlist cannot — the
+# banks and the allowlist hold nothing on n8n nodes, Gemini configuration or Automatic1111, which is
+# exactly what several sessions teach. Measured: "n8n workflow automation interview questions" returns
+# 0 allowlisted records and 24 open-web candidates, including "What is the Merge node and what merge
+# modes does it support?", which matches a session outcome verbatim.
+#
+# It runs ONLY when the trusted tiers under-deliver (see tools.tool_search_web_questions), because open
+# results are much noisier: of 71 measured candidates ALL 71 passed the form gate while only 29 came
+# from a genuine interview-question page. Hence the two extra gates below.
+OPEN_WEB_ENABLED = os.getenv("OPEN_WEB_ENABLED", "1") == "1"
+OPEN_WEB_MAX_RECORDS = int(os.getenv("OPEN_WEB_MAX_RECORDS", "60"))
+OPEN_WEB_MAX_TERMS = int(os.getenv("OPEN_WEB_MAX_TERMS", "4"))
+
+# How short a set has to be before the open web is worth the noise. Fraction of the REQUESTED count,
+# floored at MIN_QUESTIONS: at the default request of 15 the tier engages below 9.
+#
+# It used to engage below MIN_QUESTIONS alone, and that is why this tier — written specifically for the
+# n8n gap — had never once run on a live run. Run 8fb9fcb3 asked for 15, survived with EXACTLY 5, and
+# `surviving >= MIN_QUESTIONS` read that as satisfied. Landing precisely on the floor is the most
+# starved a run can be while still producing output. See `pipeline._open_web_shortfall`, which keeps a
+# separate `<= MIN_QUESTIONS` clause so a request of 5 cannot reintroduce the same off-by-one.
+OPEN_WEB_TRIGGER_RATIO = float(os.getenv("OPEN_WEB_TRIGGER_RATIO", "0.6"))
+
+# The page must LOOK like an interview-question page. This one test kept the 29 clean candidates and
+# dropped all 42 noisy ones (forum chatter, vendor docs, tutorial headings) in the measurement above.
+# It is the EDU_PLATFORM_DOMAINS "interview must be in the URL" rule, generalised to any domain.
+OPEN_WEB_PAGE_TELLS = (
+    "interview question", "interview-question", "interview questions", "interviewquestions",
+    "/interview", "interview-prep", "questions and answers", "questions-and-answers", "q&a",
+)
+
+# Domains that produced the junk. Forums and social are conversation, not interview questions
+# ("Are you willing to work on this?"); code hosts return template prose; vendor docs return
+# documentation headings ("What it does?" from ai.google.dev).
+OPEN_WEB_BLOCKED_DOMAINS = {
+    "facebook.com", "linkedin.com", "twitter.com", "x.com", "instagram.com", "tiktok.com",
+    "reddit.com", "quora.com", "github.com", "gitlab.com", "bitbucket.org", "youtube.com",
+    "pinterest.com", "slideshare.net", "scribd.com", "coursera.org", "udemy.com",
+}
+# Subdomain prefixes that mark a forum or a documentation site whatever the registrable domain.
+OPEN_WEB_BLOCKED_PREFIXES = ("community.", "forum.", "forums.", "docs.", "developer.", "support.",
+                             "help.", "status.", "blog.")
+
 # Approximate USD price per 1M tokens (input/output) for cost ESTIMATES only.
 # Update as provider pricing changes — figures are representative, not billed amounts.
 MODEL_PRICING = {
