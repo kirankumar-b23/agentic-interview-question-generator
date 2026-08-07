@@ -297,17 +297,6 @@
     "source_count": 3
   },
   {
-    "id": "8caf493c-bf65-46d9-9dc2-2c14beb382b9",
-    "content": "how can you prevent it?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.interviewquery.com/interview-guides/box-machine-learning-engineer",
-    "source_count": 3
-  },
-  {
     "id": "e5e33a71-d1d5-4cd2-94e9-2d1cea3b13e1",
     "content": "What are the key differences between discriminative and generative models?",
     "topic": "Gen AI",
@@ -409,17 +398,6 @@
   {
     "id": "713cfb7b-225e-40d1-a447-d4e71ff07163",
     "content": "What causes hallucinations in LLMs?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.interviewbit.com/generative-ai-interview-questions-and-answers",
-    "source_count": 2
-  },
-  {
-    "id": "fa26c7fc-f858-49bf-b546-d8a2d4aef4ff",
-    "content": "how do you detect and reduce them?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -541,17 +519,6 @@
   {
     "id": "c5ab5d83-be9b-4a54-97e1-a139b452b4e5",
     "content": "What is the context window?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://pub.towardsai.net/40-generative-ai-interview-questions-that-actually-get-asked-in-2026-with-answers-b4c647f1e2e8",
-    "source_count": 2
-  },
-  {
-    "id": "c446f5f2-8bcb-4975-a966-860b11179f6f",
-    "content": "what are the practical challenges of a large one?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -1782,17 +1749,6 @@
     "source_count": 1
   },
   {
-    "id": "e1014a8f-7bbe-41cb-9942-4765b8eec9e6",
-    "content": "how did you overcome them?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.interviewquery.com/interview-guides/box-machine-learning-engineer",
-    "source_count": 1
-  },
-  {
     "id": "816db108-ed97-43e3-8b13-2d371fbd7bd7",
     "content": "How do you approach feature selection for a machine learning model?",
     "topic": "Gen AI",
@@ -1828,17 +1784,6 @@
   {
     "id": "8e204d12-e763-46ab-9c7e-dfde987c2596",
     "content": "What happens when a Large Language Model (LLM) hallucinates?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": "Accenture",
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.ambitionbox.com/interviews/accenture-interview-questions/ai-ml-engineer",
-    "source_count": 1
-  },
-  {
-    "id": "97e752f0-07b7-42fa-916e-057f974e7d05",
-    "content": "how would you prevent it?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": "Accenture",
@@ -2145,17 +2090,6 @@
     "source_count": 1
   },
   {
-    "id": "3ccf588f-a80c-4d9c-b7a9-900813cfd1e3",
-    "content": "when should you use them?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.educative.io/courses/ai-interview-crash-course/evaluating-ai-and-llm-models",
-    "source_count": 1
-  },
-  {
     "id": "8abd81b8-a060-4f7b-8ccf-17a8d17e2827",
     "content": "What is generative AI in the context of LLMs?",
     "topic": "Gen AI",
@@ -2355,7 +2289,7 @@
   },
   {
     "id": "119297d1-db1c-4069-9603-b1dfe0ef9055",
-    "content": "What is a Large Language Model (LLM)?A. Think of LLMs as massive neural networks trained on billions of words, designed to understand context deeply enough to predict or generate human-like text. GPT-4 or Gemini are examples. Most of the LLMs are based on the transformer architecture.",
+    "content": "What is a Large Language Model (LLM)?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -2366,7 +2300,7 @@
   },
   {
     "id": "fbf05075-ce61-422c-bf98-3de8f4923222",
-    "content": "How would you explain the transformer architecture to someone new?A. It’s a neural network architecture that learns context by focusing on the relevance of each word in a sentence, through a mechanism called self-attention. Unlike RNNs, it processes words in parallel, making it faster and better at capturing context.",
+    "content": "How would you explain the transformer architecture to someone new?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -2388,7 +2322,7 @@
   },
   {
     "id": "0ffca36d-aef5-4daf-9d4b-bd0ca9310805",
-    "content": "How can you practically reduce “hallucinations” in generated outputs?A. By grounding responses in external knowledge bases (like RAG), Reinforcement Learning with human feedback (RLHF), and crafting prompts carefully to keep outputs realistic and factual.",
+    "content": "How can you practically reduce “hallucinations” in generated outputs?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -2410,7 +2344,7 @@
   },
   {
     "id": "5c89b462-0da1-4fc0-b39d-24ec224a31fe",
-    "content": "What’s RLHF, and why does it matter?A. RLHF (Reinforcement Learning from Human Feedback) trains models based on explicit human guidance, helping LLMs align better with human values, ethics, and preferences.",
+    "content": "What’s RLHF, and why does it matter?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -2421,7 +2355,7 @@
   },
   {
     "id": "1b576a60-23ca-42cd-8452-af58d2bf9292",
-    "content": "How would you efficiently fine-tune an LLM on limited resources?A. Use methods like LoRA or QLoRA, which tune a small number of parameters while keeping most of the original model frozen, making it cost-effective without sacrificing much quality.",
+    "content": "How would you efficiently fine-tune an LLM on limited resources?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -2653,17 +2587,6 @@
   {
     "id": "891c1dae-f32a-438b-94b6-5ef31f18e1ac",
     "content": "What you should do:",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.analyticsvidhya.com/blog/category/interview-questions",
-    "source_count": 1
-  },
-  {
-    "id": "026ec3ec-981a-42b2-b643-1bfdaafa7242",
-    "content": "How you talk and present ideas in the interview is sometimes even more important than being qualified for the job. So taking a mock interview will give you a feel of the real deal. Alternatively, you can use AI tools such as Liftoff AI to practice your interview skills.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -3377,17 +3300,6 @@
     "source_count": 1
   },
   {
-    "id": "bb28b1cf-51dd-4f47-89ff-992a273906ef",
-    "content": "A recruiter might ask, “Tell me about a project where you applied LLMs” or “How do you stay up to date with new GenAI techniques?” The best answers here are clear, concrete, and framed like a short case study: what problem did you solve, what tools did you use, and what was the outcome?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.educative.io/guide/generative-ai-interview-preparation",
-    "source_count": 1
-  },
-  {
     "id": "9ad7ddd8-289c-40de-8805-b5d6a94410c4",
     "content": "Explain transformers in plain language first (“they pay attention to important words in context”), then add technical depth if probed.",
     "topic": "Gen AI",
@@ -3812,17 +3724,6 @@
     "difficulty": "Medium",
     "company": null,
     "role": "ML/AI Engineer",
-    "source": "web",
-    "source_url": "https://discuss.huggingface.co/t/advice-needed-for-building-interviewai-a-real-time-ai-interview-feedback-project/175712",
-    "source_count": 1
-  },
-  {
-    "id": "d9425826-af34-4d47-b653-bbce272997e9",
-    "content": "What common mistakes should I avoid when building a project like this?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
     "source": "web",
     "source_url": "https://discuss.huggingface.co/t/advice-needed-for-building-interviewai-a-real-time-ai-interview-feedback-project/175712",
     "source_count": 1
@@ -6611,17 +6512,6 @@
     "source_count": 1
   },
   {
-    "id": "9d175549-f804-427e-bcb6-09d97c805877",
-    "content": "When you prepare for System Design roles, most of your attention naturally goes to high-level architecture. You think about scalability, distributed systems, databases, and caching layers. Then you walk into an interview and are asked to design a parking lot or an ATM system at the class level.",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "ML/AI Engineer",
-    "source": "web",
-    "source_url": "https://www.educative.io/blog/low-level-design-interview-questions-for-system-design-roles",
-    "source_count": 1
-  },
-  {
     "id": "0648764d-d3a0-4ef6-9fa7-55c6516895d4",
     "content": "Explain why you chose composition over inheritance or why you introduced a particular pattern.",
     "topic": "Gen AI",
@@ -7139,17 +7029,6 @@
     "source_count": 1
   },
   {
-    "id": "8c0a4eb9-354e-47e2-bdc0-76f695497ac8",
-    "content": "how do you mitigate this?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": "Mercor",
-    "role": "ML/AI Engineer",
-    "source": "web",
-    "source_url": "https://dataford.io/interview-guides/mercor/data-engineer",
-    "source_count": 1
-  },
-  {
     "id": "0cc398fd-0aee-4936-8701-3b118aadd513",
     "content": "Design a URL shortener service.",
     "topic": "Gen AI",
@@ -7515,17 +7394,6 @@
   {
     "id": "222ab3db-753a-414a-9271-6d5629d47498",
     "content": "What is the internal covariate shift?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://towardsai.net/p/l/machine-learning-interview-questions-2",
-    "source_count": 1
-  },
-  {
-    "id": "36cb07a0-af74-41d1-91fd-2dba6591f267",
-    "content": "what are the consequences of it?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -8626,17 +8494,6 @@
   {
     "id": "e0f63f6e-7a07-4071-87aa-37387daa0e22",
     "content": "LLM Hallucinations: bug or feature?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://huggingface.co/blog/dvilasuero/llm-hallucinations",
-    "source_count": 1
-  },
-  {
-    "id": "4f196701-e7cb-4dc6-9ce4-d4e092927c63",
-    "content": "Given the above, I wanted to build a simple, actionable resource for the community to see the effects of hallucinations. Something that clearly shows the issue and can be used by AI builders as an example, a playground, and food for thought.",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -11341,17 +11198,6 @@
     "source_count": 1
   },
   {
-    "id": "5ceea2b2-5132-4aea-a294-6d61bb5e71eb",
-    "content": "Given these, the best way to prepare is to know the different kinds of questions you can expect. Below, we give you the 6 most common question types, based on reports from Glassdoor across different companies, including Google, LinkedIn, Deloitte, and more.",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://igotanoffer.com/en/advice/ai-engineer-interview",
-    "source_count": 1
-  },
-  {
     "id": "0e2f3992-7177-409a-8d47-7ac558cad4c8",
     "content": "Precision vs Recall — which matters more for fraud detection?",
     "topic": "Gen AI",
@@ -11517,17 +11363,6 @@
     "source_count": 1
   },
   {
-    "id": "ba81efa1-6204-4191-82dd-a4f62b084c60",
-    "content": "how do you reduce it?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://www.tredence.com/blog/top-20-ai-machine-learning-interview-questions-2026",
-    "source_count": 1
-  },
-  {
     "id": "caa4335f-ad50-4a37-8aca-bb7d3ab4fd0a",
     "content": "How leading companies use HackerRank![Arrow?",
     "topic": "Gen AI",
@@ -11682,17 +11517,6 @@
     "source_count": 1
   },
   {
-    "id": "78864f39-b6f3-4114-8fb5-3d2155a745b2",
-    "content": "When your prompt produces the wrong output, the question is how quickly you can narrow down why. The failure could be in the instruction itself, in how the model interpreted the input structure, or in the output format, and isolating that quickly is a skill that’s fast to test and hard to fake under timed conditions.",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "Prompt Engineer",
-    "source": "web",
-    "source_url": "https://www.interviewquery.com/p/how-to-prepare-for-prompt-engineering-interviews",
-    "source_count": 1
-  },
-  {
     "id": "410b2b3f-2222-44ab-9d5e-60d9af91f517",
     "content": "For data transformation tasks especially, do you understand data types, null handling, and nested structures well enough that your instructions account for edge cases before they occur?",
     "topic": "Gen AI",
@@ -11783,17 +11607,6 @@
   {
     "id": "5e9e34dc-6abd-4f8a-8edf-b89621d80a50",
     "content": "Do you know what Spark is?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://leetcode.com/discuss/interview-question/3687009/top-50-machine-learning-interview-questions-basic-to-high-level-questions-with-answers",
-    "source_count": 1
-  },
-  {
-    "id": "22e536f4-bd72-4c41-becb-67858912e364",
-    "content": "Do you have any experience using it?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,
@@ -12201,28 +12014,6 @@
   {
     "id": "2b5aa8c5-b845-448c-aafd-f77908099b44",
     "content": "Tell me a time when you had to work with models that were producing inconsistent predictions.",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://igotanoffer.com/en/advice/ai-product-manager-interview#questions",
-    "source_count": 1
-  },
-  {
-    "id": "4ae0a639-5be3-4e15-b6a5-b65b386ebd70",
-    "content": "How did you work with the scientists to address them?",
-    "topic": "Gen AI",
-    "difficulty": "Medium",
-    "company": null,
-    "role": "General",
-    "source": "web",
-    "source_url": "https://igotanoffer.com/en/advice/ai-product-manager-interview#questions",
-    "source_count": 1
-  },
-  {
-    "id": "7182bf27-f7e2-4d31-a9fd-625119326214",
-    "content": "When asking AI product questions, interviewers like Anik will likely start with situational product questions and then introduce the AI factor. “This helps me understand the candidate's strategic thought process for integrating AI into a solution, rather than just forcing an AI?",
     "topic": "Gen AI",
     "difficulty": "Medium",
     "company": null,

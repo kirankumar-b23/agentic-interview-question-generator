@@ -108,6 +108,11 @@ MCQ_SHAPES = (
     "options:", "\\_\\_\\_", "________",
 )
 
+# The tells above are all PROSE tells, and that was the hole: they carried nothing for LETTERED
+# options, so `interview_questions.json` sat on 52 MCQs with this file green — C/Java syntax items and
+# aptitude problems ("Two oranges, 3 bananas and 4 apples cost Rs.15…"), none company-attributed.
+# `src.assessment_items` owns the shape rules so the sweeper script and this assertion cannot drift.
+
 
 class TestNoAssessmentItemsInTheRetrievalCorpus:
     """The curriculum MCQs must never reach retrieval.
@@ -126,6 +131,35 @@ class TestNoAssessmentItemsInTheRetrievalCorpus:
                if any(tell in (r.get("content") or "").lower() for tell in MCQ_SHAPES)]
         assert not bad, (f"{len(bad)} assessment-item(s) in {path.name} — these are MCQs, not "
                          f"interview questions. First few: {bad[:3]}")
+
+    @pytest.mark.parametrize("path,key", [(INTERVIEW_QUESTIONS_JSON, "questions"), (GENAI_BANK_JSON, None)])
+    def test_no_lettered_option_items_in_the_banks(self, path, key):
+        """The gap the prose tells left: an option LIST rather than an option phrase.
+
+        Fix with `python scripts/strip_assessment_items.py`, then clear `.cache/`.
+        """
+        from src.assessment_items import is_assessment_item
+
+        data = _load(path)
+        rows = data[key] if key else data
+        bad = [r["content"] for r in rows if is_assessment_item(r.get("content") or "")]
+        assert not bad, (f"{len(bad)} lettered-option MCQ(s) in {path.name}. First few: {bad[:3]}")
+
+    @pytest.mark.parametrize("path,key", [(INTERVIEW_QUESTIONS_JSON, "questions"), (GENAI_BANK_JSON, None)])
+    def test_no_answer_is_glued_onto_a_question(self, path, key):
+        """A real question carrying its own answer is a scrape artifact, not an assessment item.
+
+        `"What's RLHF, and why does it matter?A. RLHF (Reinforcement Learning from Human Feedback)…"`
+        would ship to a reviewer as a 30-word blob that states its own answer. Repaired, not deleted —
+        the word ceiling in `quality.py` is not a substitute: only 2 of the 6 exceeded 40 words.
+        """
+        from src.assessment_items import strip_glued_answer
+
+        data = _load(path)
+        rows = data[key] if key else data
+        bad = [r["content"] for r in rows
+               if strip_glued_answer(r.get("content") or "") != (r.get("content") or "").strip()]
+        assert not bad, (f"{len(bad)} row(s) in {path.name} carry a glued answer. First few: {bad[:2]}")
 
     def test_the_runtime_loader_exposes_no_curriculum_questions(self):
         """The pool that fed the misleading log line is gone, not merely unread."""
