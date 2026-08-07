@@ -64,7 +64,10 @@ drives its own topic list in the sidebar. A **preview gate** lets you sanity-che
 session/outcomes before committing a full run, and per-run **usage** (LLM/Tavily calls, tokens,
 cost estimate) is tracked and shown in History.
 
-See **`CLAUDE.md`** for the architecture, the load-bearing failure paths, and the scoring rationale.
+See **`docs/pipeline-walkthrough.html`** for a step-by-step walkthrough of a run — one step at a
+time, each with its live SSE step id, the code that runs it, what goes wrong there and how to check
+it. Open it directly in a browser; no build step. **`CLAUDE.md`** has the load-bearing failure paths
+and the scoring rationale.
 
 ---
 
@@ -72,7 +75,8 @@ See **`CLAUDE.md`** for the architecture, the load-bearing failure paths, and th
 
 ```
 main.py                    # FastAPI JSON API + serves the React build (uvicorn)
-docs/                      # deep-research-report.md — source strategy behind the Tavily allowlist
+docs/pipeline-walkthrough.html  # step-by-step walkthrough of a run (open in a browser)
+docs/deep-research-report.md    # source strategy behind the Tavily allowlist
 src/
   pipeline.py              # AgentPipeline — orchestrates the 4 agents + quality gate
   agents/                  # Understanding / Retrieval / Validation / Evaluation agents

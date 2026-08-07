@@ -45,12 +45,13 @@ scripts/
   build_eval_sets.py                # Build eval/eval_sets.json (good/bad validation examples)
   build_genai_bank.py               # Harvest the GenAI bank (Tavily); applies the FORM gate before writing
   clean_bank.py                     # Sweep an existing bank: --dry-run to report, --show N for reject samples
+  strip_assessment_items.py         # Remove lettered-option MCQs + repair glued answers (both banks)
   ingest_xlsx_questions.py          # Ingest real questions from data/raw/*.xlsx
   audit_outcomes.py                 # Seed/edit data/reading_materials/session_outcomes.json (curated outcomes)
   auth_sheets.py                    # One-time Google Sheets OAuth → token.json
 data/
-  interview_questions.json          # 1,499 company-attributed questions — general SWE/Python, little GenAI
-  genai_question_bank.json          # 1,400 curated GenAI questions (build_genai_bank.py; swept by clean_bank.py)
+  interview_questions.json          # 1,447 company-attributed questions — general SWE/Python, little GenAI
+  genai_question_bank.json          # 1,381 curated GenAI questions (build_genai_bank.py; swept by clean_bank.py)
   knowledge_graph.json              # KPs + sessions + prerequisite edges
   course_structure.json             # Topic → list of sessions (units); drives UI selection
   reading_materials/session_map.json# Canonical session name → that session's reading material
@@ -88,7 +89,7 @@ tests/                              # pytest — no LLM or network required
 
 | Source | Tool | Company attribution |
 |--------|------|---------------------|
-| Pre-indexed bank (1,499 Qs) | `search_question_bank` (hybrid embedding+TF-IDF) | Yes (verified) |
+| Pre-indexed bank (1,447 Qs) | `search_question_bank` (hybrid embedding+TF-IDF) | Yes (verified) |
 | Tavily web (69-domain allowlist) | `search_web_questions` | Best-effort from URL |
 | GitHub interview repos | `search_github_questions` | No |
 | `generate_interview_questions` | **BLOCKED** | — |
@@ -131,12 +132,42 @@ Attribution for output is computed by `attribution_label` (`src/models.py`) and 
 ## Scoring & evaluation (read before touching metrics)
 
 The composite score is built **only** from signals independent of the selector:
-`outcome_coverage`, `session_grounding`, `predicted_accept`, `set_size`.
+`coverage_efficiency`, `session_grounding`, `predicted_accept`, `set_size`.
 
 `self_relevance` (the mean LLM relevance score used to *pick* the questions) and
 `difficulty_balance` (scored against GenAI-bank labels that are ~95% "Medium") are **reported but not
 scored**. They were 50% of the old composite, which is why runs scored 0.9 while reviewers rejected
 most of the set — measured `corr(composite, approved) = 0.16` across 36 real runs.
+
+### Coverage: what it measures against, and why there are two numbers
+
+Three consecutive runs failed the gate and the sets were not the problem. Both causes are structural.
+
+- **Coverage scores `interview_topics`, NOT `learning_outcomes`** (`pipeline.coverage_targets`).
+  Outcomes describe the LESSON, setup steps included: across the 53 curated sessions **36 of 322
+  outcomes** are environment mechanics ("Set up a Kaggle account with phone verification", "Use Ngrok
+  to create secure tunnels"), and one session has **5 of 6** uncoverable. No interview question can
+  cover those, so on the Image-Generation topic the best achievable coverage was **0.56 — under the
+  0.60 pass bar with unlimited questions**. `interview_topics` is built from the same reading material
+  for exactly this purpose and has **0 of 385** such items. It already fed retrieval, the session-fit
+  profile and the relevance judge; coverage was the one place that ignored it.
+- **Two numbers, because one cannot do both jobs** (`pipeline.CoverageResult`):
+  `topic_coverage` = covered / ALL topics is honest but **bounded by supply** — with 5 questions and 22
+  topics it cannot exceed 0.23, and one run scored **0.227, its exact maximum, and was failed**. So it
+  is **reported, never gated**. `coverage_efficiency` = covered / min(topics, questions) — "did each
+  question earn its place against a *distinct* topic" — is **scored and gated**, achievable at any set
+  size, and still fails a set whose questions pile onto one topic (5 questions → 3 topics = 0.60).
+- **`predicted_accept` has no veto.** It keeps its 30% composite weight but cannot fail a set alone: it
+  is a 1-NN estimate over ~15 labels that `human_agreement` documents as an optimistic upper bound at
+  65% accuracy, and it read 0.2 on two consecutive runs purely because those topics had few labels.
+- **`QualityReport.gate_checks` names every condition with its value and bar**, and a supply cap is
+  stated as a corpus fact. The report used to carry `pass_fail` alone, so three failures in a row gave
+  no way to tell a thin corpus from a bad set.
+- **Calibration is replayed, not guessed.** `run_results.payload_json` persists every run, so a
+  threshold change is checked against history. On the 9 runs with the full metric set the new rule
+  passes 6 (the reviewer-approved one included) and still fails the three weakest; 0 runs regress from
+  pass to fail. Runs missing `session_grounding`/`predicted_accept` must be EXCLUDED from any replay —
+  their composite renormalises to ~1.0 and inflated a first pass at this from 67% to 88%.
 
 Two retrieval/grounding layers matter and are easy to confuse:
 - `question_bank.py` ranks with a **hybrid** score (0.6·embedding + 0.4·TF-IDF). Pure TF-IDF returned
@@ -262,6 +293,115 @@ Generator."* Both were true. Only 5 of 12 tested something either session actual
 - The **7 rows tagged `source: "curriculum"` in the GenAI bank are NOT MCQs** — they are real
   company-attributed questions (BluePond.AI, Blackcoat AI, Medoc Health). The `source` value is a
   misnomer from the bank build. Leave them.
+- **That assertion had no tell for LETTERED options, and 52 MCQs were sitting in the main bank with the
+  test green.** `MCQ_SHAPES` held only PROSE tells ("which of the following", "all of the above",
+  "options:"), so `"What is the right way to initialize an array? A) int num[6] = {2,4,12,5,45,5}; B) …"`
+  passed. `src/assessment_items.py` now owns the shape rules and both the test and
+  `scripts/strip_assessment_items.py` import them, so the sweeper and the assertion cannot drift.
+  (1,499 → **1,447**.)
+- **Two shapes, two remedies — do not treat a lettered marker as one thing.** `≥2 distinct option
+  letters` ⇒ a real MCQ, delete it. **Exactly one marker ⇒ an ANSWER glued onto a real question**
+  (`"What's RLHF, and why does it matter?A. RLHF (Reinforcement Learning from Human Feedback) trains…"`,
+  6 rows) — **repair by truncating at the marker**, never delete: those are genuine questions with
+  scrape residue and became clean 7-10 word questions. Requiring TWO letters to delete is what protects
+  a legitimate parenthetical (a coding problem reading `"the fewest number of digits (d) and base
+  number (m)"` matches one marker and must survive). The word rule in `quality.py` is **not** a
+  substitute for the repair: only 2 of those 6 exceeded 40 words, so it would have missed 3 and deleted
+  the other 2.
+- `interview_questions.json` still has **127 rows failing the form gate** (embedded code blocks,
+  HackerRank specs). That is pre-existing, no test guards it, and it is NOT the MCQ class — do not
+  conflate the two when cleaning.
+
+## The form gate has no upper bound — but length is not the discriminator
+
+A live run shipped **56 words of interviewer rubric** as a question: *"When your prompt produces the
+wrong output, the question is how quickly you can narrow down why. The failure could be in the
+instruction itself…"*. It passed everything — it opens with "When" (a legitimate `_Q_STARTS` word) and
+is normal-cased — because `quality.py` had `_MIN_WORDS = 3` and **no maximum at all**.
+
+- **A bare word ceiling is the wrong fix, and this was measured before the rule was written.** Of the 26
+  shipped rows over 40 words, 7 are prose blobs and the rest are *genuine* long asks — *"Build an API
+  for a leave request system in an HR management system using Flask, FastAPI…"*, *"Can you explain the
+  request flow when a user creates a blog and hits publish…"* — plus HackerRank coding specs. Rejecting
+  on length would have killed 7 blobs and **9 genuine questions** with them. Same overlapping-
+  distributions trap as `_outcome_coverage`'s proximity threshold and the dedup bar.
+- **What separates them is whether the text ASKS the candidate anything** (`quality._asks_something`):
+  its OWN question mark — one inside a *quoted example* does not count, which is what makes *"A
+  recruiter might ask, “Tell me about a project where you applied LLMs”…"* prose — or a sentence opening
+  with an imperative task verb.
+- `_TASK_VERBS` is **derived from `_Q_STARTS`** so the two cannot drift, minus wh-words and minus
+  **`given`**: *"Given the above, I wanted to build…"* and *"Given these, the best way to prepare is…"*
+  are blog prose, while the coding specs that open that way carry a later `find`/`determine` and survive
+  on those.
+- `_INTERVIEW_META` (talks ABOUT recruiters/hiring rather than asking) applies **only above the length
+  bar**, so *"What do recruiters look for in a GenAI candidate?"* is untouched.
+- Measured: rejects **8 of 2,835 rows (0.28%)** — all 7 blobs, plus one coding word problem the dormant
+  coding path cannot use. Two known misses remain; a tighter rule costs genuine questions. Reviving
+  coding retrieval will need a code-aware exemption.
+
+## The open-web tier, and why it had never once fired
+
+Written specifically for the n8n gap, and dead on arrival for two rounds. Run `8fb9fcb3` shipped 5
+questions for a topic whose sessions name n8n, RSS Feed Read Node, Schedule Trigger and Gmail Send Node
+across **10 of 22 outcomes**, and **0 of the 5 questions touched any of it**.
+
+- **`surviving >= MIN_QUESTIONS` read the floor as success.** Surviving was **exactly 5** and
+  `MIN_QUESTIONS` is **5**, against a request of 15 (`set_size` scored 0.33). Landing precisely on the
+  floor is the most starved a run can be while still producing output. `_open_web_shortfall` now fires
+  below `max(MIN_QUESTIONS, ceil(OPEN_WEB_TRIGGER_RATIO × requested))` — 9 of 15 at the 0.6 default.
+- **The `<= MIN_QUESTIONS` clause is SEPARATE from the ratio and must stay.** With
+  `requested == MIN_QUESTIONS` the ratio floors to 5 and `surviving < 5` reintroduces the very
+  off-by-one this exists to fix. `tests/…::TestTheTriggerThatNeverFired` asserts the whole table rather
+  than the constant, because the table is the defect.
+- **A second trigger fires on zero tool representation, at ANY count.** A full set of 15 on an n8n
+  session that never says "n8n" is still the wrong set and no count test can see it
+  (`_unrepresented_terms`, word-boundary matched, `[]` for theory-only sessions). Those missing terms
+  **become the query**, ahead of the old generic `_tool_terms(ctx)[:4]`.
+- **The cross-topic pre-filter killed the one real n8n question retrieved** — *"What kind of workflows
+  have you built with n8n before…"* — because `_prefilter_semantic` compares POOLED course-topic
+  profiles, and pooled across the GenAI course an n8n question resembles "the course" less than a prompt
+  question does. A candidate naming a `_tool_terms` term is now exempt from **that stage only**;
+  `_score_session_fit` runs BEFORE it (so the "interviewing at RSS Security" false positives stay
+  dropped and cannot be resurrected), and the relevance judge and syllabus audit still follow.
+- **Open-web queries are PLATFORM-QUALIFIED, and skipping that made the whole tier useless.** The first
+  run where the tier actually fired searched *"RSS, n8n, Merge"* and every candidate came back about
+  **Merge the company** (*"What was your interview with Merge like?"*), `pandas.merge()`, merging sorted
+  lists, and *"the ServiceNow RSS web service"*. The relevance judge correctly rejected all of them, so
+  the tier fired, spent its calls and added nothing on-topic — a failure that looks identical to "the
+  web has no n8n content". The cause is upstream of both: the reading material writes *"Merge and
+  Aggregate **nodes**"* and *"**RSS** Feed Read Node"* with a lowercase head, so `_PROPER_RUN` can only
+  ever capture the bare `Merge` / `RSS`. `_qualify_tool_terms` prefixes them with the session's platform
+  (the highest-ranked letter-digit token — `n8n`) → *"n8n Merge"*, *"n8n RSS"*. With no such token the
+  terms are returned unchanged rather than qualified by a guess.
+- **`_score_session_fit` takes `only_ids` and it is not a convenience.** Open-web additions used to land
+  with `session_fit = None`, which drops them out of `session_grounding` (it averages non-None only, so
+  the metric silently measured just the vetted subset) and sinks them in Review's ranking (`_rank_key`
+  reads None as 0.0). A blanket re-run is the wrong fix: the floor is **relative to the pool's best
+  fit**, so re-scoring after adding up to 60 candidates moves the bar and evicts vetted questions whose
+  place was already decided. With `only_ids` the floor is still computed across the whole pool — the
+  session's real bar — but only the named ids can be dropped.
+
+## Same-thing duplicates: judged on the selected set, never by threshold
+
+Run `8fb9fcb3` shipped *"How would you modify a system prompt to ensure the model always responds in
+structured JSON format?"* **and** *"How do you write effective prompts for consistent JSON output?"*.
+The gate's critique named them; semantic dedup measured them at **0.767** against its **0.82** bar.
+
+- **Do NOT lower `DEDUP_SEMANTIC_THRESHOLD`.** Measured: 209 pairs in 900 GenAI-bank rows sit in
+  [0.74, 0.82), and the band holds both real duplicates (*"What is a neural network?"* / *"What is a
+  Neural Network and ANN?"*, 0.815) and legitimately distinct pairs (*"What is fine-tuning in LLMs?"* /
+  *"best practices for LLM fine-tuning?"*, 0.819). Overlapping distributions — no cutoff separates them.
+  `tests/test_same_thing.py::TestTheDedupThresholdIsNotTheFix` pins the constant so the cheap wrong fix
+  fails loudly.
+- **`tools._same_thing_pass` judges instead**, and it is affordable only where it runs: one LLM call over
+  the **5-60 SELECTED** questions, after `_scope_trim` (trimming can pull two questions onto the same
+  core ask). Never at retrieval time — that is the mistake `_scope_trim` documents at length.
+- **The reply is verified in code**: only a pair index we actually asked about can be acted on, and only
+  pairs in `[_SAME_THING_LOW, DEDUP_SEMANTIC_THRESHOLD)` are ever offered — anything above the bar was
+  already removed by `tool_deduplicate_questions`.
+- **At `MIN_QUESTIONS` it FLAGS instead of removing** (`QuestionDetail.duplicate_of`, a `same as another`
+  tag in Review, and the report names the count). That floor case is exactly why the duplicate shipped
+  last time: the critique flagged it, the set held exactly 5, and `remove_question` correctly refused.
 
 ## Two different "slicing" mechanisms — do not merge them
 
@@ -368,7 +508,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 432 tests, no LLM or network required. Beyond unit coverage:
+`pytest tests/ -q` — 479 tests, no LLM or network required. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,
   including each outage above. This is the cheapest way to check a pipeline change.
 - `tests/test_failure_paths.py` and `tests/test_audit_fixes.py` pin the silent-failure classes.
