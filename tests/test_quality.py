@@ -107,3 +107,71 @@ class TestStripArtifacts:
         assert strip_artifacts("") == ""
         assert not is_quality_question("")
         assert not is_quality_question(None)
+
+
+class TestLongExpositoryProse:
+    """A long body that never ASKS anything is interviewer rubric or blog prose, not a question.
+
+    Run 8fb9fcb3 shipped 56 words of rubric to a reviewer. It passed every gate because it opens with
+    "When" — a legitimate `_Q_STARTS` word — and is normal-cased.
+
+    These tests pin the DISCRIMINATOR, not a length ceiling, because length alone does not separate
+    the classes: of the 26 shipped rows over 40 words, 7 are prose and the rest are genuine long asks
+    and coding specs. A future change that rejects on length would pass a naive "the blob is gone"
+    check while quietly dropping the `KEEPS_GENUINE_LONG` cases below.
+    """
+
+    # Every string here was in a shipped bank or a shipped question set.
+    REJECTS_PROSE = [
+        ("When your prompt produces the wrong output, the question is how quickly you can narrow down "
+         "why. The failure could be in the instruction itself, in how the model interpreted the input "
+         "structure, or in the examples you gave it. Walking through that isolation process is hard to "
+         "fake under timed conditions.", "the rubric blob run 8fb9fcb3 shipped"),
+        ("A recruiter might ask, “Tell me about a project where you applied LLMs” or “How do you stay "
+         "up to date with new GenAI techniques?” The best answers here are specific and show real "
+         "ownership of the work you did rather than generic enthusiasm.",
+         "its only question marks are inside quoted examples"),
+        ("How you talk and present ideas in the interview is sometimes even more important than being "
+         "qualified for the job. So taking a mock interview will give you a real sense of where you "
+         "stand and what you still need to practise before the real thing.", "advice prose"),
+        ("Given these, the best way to prepare is to know the different kinds of questions you can "
+         "expect. Below, we give you the 6 most common question types, with examples of each so you "
+         "can practise them one at a time before your interview.",
+         "'Given' as a discourse connective, not the coding-spec 'Given an array'"),
+    ]
+
+    KEEPS_GENUINE_LONG = [
+        ("Build an API for a leave request system in an HR management system using Flask, FastAPI, or "
+         "any framework you are comfortable with. Ensure the API includes endpoints for creating, "
+         "approving and listing leave requests, with validation and role-based access so that managers "
+         "and employees see different things.", "imperative task opener"),
+        ("Can you explain the request flow when a user creates a blog and hits publish in your blogging "
+         "app? Specifically, take me through the API request flow, the database writes, and how the "
+         "feed is updated for followers.", "long, but asks with its own question mark"),
+        ("Given an array of integers, find the pair of adjacent elements that has the smallest absolute "
+         "difference between them, and return that difference along with the pair itself so the caller "
+         "can report both values to the user.", "coding spec — survives on 'find', not on 'Given'"),
+    ]
+
+    @pytest.mark.parametrize("text,why", REJECTS_PROSE)
+    def test_prose_that_asks_nothing_is_rejected(self, text, why):
+        assert not is_quality_question(text), f"should reject ({why})"
+
+    @pytest.mark.parametrize("text,why", KEEPS_GENUINE_LONG)
+    def test_a_genuine_long_ask_survives(self, text, why):
+        assert is_quality_question(text), f"should keep ({why})"
+
+    def test_the_rule_is_not_a_length_ceiling(self):
+        """The regression guard: same length, opposite verdicts.
+
+        A bare `len(words) > 40` rejection would pass every REJECTS_PROSE case and fail here.
+        """
+        prose = self.REJECTS_PROSE[0][0]
+        genuine = self.KEEPS_GENUINE_LONG[0][0]
+        assert len(prose.split()) > 40 and len(genuine.split()) > 40
+        assert not is_quality_question(prose)
+        assert is_quality_question(genuine)
+
+    def test_a_short_question_mentioning_recruiters_is_untouched(self):
+        """The interview-meta tell applies only above the length bar, so this stays a real question."""
+        assert is_quality_question("What do recruiters look for in a GenAI candidate?")

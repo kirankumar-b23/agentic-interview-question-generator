@@ -97,6 +97,19 @@ _DANGLING_REFERENCE = re.compile(
 )
 _REJECT_RE = [re.compile(p, re.IGNORECASE) for p in _REJECT_PATTERNS]
 
+# A question that ENDS on a bare demonstrative/pronoun refers to something only the source page knew.
+# Found while adding the open-web tier: "Are you willing to work on this?" and "Any resources to support
+# this?" are real forum lines that passed every other gate, including on an allowed page.
+_TRAILING_DEMONSTRATIVE = re.compile(r"\b(?:this|that|these|those|it|them|one)\s*\?\s*$", re.IGNORECASE)
+# A capitalised term after the first word, or a letter-digit token (n8n, GPT-4, Automatic1111): the
+# question names something concrete, so a trailing pronoun has an antecedent inside the question.
+_NAMED_SUBJECT = re.compile(r"(?<!^)\b(?:[A-Z][A-Za-z0-9-]{1,}|[a-z]+\d+[a-z\d]*)\b")
+
+
+def _names_a_subject(text: str) -> bool:
+    words = text.split()
+    return bool(words) and bool(_NAMED_SUBJECT.search(" ".join(words[1:])))
+
 # CANDIDATE-voice question: the candidate asking the interviewer about their own career, harvested
 # from forum threads ("If I get a chance, can I move to the AI agents stack?"). Requires BOTH a
 # first-person subject AND a career-move term, so a technical "How can I reduce latency?" survives.
@@ -114,6 +127,63 @@ _WH_STARTS = ("what", "how", "why", "when", "where", "which", "who", "whose", "w
 _SHORT_OK_STARTS = tuple(set(_Q_STARTS) | set(_WH_STARTS) | {"is", "are", "do", "does", "can", "should"})
 _MIN_WORDS = 3          # hard floor
 _SHORT_WORDS = 5        # below this, require a question/task opener
+
+# ── Long expository prose ────────────────────────────────────────────────────────────────────────
+# There was no UPPER bound at all, and a live run shipped 56 words of interviewer rubric as a
+# question: "When your prompt produces the wrong output, the question is how quickly you can narrow
+# down why. The failure could be in the instruction itself…". It passes every gate above — it opens
+# with "When" (a legitimate `_Q_STARTS` word) and is normal-cased.
+#
+# A BARE WORD CEILING IS THE WRONG FIX, and this was measured before writing the rule. Across the
+# 2,835 shipped rows, 26 exceed 40 words and the class is genuinely mixed: 7 are prose blobs like the
+# one above, but the rest are real long asks — "Build an API for a leave request system in an HR
+# management system using Flask, FastAPI…", "Can you explain the request flow when a user creates a
+# blog and hits publish…", plus HackerRank-style coding specs. Rejecting on length alone would have
+# killed 7 blobs and 9 genuine questions with them, the same overlapping-distributions trap that
+# `_outcome_coverage` and the dedup threshold both document.
+#
+# What separates them is whether the text ASKS the candidate anything:
+#   * its own question mark — one inside a QUOTED example does not count, which is what makes
+#     "A recruiter might ask, “Tell me about a project where you applied LLMs”…" prose and not a
+#     question; or
+#   * a sentence opening with an imperative task verb ("Build …", "Design and implement …").
+# Plus a tell for text that talks ABOUT the hiring process rather than asking anything, applied only
+# above the length bar so "What do recruiters look for in a GenAI candidate?" is untouched.
+#
+# Measured: rejects 8 of 2,835 rows (0.28%) — all 7 prose blobs, and one coding word problem the
+# dormant coding path cannot use anyway. Two known misses remain (an answer-explanation shipped as a
+# question); perfect separation is not available here and a tighter rule costs genuine questions.
+_LONG_WORDS = 40
+# Imperative task openers, derived FROM `_Q_STARTS` so the two cannot drift — minus the wh-words and
+# the discourse-ambiguous ones. "Given" is excluded deliberately: "Given the above, I wanted to
+# build…" and "Given these, the best way to prepare is…" are both blog prose, while the coding specs
+# that legitimately open that way carry a later "find"/"determine" and survive on those.
+_NOT_IMPERATIVE = {"what", "why", "how", "when", "where", "given", "suppose", "tell me", "can you",
+                   "difference between", "walk me through"}
+_TASK_VERBS = frozenset(
+    {s.strip().lower() for s in _Q_STARTS if s.strip().lower() not in _NOT_IMPERATIVE}
+    | {"make", "complete", "develop", "refactor", "optimize", "optimise", "debug", "draw",
+       "suggest", "propose", "calculate", "determine", "identify", "assume", "traverse"}
+)
+_QUOTED_SPAN = re.compile(r"[\"“][^\"“”]{8,}?[\"”]|[‘'][^’']{8,}?[’']")
+_SENTENCE_START = re.compile(r"(?:^|(?<=[.!?])\s+|(?<=[:;])\s+|(?<=,)\s+)([A-Za-z][a-z]+)")
+_INTERVIEW_META = re.compile(
+    r"\b(?:a recruiter|recruiters|interviewers|hiring managers?|mock interview|the best answers?|"
+    r"you can expect|most candidates|interview prep|in the interview|for the job)\b", re.IGNORECASE)
+
+
+def _asks_something(t: str) -> bool:
+    """Does this text put a question or a task TO the candidate (vs. narrating about interviews)?"""
+    if "?" in _QUOTED_SPAN.sub(" ", t):          # its OWN question mark, not a quoted example
+        return True
+    return any(m.group(1).lower() in _TASK_VERBS for m in _SENTENCE_START.finditer(t))
+
+
+def _is_expository_prose(t: str) -> bool:
+    """A long body that never actually asks anything — see `_LONG_WORDS`."""
+    if len(t.split()) <= _LONG_WORDS:
+        return False
+    return not _asks_something(t) or bool(_INTERVIEW_META.search(t))
 
 
 def strip_artifacts(text: str) -> str:
@@ -192,6 +262,10 @@ def is_quality_question(text: str) -> bool:
     words = t.split()
     if len(words) < _MIN_WORDS:
         return False
+    # Long body that never asks the candidate anything → interviewer rubric / blog prose, not a
+    # question. Deliberately not a bare word ceiling — see `_LONG_WORDS` for the measurement.
+    if _is_expository_prose(t):
+        return False
     if words[0].strip(",.").lower() in _FRAGMENT_STARTS:   # "Also, how diverse…" / "And what about…" → scrap
         return False
     # Listicle/heading opener without a question mark → doc heading, not a question.
@@ -217,6 +291,17 @@ def is_quality_question(text: str) -> bool:
         return False
     # Candidate asking about their own career, not an interview question put TO a candidate.
     if _SELF_SUBJECT.search(t) and _CAREER_TERMS.search(t):
+        return False
+    # Ends on a bare demonstrative — the thing being asked about is only on the page it came from:
+    # "Are you willing to work on this?", "Any resources to support this?" (both real forum lines that
+    # otherwise passed every gate). Distinct from the `_DANGLING_REFERENCE` rule above, which needs a
+    # noun after the demonstrative. A question ending in a real word is unaffected: "…what merge modes
+    # does it support?" ends on "support", not on "it".
+    # …but ONLY when the question names nothing for the pronoun to refer to. "What is the HTTP Request
+    # node and when do you use it?" is self-contained — "it" is the node, named in the same sentence —
+    # and a bare trailing-pronoun rule wrongly rejected it. A named subject (a capitalised term after
+    # the first word, or a letter-digit token like n8n/GPT-4) is what separates the two.
+    if _TRAILING_DEMONSTRATIVE.search(t) and not _names_a_subject(t):
         return False
     if _DANGLING_REFERENCE.search(t):         # "…in these systems" → antecedent left on the page
         return False
