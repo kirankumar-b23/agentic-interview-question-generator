@@ -224,7 +224,6 @@ SESSION_PROFILE_RM_CHUNKS = int(os.getenv("SESSION_PROFILE_RM_CHUNKS", "12"))
 # RM-only match has to be distinctly stronger than a curated-outcome match to keep a candidate.
 SESSION_PROFILE_RM_WEIGHT = float(os.getenv("SESSION_PROFILE_RM_WEIGHT", "0.85"))
 EMBED_COVERAGE_THRESHOLD = float(os.getenv("EMBED_COVERAGE_THRESHOLD", "0.30"))  # cosine ≥ ⇒ outcome covered
-DEFAULT_DIFFICULTY_DISTRIBUTION = {"easy": 0.3, "medium": 0.5, "hard": 0.2}
 
 
 DEDUP_THRESHOLD = 0.85            # TF-IDF cosine (fallback path / cross-run dedup)
@@ -232,8 +231,12 @@ DEDUP_THRESHOLD = 0.85            # TF-IDF cosine (fallback path / cross-run ded
 # ("What are LLMs?" vs "What are Large Language Models in AI?"); embeddings catch them. 0.82 collapses
 # clear rewordings while keeping genuinely distinct angles ("how do LLMs work?" stays separate).
 DEDUP_SEMANTIC_THRESHOLD = float(os.getenv("DEDUP_SEMANTIC_THRESHOLD", "0.82"))
-QUALITY_PASS_THRESHOLD = 0.75
-MAX_EVAL_RETRIES = 2
+# Removed: QUALITY_PASS_THRESHOLD, MAX_EVAL_RETRIES, DEFAULT_DIFFICULTY_DISTRIBUTION — defined here
+# and read by nothing, not even inside this file. QUALITY_PASS_THRESHOLD was the actively
+# misleading one: the gate decides with the explicit per-condition bars in
+# `pipeline._build_quality_report` (`gate_checks`), so a stale "pass threshold" constant read
+# like the thing being enforced. Same hazard that got the curriculum path constants deleted —
+# an unused path is what invites the confusion.
 # Per-agent tool-call budgets live on each agent class (BaseAgent.max_tool_calls), which is what
 # actually applies. A module-level MAX_TOOL_CALLS used to sit here reading an env var that nothing
 # consumed, so setting it appeared to work and did nothing.

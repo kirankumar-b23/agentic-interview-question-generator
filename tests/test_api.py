@@ -203,7 +203,12 @@ class TestReadEndpoints:
     def test_history_shape(self, client):
         assert isinstance(client.get("/api/history").json()["runs"], list)
 
-    def test_usage_shape(self, client):
+    def test_usage_shape(self, client, monkeypatch):
+        # /api/usage reads the live OpenRouter balance (main.py: `get_credit_balance() or {}`), so this
+        # shape assertion was making a real request on every suite run. None is the supported path.
+        import main as main_mod
+        monkeypatch.setattr(main_mod, "get_credit_balance", lambda: None)
+
         totals = client.get("/api/usage").json()["totals"]
         for key in ("runs", "llm_calls", "prompt_tokens", "tokens", "est_cost"):
             assert key in totals

@@ -100,6 +100,11 @@ def stub_llm(monkeypatch):
         import src.sources.tavily_search as tav
         monkeypatch.setattr(tav.TavilyConnector, "health_check",
                             lambda self: (False, "no_key", "stubbed out for tests"))
+        # Tavily has a SECOND path: the last-resort open-web tier, which `_top_up_from_open_web` imports
+        # from this module at call time. Stubbing `tool_search_web_questions` below does not cover it.
+        # It went live once the zero-tool-representation trigger began firing at any count — 21 pipeline
+        # runs in this file, up to 4 searches each, and the Tavily plan's usage limit was reached.
+        monkeypatch.setattr(tav, "fetch_open_web", lambda terms: ([], 0, None))
         monkeypatch.setattr(tools_mod, "tool_search_web_questions",
                             lambda state, *a, **kw: {"found": 0, "added": 0, "total_accumulated":
                                                      len(state.questions), "web_remaining": 0})

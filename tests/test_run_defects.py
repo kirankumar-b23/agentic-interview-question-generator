@@ -233,9 +233,15 @@ class TestKpLabelsAreAssigned:
         assert _assign_kp_labels(qs, SimpleNamespace(matched_kp_ids=[])) == 0
         assert qs[0].kp_label is None
 
-    def test_submit_reports_how_many_it_tagged(self):
+    def test_submit_reports_how_many_it_tagged(self, monkeypatch):
         """The count is reported so a silent zero is visible instead of looking like success."""
+        import src.tools as tools_mod
         from src.tools import tool_submit_question_set
+
+        # Submit makes three OpenRouter calls (`_scope_trim`, `_syllabus_audit`, `_same_thing_pass`).
+        # This test is about KP labelling, which is a local embedding match — so stub the boundary
+        # rather than spending credit on it. All three are fail-open, so `{}` is enough.
+        monkeypatch.setattr(tools_mod, "chat_completion_json", lambda **kw: {})
 
         kps = [SimpleNamespace(kp_id="KP1", kp_label="Chain-of-thought prompting", relevance=0.9)]
         qs = [_q("What is chain-of-thought prompting?"),

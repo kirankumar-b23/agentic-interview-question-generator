@@ -84,7 +84,7 @@ eval/
   eval_sets.json                    # 46 eval sessions + format rules
   feedback_examples.json            # Reviewer accept/reject decisions (runtime data; gitignored)
   run_eval.py                       # Scored harness. Primary metric = predicted reviewer acceptance
-tests/                              # pytest — no LLM or network required
+tests/                              # pytest — no network, ENFORCED by conftest.py + netguard.py
 ```
 
 ## Question Sources (real only — no generation)
@@ -365,6 +365,16 @@ across **10 of 22 outcomes**, and **0 of the 5 questions touched any of it**.
   question does. A candidate naming a `_tool_terms` term is now exempt from **that stage only**;
   `_score_session_fit` runs BEFORE it (so the "interviewing at RSS Security" false positives stay
   dropped and cannot be resurrected), and the relevance judge and syllabus audit still follow.
+- **`_tool_terms` must return PRODUCTS, not capitalised concepts — it reaches a live search.** On the real
+  curated outcomes it returned `['Acting', 'Reasoning', 'Observation', 'ReAct']` for an AI-agents session,
+  so the zero-representation trigger fanned out to Tavily for *"Observation interview questions"* and
+  **exhausted the Tavily plan** (21 pipeline runs in the integration file × up to 4 searches each). The
+  docstring's claim that theory sessions yield `[]` was false against real data, and the test asserting it
+  passed only on a crafted input. Fixed by extending `_NOT_A_TOOL` with the abstract/process vocabulary.
+  Two rules measured and **rejected**: mention count *inverts* the answer (`n8n` is mentioned once,
+  `Observation`/`Reasoning`/`Acting` twice each), and requiring a product identifier (letter+digit or
+  ALL-CAPS) silences theory sessions but also loses `Kaggle`, `ChatGPT`, `Gamma`, `Otter`, `Bolt`,
+  `Hugging Face`, `Google Sheets`. Anything added to that extraction reaches a paid search.
 - **Open-web queries are PLATFORM-QUALIFIED, and skipping that made the whole tier useless.** The first
   run where the tier actually fired searched *"RSS, n8n, Merge"* and every candidate came back about
   **Merge the company** (*"What was your interview with Merge like?"*), `pandas.merge()`, merging sorted
@@ -444,6 +454,55 @@ filters the pool; `config.CONVERSATIONAL_ONLY=0` turns it off.
 - **A test asserting only "it isn't in the shipped set" is VACUOUS here**, and a mutation check is what
   caught it: `_select_final` trims ~150 candidates to 8, so an injected question misses the cut whether or
   not the filter ran, and the assertion passed with the filter unwired. Assert the **removal record**.
+
+## The suite must cost nothing — and it did not
+
+CLAUDE.md claimed "no LLM or network required" for months while every `pytest tests/` run spent real
+money. Nothing enforced it, and a live call that succeeds is indistinguishable from a stub that works.
+
+- **`tests/conftest.py` blocks outbound sockets** (loopback stays open for Starlette's in-process
+  `TestClient`) and sets `HF_HUB_OFFLINE`/`TRANSFORMERS_OFFLINE`. **If embeddings break under the guard,
+  set those — do not weaken the guard.** Opt out with `@pytest.mark.allow_network`, used by nothing.
+- **RAISING IS NOT ENOUGH, and this is the subtle part.** Every leaking call site — `_scope_trim`,
+  `_syllabus_audit`, `_same_thing_pass`, `tool_validate_relevance`, `fetch_open_web` — is deliberately
+  FAIL-OPEN. The first version of the guard was armed and correct, the whole suite passed, and it reported
+  **zero leaks while calls were being attempted and swallowed**. So attempts are RECORDED in
+  `tests/netguard.py` and the offending test is failed in teardown.
+- `netguard.py` is a separate module on purpose: pytest loads `conftest.py` through its own plugin
+  machinery, so `from tests.conftest import …` in a test yields a SECOND module object with a different
+  exception class and a different ledger.
+- **The measured leaks were four, not the three a static audit predicted** — file-level "does it stub
+  `chat_completion_json`?" gave a false negative on `test_failure_paths.py::TestSelectionIsGuaranteed`,
+  whose two tests reach `tool_submit_question_set` via `_enforce_submission`. The predicted Tavily leak
+  was already gone, fixed by the `_NOT_A_TOOL` change. **Measure; do not audit by grep.**
+- Corroboration: the suite got **16s faster** (108s → 92s) once the round-trips went.
+
+## The de-stack verdict: the semantic filters are NOT the problem
+
+Recorded so the "three overlapping filters" theory is not re-litigated. Replayed both embedding stages
+offline against 13 persisted runs (free — they are local embeddings, and the pool is reconstructible from
+`removed[]` + `question_details`):
+
+- `_score_session_fit` and `_prefilter_semantic` overlap **65%** — not duplicates.
+- **The prefilter's unique contribution is 644 candidates averaging 0.501 session-fit against 0.625 for
+  shipped questions; NONE reach the median shipped fit, and it has never dropped a question that
+  shipped.** Removing it would only push weaker material into the expensive LLM stage.
+- The LLM judge is **not** anti-correlated with grounding: rejected 0.564 vs shipped 0.627, inverted in
+  only 1 of 13 runs. (Do not build a thesis on a single run — that one was the outlier.)
+
+### What actually bound the funnel: the relevance back-fill stopped at the floor
+
+`tool_validate_relevance` cuts a mean **88%** of everything reaching it. It keeps ≥ `RELEVANCE_THRESHOLD`
+(0.50) then tops up from ≥ `RELEVANCE_FLOOR` (0.35) — but the target was `min_questions` (5), **not the
+requested count**. The same off-by-one as the old open-web trigger: a supply-aware net calibrated to the
+absolute minimum, so a run asking for 15 filled to 5 and stopped.
+
+Replayed on the persisted `relevance_score`s: median shipped-equivalent **6 → 14**, 11 of 13 runs gaining.
+The admitted [0.35, 0.50) band is grounded **as well as what ships** — mean `session_fit` 0.610 vs 0.625,
+against 0.561 below the floor — so the 0.50 cutoff was discarding questions indistinguishable in grounding
+from the ones it kept. `coverage_efficiency` was replayed too and holds at 1.0 across all 13, so bigger
+sets do not cost the gate. **The FLOOR stays absolute**: a thin on-topic pool returns FEWER questions, never
+loosely-related filler.
 
 ## Two different "slicing" mechanisms — do not merge them
 
@@ -550,7 +609,9 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 479 tests, no LLM or network required. Beyond unit coverage:
+`pytest tests/ -q` — 573 tests. **No LLM or network required, and that is now ENFORCED** by an
+autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
+hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,
   including each outage above. This is the cheapest way to check a pipeline change.
 - `tests/test_failure_paths.py` and `tests/test_audit_fixes.py` pin the silent-failure classes.

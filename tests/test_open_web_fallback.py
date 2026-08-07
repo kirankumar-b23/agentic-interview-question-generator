@@ -476,3 +476,68 @@ class TestPlatformQualifiedQueries:
         from src.tools import _qualify_tool_terms
 
         assert _qualify_tool_terms(["Automatic1111", "LoRA"]) == ["Automatic1111", "Automatic1111 LoRA"]
+
+
+class TestToolTermsAgainstRealCuratedData:
+    """`_tool_terms` feeds a LIVE Tavily search, so a concept leaking in costs quota.
+
+    `TestToolTermExtraction` above uses crafted inputs and passed while the real curated outcomes
+    produced `['Acting', 'Reasoning', 'Observation', 'ReAct']` for an AI-agents session. Because
+    `_unrepresented_terms` fires the open-web tier for any taught tool no question covers, a live run
+    fanned out asking Tavily for "Observation interview questions and answers" and exhausted the plan's
+    usage limit. These cases read the shipped `session_outcomes.review.json` instead.
+    """
+
+    @staticmethod
+    def _curated():
+        import json
+        from pathlib import Path
+        p = Path(__file__).resolve().parent.parent / "data/reading_materials/session_outcomes.review.json"
+        return json.loads(p.read_text()) if p.exists() else {}
+
+    def _terms_for(self, needle):
+        from types import SimpleNamespace
+        from src.tools import _tool_terms
+
+        for name, v in self._curated().items():
+            if needle.lower() in name.lower():
+                return name, _tool_terms(SimpleNamespace(
+                    scope_in=v.get("scope_in") or [], key_concepts=v.get("key_concepts") or [],
+                    learning_outcomes=v.get("learning_outcomes") or [], interview_topics=[]))
+        return None, None
+
+    # Words this curriculum capitalises mid-sentence that must never reach a search query.
+    CONCEPTS = {"acting", "reasoning", "observation", "thought", "action", "reflection", "memory",
+                "planning", "role", "tone", "format", "write", "read", "prepare", "handle", "provide"}
+
+    def test_no_curated_session_yields_a_concept_as_a_tool(self):
+        from types import SimpleNamespace
+        from src.tools import _tool_terms
+
+        curated = self._curated()
+        if not curated:
+            pytest.skip("curated outcomes not present")
+        leaks = {}
+        for name, v in curated.items():
+            terms = _tool_terms(SimpleNamespace(
+                scope_in=v.get("scope_in") or [], key_concepts=v.get("key_concepts") or [],
+                learning_outcomes=v.get("learning_outcomes") or [], interview_topics=[]))
+            bad = [t for t in terms if t.lower() in self.CONCEPTS]
+            if bad:
+                leaks[name] = bad
+        assert not leaks, f"concepts would be queried as tools: {leaks}"
+
+    def test_the_theory_session_that_burned_the_tavily_quota(self):
+        name, terms = self._terms_for("Introduction to AI Agents")
+        if name is None:
+            pytest.skip("session not in curated outcomes")
+        assert "Observation" not in terms and "Reasoning" not in terms and "Acting" not in terms
+        assert terms == ["ReAct"], f"expected only the framework name, got {terms}"
+
+    def test_the_tool_session_keeps_its_products(self):
+        """The other half of the trade: pruning concepts must not cost real product names, which is why
+        this is a denylist and not a whitelist of product shapes."""
+        name, terms = self._terms_for("News Summarizer | Part 1")
+        if name is None:
+            pytest.skip("session not in curated outcomes")
+        assert "n8n" in terms and "RSS" in terms

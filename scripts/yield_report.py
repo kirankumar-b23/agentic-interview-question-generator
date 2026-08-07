@@ -19,7 +19,9 @@ Reads only. Never writes, never calls an LLM or Tavily.
 READING IT
 ----------
 `raw -> pool` is what the form gate, topic-trim and per-source caps cost. `pool -> final` is the
-semantic stack: session-fit, the off-topic pre-filter and the LLM relevance judge. When `final` sits at
+semantic stack: session-fit, the off-topic pre-filter and the LLM relevance judge. It is NOT pure
+subtraction: the last-resort open-web tier adds candidates after the pre-filter, which is what the
+`+web` column accounts for — without it the stage counts look like they do not reconcile. When `final` sits at
 or below MIN_QUESTIONS the set was supply-starved, and a threshold change that lowers `final` further is
 a regression however good its own unit tests look.
 """
@@ -69,6 +71,9 @@ def _funnel(d: dict) -> dict:
         "suppressed": stages.get("suppressed", 0),
         # Counted explicitly: a filter that silently shrinks the pool reads as "nothing was dropped".
         "hands_on": stages.get("hands_on", 0),
+        # The open-web tier ADDS candidates after the prefilter, so pool -> final is not pure
+        # subtraction. Without this column a topped-up run looks like the stage counts do not add up.
+        "web_added": (raw.get("open_web") or 0),
     }
 
 
@@ -83,7 +88,7 @@ def main() -> int:
         print("No persisted runs matched. (run_results is written by main.py on each completed run.)")
         return 1
 
-    print(f"{'run':<10}{'raw':>7}{'pool':>7}{'hand-':>7}{'fit-':>6}{'pre-':>6}{'rel-':>6}{'FINAL':>7}"
+    print(f"{'run':<10}{'raw':>7}{'pool':>7}{'hand-':>7}{'fit-':>6}{'pre-':>6}{'+web':>6}{'rel-':>6}{'FINAL':>7}"
           f"{'verdict':>9}  topic")
     print("-" * 104)
     finals, starved, approved_finals = [], 0, []
@@ -99,7 +104,7 @@ def main() -> int:
         if f["final"] <= MIN_QUESTIONS:
             starved += 1
         print(f"{run_id[:8]:<10}{f['raw']:>7}{f['pool']:>7}{f['hands_on']:>7}{f['session_fit']:>6}{f['prefilter']:>6}"
-              f"{f['relevance']:>6}{f['final']:>7}{(rep.get('pass_fail') or '?'):>9}"
+              f"{f['web_added']:>6}{f['relevance']:>6}{f['final']:>7}{(rep.get('pass_fail') or '?'):>9}"
               f"  {name}{'  [APPROVED]' if was_approved else ''}")
 
     n = len(finals)

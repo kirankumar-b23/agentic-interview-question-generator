@@ -46,6 +46,15 @@ class TestSelectionIsGuaranteed:
     only prompt-advised to call it. When it doesn't, the raw candidate pool used to be serialized as
     the final set: up to ~270 unranked questions, reported as a successful run."""
 
+    @pytest.fixture(autouse=True)
+    def _no_llm(self, monkeypatch):
+        """`_enforce_submission` calls `tool_submit_question_set`, which makes three OpenRouter calls
+        (`_scope_trim`, `_syllabus_audit`, `_same_thing_pass`). These tests are about the trim, not the
+        LLM, and every one of those paths is fail-open — so the calls were being attempted, swallowed,
+        and spending credit invisibly. Caught by the conftest network ledger."""
+        import src.tools as tools_mod
+        monkeypatch.setattr(tools_mod, "chat_completion_json", lambda **kw: {})
+
     def test_pool_is_trimmed_when_the_agent_never_submits(self, monkeypatch):
         st = _state(n_questions=40, max_questions=5)
         # Simulate an Evaluation agent that does nothing at all (API error, or a text-only reply).

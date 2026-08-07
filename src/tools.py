@@ -636,9 +636,28 @@ Respond in JSON only:
     if not state.relevance_scored:
         print(f"[relevance] ALL {batches_total} batch(es) failed — the set was never scored")
 
-    from src.config import RELEVANCE_THRESHOLD, RELEVANCE_FLOOR
+    from src.config import FINAL_SET_CAP, RELEVANCE_THRESHOLD, RELEVANCE_FLOOR
     THRESHOLD = RELEVANCE_THRESHOLD
-    min_keep = max(1, state.config.min_questions)
+    # Back-fill target is the REQUESTED count, not the absolute minimum.
+    #
+    # This was `max(1, min_questions)` — a supply-aware safety net calibrated to the floor, so a run
+    # asking for 15 was topped up to 5 and stopped. It is the same off-by-one as the old open-web trigger
+    # (`surviving >= MIN_QUESTIONS`), and this stage cuts a mean 88% of everything reaching it, so it is
+    # the single biggest constraint on yield.
+    #
+    # Replayed over the 13 persisted runs using their stored `relevance_score`s: median shipped-equivalent
+    # set size 6 -> 14, with 11 of 13 runs gaining. The material admitted is the [0.35, 0.50) band, and it
+    # is grounded as well as what already ships — mean `session_fit` 0.610 vs 0.625 for shipped questions,
+    # against 0.561 for everything below the floor. So the 0.50 cutoff was discarding questions
+    # indistinguishable in grounding from the ones it kept, while the 0.35 FLOOR is doing the real work.
+    # `coverage_efficiency` was replayed too and holds at 1.0 for all 13 runs, so bigger sets do not cost
+    # the gate.
+    #
+    # The FLOOR is still absolute: a genuinely thin on-topic pool returns FEWER questions rather than
+    # loosely-related filler. Selection trims to the requested count afterwards, and anything unselected
+    # goes to `state.reserve`, so this adds no LLM cost — the scoring pass already ran on these.
+    requested = min(getattr(state.config, "max_questions", None) or 12, FINAL_SET_CAP)
+    min_keep = max(1, state.config.min_questions, requested)
 
     # Apply scores + LLM difficulty tags. A question the model OMITTED — whether from a fully-FAILED
     # batch or a partially-scored one — was NEVER actually judged, so we must not treat "no score" as
@@ -1051,6 +1070,31 @@ _NOT_A_TOOL = {
     "multi", "step", "end", "real", "time", "best", "practices", "different", "various", "cloud",
     "python", "code", "text", "image", "images", "video", "audio", "email", "system", "systems",
     "decompose", "schedule", "optimize", "optimise", "test", "validate", "deploy", "execute", "install",
+    # ── Abstract concepts this curriculum CAPITALISES, which are not tools ───────────────────────────
+    # `_PROPER_RUN` matches capitalised runs, so on a theory session it returned process vocabulary as
+    # though it were products. Measured on the real curated outcomes, "Introduction to AI Agents" yielded
+    # ['Acting', 'Reasoning', 'Observation', 'ReAct'] — and because
+    # `pipeline._unrepresented_terms` fires the open-web tier for any taught tool with no question, the
+    # run fanned out to Tavily asking for "Observation interview questions and answers" and burned the
+    # plan's quota. The docstring below used to claim a theory session yields `[]`; against real data it
+    # did not, and the test asserting it only passed on a crafted input.
+    #
+    # Deliberately a DENYLIST of concepts, not a whitelist of product shapes. Requiring letter+digit or
+    # ALL-CAPS identity does silence theory sessions, but measured across the 53 curated sessions it also
+    # discards real single-word products — Kaggle, ChatGPT, Gamma, Otter, Bolt, Replit, Hugging Face,
+    # Google Sheets. Mention count is worse than useless here and inverts the answer: "n8n" is mentioned
+    # ONCE while "Observation"/"Reasoning"/"Acting" are mentioned twice each.
+    "observation", "observations", "reasoning", "reason", "acting", "thought", "thoughts", "action",
+    "actions", "reflection", "memory", "planning", "plan", "role", "tone", "format", "chain", "chains",
+    "generative", "distinguish", "large language", "context", "goal", "goals", "task", "tasks",
+    "output", "outputs", "input", "inputs", "response", "responses", "example", "examples",
+    # Sentence-initial imperatives and bare fragments that `_PROPER_RUN` picks up because the outcome
+    # sentence capitalises them. Left IN deliberately: "Make" (Make.com is a real automation product),
+    # "Map", "Docs", "Drive", "Calendar", "Transformer", "Radio"/"Textbox"/"Dropdown" (Gradio
+    # components) — all genuinely searchable, so pruning them would cost retrieval terms.
+    "write", "host", "parse", "save", "prepare", "articulate", "add", "leverage", "load", "split",
+    "embed", "handle", "provide", "simple", "cross", "gen", "user", "assistant", "norm", "feed",
+    "read",
 }
 
 
@@ -1068,6 +1112,15 @@ def _tool_terms(ctx, limit: int = 4) -> list[str]:
     ever asked them for it.
 
     Parenthesised lists are read too, since that is where the curated scope puts tool enumerations.
+
+    A theory session yields FEW terms, not necessarily none — and the older claim that it returned `[]`
+    was false against real data. `_PROPER_RUN` matches capitalised runs, so before `_NOT_A_TOOL` was
+    extended, "Introduction to AI Agents" returned `['Acting', 'Reasoning', 'Observation', 'ReAct']`.
+    That mattered because `pipeline._unrepresented_terms` fires the open-web tier for any taught tool no
+    question covers: the run fanned out to Tavily for *"Observation interview questions and answers"* and
+    burned the plan's quota. Measured after the fix, 3 of the 53 curated sessions yield `[]` and the rest
+    are dominated by real products (n8n, LangChain, Kaggle, Gradio, ChromaDB, LoRA…). **Anything added
+    here reaches a live search, so a new term must be a product, not a concept.**
     """
     if ctx is None:
         return []
