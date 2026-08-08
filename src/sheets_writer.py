@@ -13,6 +13,11 @@ from src.data_loader import get_topic_for_session
 from datetime import datetime
 
 
+# Interactive OAuth opens a browser and blocks until consent is given. That is correct for the
+# one-time `scripts/auth_sheets.py` run and wrong inside a web request, where it hangs a worker
+# thread forever waiting for a browser on the SERVER. Opt in explicitly.
+ALLOW_INTERACTIVE_OAUTH = os.getenv("ALLOW_INTERACTIVE_OAUTH", "0") == "1"
+
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -58,10 +63,27 @@ def _get_gspread_client() -> gspread.Client:
     if TOKEN_PATH.exists():
         creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
 
-    # If no valid creds, run OAuth flow
+    # If no valid creds, refresh or run the OAuth flow.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            try:
+                creds.refresh(Request())
+            except Exception as exc:  # noqa: BLE001 — a revoked/expired refresh token is expected
+                raise RuntimeError(
+                    "Google Sheets authorization expired and could not be refreshed "
+                    f"({exc}). Delete token.json and run `python scripts/auth_sheets.py` to "
+                    "re-authorize."
+                ) from exc
+        elif not ALLOW_INTERACTIVE_OAUTH:
+            # `flow.run_local_server` opens a browser and BLOCKS until someone completes the consent
+            # screen — on the machine running the server. Inside a request thread that is an
+            # indefinite hang nobody can see. Refuse with instructions instead.
+            raise RuntimeError(
+                "Google Sheets is not authorized on this machine and interactive authorization is "
+                "disabled for the server process. Run `python scripts/auth_sheets.py` once to create "
+                "token.json (or set ALLOW_INTERACTIVE_OAUTH=1 if you are running locally and want the "
+                "browser flow)."
+            )
         else:
             client_id = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("Client_ID")
             client_secret = os.getenv("GOOGLE_CLIENT_SECRET") or os.getenv("Client_Secret")
@@ -131,14 +153,25 @@ def write_to_sheets(
     qd_rows = [qd_headers]
     for q in output.question_details:
         qd_rows.append([
-            q.question_id, "Gen_AI", strip_question_prefix(q.content), "Gen_AI",
-            q.sub_topic or "", "",                       # difficulty intentionally blank
-            q.language or "", "Gen_AI", q.tool or "",
-            (q.attribution or "").upper(),               # asked_in_company in ALL CAPS
+            q.question_id,
+            # `cat` throughout, not a hardcoded "Gen_AI". The docstring already promised category-driven
+            # branding, but topic/category/framework were pinned to Gen_AI, so a FULL_STACK course
+            # exported every row labelled as a GenAI question.
+            cat, strip_question_prefix(q.content), cat,
+            q.sub_topic or "",
+            # Export the difficulty the pipeline computed, balanced and scored. It was written blank,
+            # which discarded the signal at the last step.
+            q.difficulty or "",
+            q.language or "", cat, q.tool or "",
+            # Only a VERIFIED company belongs in a column the portal reads as "the company that asked
+            # this", so this reads `asked_in_company` and not `attribution`. `attribution` used to
+            # fall back to the source site ("GeeksforGeeks"), which would have asserted a company that
+            # never asked the question; it now yields NIAT instead, and provenance lives on
+            # `source_site`. Blank stays the honest value for this column either way.
+            (q.asked_in_company or "").strip().upper(),
         ])
 
-    if qd_rows:
-        ws_qd.update(range_name="A1", values=qd_rows)
+    ws_qd.update(range_name="A1", values=qd_rows)
 
     # --- Tab 2: Organisation ---
     ws_org = spreadsheet.add_worksheet(title="Organisation", rows=2, cols=3)
@@ -245,7 +278,8 @@ def write_to_sheets(
             cq_rows.append([
                 q.id, q.category, q.title, strip_question_prefix(q.content[:1000]), q.code_id or "",
                 cat, q.sub_topic or "", (q.difficulty or "").upper(), q.language,
-                cat, q.tool or "", q.attribution,
+                # Only a VERIFIED company, matching the theory tab — never the computed `attribution`.
+                cat, q.tool or "", (q.asked_in_company or "").strip().upper(),
             ])
         ws_cq.update(range_name="A1", values=cq_rows)
 

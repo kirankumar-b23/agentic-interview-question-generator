@@ -69,7 +69,9 @@ DROP_TOPICS = {
 
 def prepare_interview_questions():
     """Convert interview CSV to filtered, structured JSON."""
-    csv_path = PROJECT_ROOT / "Interview Intelligence Master_ 2026 - Master Sheet.csv"
+    # Lives under data/raw/ — every other ingest path (config.INTERVIEW_CSV,
+    # scripts/ingest_xlsx_questions.py) already reads it from there.
+    csv_path = DATA_DIR / "raw" / "Interview Intelligence Master_ 2026 - Master Sheet.csv"
     if not csv_path.exists():
         print("  ERROR: Interview CSV not found")
         return
@@ -196,9 +198,9 @@ def prepare_knowledge_graph():
 
     # Load all curriculum JSONs
     json_files = [
-        (PROJECT_ROOT / "gen_ai_final.json", "gen_ai"),
-        (PROJECT_ROOT / "llm_applications_kp_links_final_fixed.json", "llm_applications"),
-        (PROJECT_ROOT / "flask_kp_links_final.json", "flask"),
+        (DATA_DIR / "curriculum" / "gen_ai_final.json", "gen_ai"),
+        (DATA_DIR / "curriculum" / "llm_applications_kp_links_final_fixed.json", "llm_applications"),
+        (DATA_DIR / "curriculum" / "flask_kp_links_final.json", "flask"),
     ]
 
     all_kps = {}       # kp_id -> {label, course, prerequisites, dependents}
@@ -259,8 +261,8 @@ def prepare_knowledge_graph():
     # Parse sessions from reading materials
     sessions = {}
     rm_files = [
-        (PROJECT_ROOT / "gen_ai_reading_material.md", "gen_ai"),
-        (PROJECT_ROOT / "llm_applications_reading_material.md", "llm_applications"),
+        (DATA_DIR / "reading_materials" / "gen_ai_reading_material.md", "gen_ai"),
+        (DATA_DIR / "reading_materials" / "llm_applications_reading_material.md", "llm_applications"),
     ]
 
     for rm_path, course_name in rm_files:

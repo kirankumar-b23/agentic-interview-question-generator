@@ -45,11 +45,27 @@ class EvaluationAgent(BaseAgent):
                 f"  - {item.get('id', '?')}: {item.get('issue', '')} → {item.get('suggestion', '')}"
                 for item in state.revision_notes
             )
+            # The remediation must match the issue. Telling the agent to "use remove_question" for
+            # every issue was actively wrong for a `too-few` verdict — its only mutating tool removes
+            # questions, so the instruction pushed it to make the problem worse. The real growth path
+            # is submit itself: it re-selects from the RESERVE (validated candidates that missed the
+            # cut) as well as the current set, so re-submitting after removals backfills the freed
+            # slots. The agent had no way to know that.
+            too_few = any(i.get("issue") == "too-few" for i in state.revision_notes)
+            remedy = (
+                "This set is TOO SMALL. Do NOT remove anything. Call `submit_question_set` again — it "
+                "re-selects from the reserve of validated candidates that missed the last cut, which "
+                "backfills the set. If it still comes back short, the on-topic pool is genuinely thin "
+                "and a smaller set is the correct outcome; submit it as-is."
+                if too_few else
+                "Call `remove_question` for each flagged ID, then `submit_question_set` — it will "
+                "backfill the freed slots from the reserve of validated candidates."
+            )
             revision_section = f"""
 ## REVISION MODE — Fix These Issues First
 {issues}
 
-Use `remove_question` for flagged IDs, then re-check and submit.
+{remedy}
 """
 
         return f"""You are the final evaluator for an interview question set.
@@ -57,12 +73,12 @@ Use `remove_question` for flagged IDs, then re-check and submit.
 ## Session: {session_label}  |  Type: {session_type}
 ## Candidate pool: {q_count}  |  Final target: {min_q}–{max_q}
 This is a WIDE, relevance-scored candidate pool. `submit_question_set` automatically keeps the
-top {max_q} by relevance score — you do NOT need to prune the pool down to the target yourself.
+best {max_q} — you do NOT need to prune the pool down to the target yourself.
 {revision_section}
 ## Workflow (in order)
 1. `check_difficulty_balance` — check Easy/Medium/Hard distribution (informational)
 2. `check_outcome_coverage` — check outcome coverage (informational)
-3. `submit_question_set` — LAST step; it trims to the top {max_q} by relevance and ends this agent's run
+3. `submit_question_set` — LAST step; it ranks the pool (relevance, minus redundancy, plus outcome-coverage / difficulty / per-session / attribution / role bonuses) and keeps the best {max_q}, then ends this agent's run
 
 Do NOT generate any questions — no coding questions and no expected answers are produced. Only real,
 retrieved questions are used; if the retrieval found no coding questions, the coding set stays empty.

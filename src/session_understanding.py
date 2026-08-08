@@ -93,7 +93,8 @@ Rules:
 """
 
 
-def understand_session(session_names: list[str], data_store: DataStore) -> SessionContext:
+def understand_session(session_names: list[str], data_store: DataStore,
+                       model: str | None = None) -> SessionContext:
     """Extract structured understanding of session(s).
 
     Each session is resolved from ITS OWN reading material (or the knowledge
@@ -123,24 +124,37 @@ def understand_session(session_names: list[str], data_store: DataStore) -> Sessi
         return SessionContext(**cached)
 
     if len(session_names) == 1:
-        context = _resolve_single(session_names[0], data_store)
+        context = _resolve_single(session_names[0], data_store, model)
     else:
-        per_session = [_resolve_single(name, data_store) for name in session_names]
+        per_session = [_resolve_single(name, data_store, model) for name in session_names]
         context = _merge_contexts(per_session, combined_name)
 
     memory.cache_resolution(cache_key, context.model_dump())
     return context
 
 
-def _resolve_single(name: str, data_store: DataStore) -> SessionContext:
-    """Resolve one session to a SessionContext using its own content, then apply any curated override."""
+def _resolve_single(name: str, data_store: DataStore, model: str | None = None) -> SessionContext:
+    """Resolve one session to a SessionContext using its own content, then apply any curated override.
+
+    A failed LLM resolution falls back to the knowledge graph rather than yielding a context with
+    empty outcomes. An empty context is worse than a coarse one: outcomes ground retrieval, the
+    session-fit gate and the relevance judge, so a run with none of them silently produces nothing
+    on-topic while still reporting success.
+    """
     if data_store.get_session_content(name):
         # Reading material is primary: extract only KPs that are directly taught.
-        context = _from_llm([name], name, data_store)
+        try:
+            context = _from_llm([name], name, data_store, model)
+        except Exception as exc:  # noqa: BLE001 — includes JSONResponseError
+            print(f"[session] LLM resolution failed for {name!r} ({type(exc).__name__}: {exc}); "
+                  f"falling back to the knowledge graph")
+            context = _from_knowledge_graph([name], name, data_store)
+            if not context:
+                raise
     else:
         context = _from_knowledge_graph([name], name, data_store)
         if not context:
-            context = _from_llm([name], name, data_store)
+            context = _from_llm([name], name, data_store, model)
     return _apply_override(name, context, _load_outcome_overrides())
 
 
@@ -276,6 +290,7 @@ def _from_llm(
     session_names: list[str],
     combined_name: str,
     data_store: DataStore,
+    model: str | None = None,
 ) -> SessionContext:
     """Fall back to LLM-based session analysis."""
     rm_parts = []
@@ -292,6 +307,7 @@ def _from_llm(
     )
 
     result = chat_completion_json(
+        model=model,          # the RUN's model; None falls back to the configured default
         system_prompt=LLM_SYSTEM_PROMPT,
         # Feed the FULL per-session reading material (RM is pre-capped at 12k/session upstream).
         # The old 8000-char cut truncated the lesson's tail, so deep sub-topics taught later

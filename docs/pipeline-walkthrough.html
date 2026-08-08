@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NxtMock — how a run actually works, step by step</title>
+<!--
+  Self-contained on purpose: no CDN, no fonts fetched, no build step. Open it by double-click, offline,
+  or publish it as-is. Every step id below is a real `emit()` call in src/pipeline.py and every function
+  named is a real function — the point is that a stuck run maps to a slide.
+  Regenerate the funnel numbers with:  python3 scripts/yield_report.py
+-->
+<style>
+  :root{
+    --bg:#090c12; --surface:#11151f; --surface2:#161c28; --line:#232c3b; --line2:#303c50;
+    --text:#e9eef6; --dim:#a4b0c4; --faint:#677488;
+    --accent:#4d8df6; --accent2:#46d6cf; --ok:#43c98a; --warn:#e3b341; --bad:#f2705b;
+    --mono: ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;
+    --serif: 'Iowan Old Style',Georgia,'Times New Roman',serif;
+    --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f3f6fb; --surface:#fff; --surface2:#eef2f8; --line:#d8e0ec; --line2:#c2cddd;
+           --text:#141a24; --dim:#48526a; --faint:#79849a; --accent:#2f6fe0; --accent2:#11a99f;
+           --ok:#1f9d62; --warn:#b07d12; --bad:#d6452f; }
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;
+       min-height:100vh;display:flex;flex-direction:column}
+  header{border-bottom:1px solid var(--line);padding:18px 28px 0;flex-shrink:0}
+  .brand{font-family:var(--serif);font-size:1.7rem;line-height:1.1}
+  .brand em{font-style:normal;color:var(--accent)}
+  .sub{font-family:var(--mono);font-size:.7rem;color:var(--faint);letter-spacing:.14em;
+       text-transform:uppercase;margin-top:6px}
+  /* Step rail — also a jump control. Wide content must never push the page sideways. */
+  .rail{display:flex;gap:2px;overflow-x:auto;margin-top:16px;padding-bottom:2px}
+  .rail button{flex:0 0 auto;background:none;border:0;font:inherit;color:var(--faint);cursor:pointer;
+       font-family:var(--mono);font-size:.66rem;padding:7px 9px;border-bottom:2px solid transparent;
+       white-space:nowrap}
+  .rail button:hover{color:var(--text)}
+  .rail button[aria-current="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+  main{flex:1;padding:26px 28px;max-width:1180px;width:100%;margin:0 auto}
+  .stepno{font-family:var(--mono);font-size:.72rem;color:var(--faint);letter-spacing:.16em}
+  h2{font-family:var(--serif);font-size:2.1rem;font-weight:400;line-height:1.15;margin:4px 0 6px}
+  .who{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:.68rem;
+       text-transform:uppercase;letter-spacing:.1em;background:var(--surface2);border:1px solid var(--line2);
+       border-radius:999px;padding:3px 11px;color:var(--dim);margin-bottom:18px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:820px){ .grid{grid-template-columns:1fr} h2{font-size:1.6rem} main{padding:20px 16px} }
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:15px 17px}
+  .card.wide{grid-column:1/-1}
+  .lbl{font-family:var(--mono);font-size:.63rem;letter-spacing:.15em;text-transform:uppercase;
+       color:var(--faint);margin-bottom:8px}
+  .card p{font-size:.94rem;color:var(--dim)}
+  .card p strong{color:var(--text);font-weight:600}
+  code{font-family:var(--mono);font-size:.82em;background:var(--surface2);border:1px solid var(--line);
+       border-radius:4px;padding:1px 5px;color:var(--text)}
+  .flow{font-family:var(--mono);font-size:.84rem;color:var(--text);display:flex;flex-wrap:wrap;
+        align-items:center;gap:8px}
+  .flow span.arrow{color:var(--accent)}
+  ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  li{font-size:.9rem;color:var(--dim);padding-left:15px;position:relative}
+  li::before{content:'';position:absolute;left:0;top:.62em;width:5px;height:5px;border-radius:50%;
+             background:var(--bad);opacity:.85}
+  .card.check li::before{background:var(--ok)}
+  .card.risk{border-left:2px solid var(--bad)}
+  .card.check{border-left:2px solid var(--ok)}
+  /* Funnel table on the last-but-one slide */
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.78rem;margin-top:4px}
+  th{text-align:left;color:var(--faint);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--line2);
+     font-size:.66rem;letter-spacing:.1em;text-transform:uppercase}
+  td{padding:6px 8px;border-bottom:1px solid var(--line);color:var(--dim)}
+  td.n{text-align:right;color:var(--text)}
+  tr.good td.v{color:var(--ok)} tr.bad td.v{color:var(--bad)}
+  footer{border-top:1px solid var(--line);padding:14px 28px;display:flex;align-items:center;
+         justify-content:space-between;gap:14px;flex-shrink:0;background:var(--surface)}
+  .nav{display:flex;gap:8px}
+  .nav button{font:inherit;font-size:.86rem;font-weight:600;padding:8px 17px;border-radius:7px;
+      border:1px solid var(--line2);background:var(--surface2);color:var(--text);cursor:pointer}
+  .nav button:hover:not(:disabled){border-color:var(--accent)}
+  .nav button:disabled{opacity:.4;cursor:not-allowed}
+  .nav button.primary{background:var(--accent);border-color:var(--accent);color:#06121f}
+  .hint{font-family:var(--mono);font-size:.68rem;color:var(--faint)}
+  @media print{ .rail,footer{display:none} .step{display:block!important;page-break-after:always} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">NxtMock — <em>how a run actually works</em></div>
+  <div class="sub">13 steps · every step id is a real SSE event · built from the code, not from memory</div>
+  <nav class="rail" id="rail" aria-label="Jump to step"></nav>
+</header>
+
+<main id="stage" aria-live="polite"></main>
+
+<footer>
+  <div class="hint" id="counter"></div>
+  <div class="nav">
+    <button id="prev">← Back</button>
+    <button id="next" class="primary">Next →</button>
+  </div>
+  <div class="hint">use ← → keys</div>
+</footer>
+
+<script>
+/* Each step carries the SAME six fields. That consistency is what makes this a debugging tool
+   rather than a diagram: when a run stalls, find the step id in the transcript, open that slide,
+   and the failure modes and the check are already listed. */
+const STEPS = [
+ {
+  tag:"Start", n:"STEP 01", title:"You pick a topic; the run is created",
+  who:"FastAPI · main.py",
+  does:"You choose a course topic in the sidebar. <strong>Every session inside that topic is sent together</strong> — a topic is not one lesson, it is 2–4 merged sessions, which is why later steps talk about per-session representation.",
+  flow:["POST /api/generate", "run_id", "background thread", "SSE stream"],
+  code:"<code>main.py:api_generate</code> → <code>orchestrator.run_pipeline</code> → <code>pipeline.AgentPipeline.run</code>",
+  sse:"<code>agent</code> · <em>“Pipeline starting — 4-agent workflow…”</em>",
+  wrong:["The model must come from <strong>this run's</strong> config, not a global. <code>run_model(state)</code> exists because two tabs on different models used to poison each other's calls.",
+         "<code>/api/result</code> returns <strong>409 while in flight</strong> — that is deliberate, not an error. Never add a blocking join; it starves the threadpool."],
+  check:["Watch <code>GET /api/stream/{run_id}</code> — it replays history, so a reload does not lose the transcript.",
+         "<code>report.api_usage.model</code> tells you which model actually ran."]
+ },
+ {
+  tag:"1 Understand", n:"STEP 02", title:"Understanding agent reads the session material",
+  who:"Agent 1 · “Understanding Session”",
+  does:"For <strong>each</strong> selected session it reads that session's own reading material and resolves it into learning outcomes, <strong>interview topics</strong>, key concepts, in/out scope, and the session type. Then it merges them.",
+  flow:["session names", "reading material", "outcomes + interview_topics + KPs", "SessionContext"],
+  code:"<code>understand_session</code> → <code>session_understanding.py</code>; curated overrides from <code>data/reading_materials/session_outcomes.json</code> win over the LLM",
+  sse:"<code>phase:understanding</code>, <code>understand_session</code> · <em>“code_heavy session — 19 outcomes, 34 KPs”</em>",
+  wrong:["<strong>outcomes ≠ interview topics.</strong> Outcomes describe the lesson, setup steps included (“Set up a Kaggle account with phone verification”). 36 of 322 curated outcomes are environment mechanics no interview can test. <code>interview_topics</code> is the transferable list — 0 of 385 are setup steps.",
+         "<code>session_type</code> has four historical sources that disagree. Only this one — the LLM reading the material — is authoritative.",
+         "<code>matched_kp_ids</code> is still the old <code>KP_GLOBAL_*</code> catalog and does <em>not</em> describe these sessions. It no longer steers retrieval."],
+  check:["<code>result.context.interview_topics</code> vs <code>learning_outcomes</code> — coverage is scored against the former.",
+         "Missing reading material silently falls back to the knowledge graph: check <code>session_map.json</code> has the exact session name."]
+ },
+ {
+  tag:"2 Retrieve", n:"STEP 03", title:"Retrieval agent gathers real questions",
+  who:"Agent 2 · “Retrieving Questions”",
+  does:"Searches the <strong>pre-indexed bank first</strong> (hybrid: 0.6·embedding + 0.4·TF-IDF), then <strong>allowlisted web</strong> via Tavily across 67 trusted domains. Queries are built from interview topics <em>plus the concrete tool names</em> the session teaches. Nothing is ever generated.",
+  flow:["interview_topics + tool names", "bank 1,499 + GenAI 1,388", "Tavily × 67 domains", "~1,900 raw"],
+  code:"<code>search_question_bank</code>, <code>search_web_questions</code> → <code>tools.py</code>, <code>question_bank.py</code>, <code>sources/tavily_search.py</code>",
+  sse:"<code>phase:retrieval</code>, <code>search_question_bank</code>, <code>search_web_questions</code>",
+  wrong:["<strong>Queries used to be too abstract.</strong> Built only from interview_topics, they searched “Workflow automation with LLMs” and never “n8n”. <code>_tool_terms</code> now adds the product names — measured: “n8n node types interview questions” returns 14 allowlisted records where the abstract query returned 0.",
+         "GitHub is off (<code>GITHUB_ENABLED=0</code>) — those repos carry no company attribution.",
+         "Per-source caps (<code>BANK_POOL_CAP</code> 150, <code>WEB_POOL_CAP</code> 120) bound the pool at ~270. Fetching more raw does not enlarge it."],
+  check:["<code>metadata.raw_fetched</code> — raw hits per source.",
+         "<code>report.web_status</code> = <code>quota|auth|rate|empty</code> tells you a bank-only run apart from a thin topic."]
+ },
+ {
+  tag:"3 Suppress", n:"STEP 04", title:"Drop what you already rejected",
+  who:"Pipeline · learning from review",
+  does:"Any question whose normalised text you rejected for this session before is removed <strong>before</strong> validation, so a rejected question cannot take a slot on a re-run.",
+  flow:["candidate pool", "rejected_questions (SQLite)", "pool minus repeats"],
+  code:"<code>pipeline._drop_rejected</code> → <code>memory.get_rejected_norms</code>",
+  sse:"<code>suppress_rejected</code> · <em>“Suppressed 8 previously-rejected question(s).”</em>",
+  wrong:["Matching is on <strong>normalised content</strong> because <code>question_id</code> is regenerated every run.",
+         "Only a <em>whole-set</em> reject writes here. Per-question “bad” marks feed the judge's examples instead — so a low count does not mean your feedback was lost."],
+  check:["<code>select count(*) from rejected_questions where session_name=…</code>",
+         "The <code>suppressed</code> entries in <code>result.removed[].stage</code>."]
+ },
+ {
+  tag:"4 Session fit", n:"STEP 05", title:"Score every candidate against THIS session",
+  who:"Pipeline · embeddings, no LLM",
+  does:"Each candidate is scored against this session's own curated outcomes, interview topics and <strong>reading-material chunks</strong>, then the weak tail is dropped and the pool is re-ordered best-first.",
+  flow:["~270 candidates", "cosine vs session profile", "drop below the fit floor", "~130"],
+  code:"<code>pipeline._score_session_fit</code>, profile from <code>_session_profile</code> (chunks, never one blob)",
+  sse:"<code>session_fit</code> · <em>“scored 270 candidate(s) … dropped 139 below fit 0.42”</em>",
+  wrong:["<strong>This is usually the single biggest filter</strong> — 140–170 of 270 on real runs. If a set comes back thin, look here first.",
+         "The profile must be <strong>chunks, max-pooled</strong>. One concatenated blob dilutes precise matches — that bug labelled all 12 questions of a two-session run with the first session (12/0 instead of 6/6)."],
+  check:["Count <code>result.removed[].stage == \"session_fit\"</code>.",
+         "<code>SESSION_FIT_FLOOR</code> / <code>SESSION_PROFILE_RM_WEIGHT</code> in <code>config.py</code>."]
+ },
+ {
+  tag:"5 Pre-filter", n:"STEP 06", title:"Cheap cross-topic pre-filter",
+  who:"Pipeline · embeddings, no LLM",
+  does:"Drops candidates that belong to a <strong>different course topic</strong> before spending LLM calls on them — comparative, not absolute, because inside one domain everything is ~0.3–0.45 similar to everything.",
+  flow:["~130", "nearest course-topic profile", "drop cross-topic", "~50–110"],
+  code:"<code>pipeline._prefilter_semantic</code>; margins in <code>config.SEMANTIC_TOPIC_MARGIN</code>",
+  sse:"<code>prefilter</code> · <em>“Pre-filtered 81 off-topic candidate(s); 50 remain for scoring.”</em>",
+  wrong:["It compares <strong>pooled course-topic</strong> profiles, so it never filters <em>within</em> a topic — that is step 05's job. Confusing the two is easy and leads to tuning the wrong knob.",
+         "Overlaps with step 05 and step 07. Three successive semantic filters is why 1,900 raw can become 3 final."],
+  check:["Count <code>removed[].stage == \"off_topic_prefilter\"</code>.",
+         "Compare it with the <code>session_fit</code> count — if both are large, they are fighting."]
+ },
+ {
+  tag:"6 Validate", n:"STEP 07", title:"Validation agent judges relevance, then de-duplicates",
+  who:"Agent 3 · “Validating Questions”",
+  does:"An LLM scores each candidate's relevance to the session in batches of 25, calibrated with <strong>your own past accept/reject decisions</strong> and the session's type. Then near-duplicates are merged.",
+  flow:["~50–110", "LLM relevance ≥ 0.5", "semantic dedup", "5–20 survive"],
+  code:"<code>validate_relevance</code>, <code>deduplicate_questions</code>; thresholds <code>RELEVANCE_THRESHOLD</code> / <code>RELEVANCE_FLOOR</code>",
+  sse:"<code>phase:validation</code>, <code>validate_relevance</code> · <em>“Kept 5, removed 45 irrelevant”</em>",
+  wrong:["<strong>The harshest stage by rate</strong> — up to 89% on a thin pool. Thresholds are absolute regardless of how little is left, so on a starved session this is an accident rather than a judgement.",
+         "A total judge failure sets <code>relevance_scored = False</code> and fails the report. Unscored candidates default to the keep threshold — right for one bad batch, unsafe as a silent whole-run default.",
+         "This step can legitimately run for <strong>minutes</strong> in silence. The SSE stream heartbeats; a quiet stream is not a dead one."],
+  check:["<code>metadata.removed_by_relevance</code> and <code>removed[].stage == \"relevance\"</code>.",
+         "<code>report.metric_scores.self_relevance</code> is <em>reported, never scored</em> — a selector cannot grade itself."]
+ },
+ {
+  tag:"7 Open web", n:"STEP 08", title:"Last resort — search the open web",
+  who:"Pipeline · only when short",
+  does:"<strong>Only if fewer than 5 questions survived</strong>, search the web with <em>no</em> domain allowlist, using the session's tool names. Everything it finds is filtered hard, flagged, and still judged.",
+  flow:["< 5 surviving", "unrestricted Tavily", "page + form gates", "re-judge relevance"],
+  code:"<code>pipeline._top_up_from_open_web</code> → <code>tavily_search.fetch_open_web</code> → <code>tools.add_open_web_records</code>",
+  sse:"<code>open_web</code> · <em>“Only 3 question(s) from trusted sources — searching the open web for n8n…”</em>",
+  wrong:["<strong>Placement is everything.</strong> The first version tested the shortfall <em>inside retrieval</em>, where the pool is ~270 — so the condition was never true and the tier never once ran. It must sit after validation and dedup.",
+         "Open results are noisy: of 71 measured candidates <strong>all 71 passed the form gate</strong> but only 29 sat on a real interview-question page. The page filter and domain blocklist are load-bearing.",
+         "These questions <strong>never claim a company</strong> — attribution is forced to <code>NIAT</code> and each is tagged <code>unvetted source</code> in review."],
+  check:["<code>report.critique</code> names the count: “N of M came from outside the trusted source list”.",
+         "Set <code>OPEN_WEB_ENABLED=0</code> to prove whether a result depended on it."]
+ },
+ {
+  tag:"8 Evaluate", n:"STEP 09", title:"Evaluation agent checks the set, then submits it",
+  who:"Agent 4 · “Evaluating & Finalizing”",
+  does:"Checks the difficulty mix against <strong>this session type's</strong> target and how many interview topics are covered, drops weak items, then submits — which is where the final selection actually happens.",
+  flow:["surviving set", "difficulty + coverage checks", "submit_question_set", "final set"],
+  code:"<code>check_difficulty_balance</code>, <code>check_outcome_coverage</code>, <code>submit_question_set</code>",
+  sse:"<code>phase:evaluation</code>, … · <em>“E:3 M:8 H:7 OK”</em>, <em>“11/13 outcomes covered”</em>",
+  wrong:["The agent is <strong>prompt-advised</strong> to submit, not forced. <code>_enforce_submission</code> calls it directly otherwise — without that, an API error would ship ~270 unranked candidates as the final set.",
+         "<code>check_difficulty_balance</code> reports <code>achievable</code>, not just <code>balanced</code>. It once returned “Fix” for three rounds on a pool with zero Easy candidates.",
+         "Difficulty can be earned <strong>off-syllabus</strong>: in one run all four Hard questions were the ungrounded ones. Read the mix next to the off-syllabus count, never alone."],
+  check:["<code>submit_question_set</code> result: <code>{total_questions, per_session, kp_tagged, scope_trimmed, off_syllabus}</code>.",
+         "A <code>submit_question_set [warning]</code> event means the pipeline had to submit for the agent."]
+ },
+ {
+  tag:"8b Inside submit", n:"STEP 10", title:"What submit does — five passes on the chosen set",
+  who:"tool_submit_question_set",
+  does:"Ranking and every finishing pass happen here, on the <strong>selected</strong> questions only — never on the whole pool.",
+  flow:["select (MMR)", "session representation", "KP labels", "scope trim", "syllabus audit"],
+  code:"<code>_select_final</code> → <code>_ensure_session_representation</code> → <code>_assign_kp_labels</code> → <code>_scope_trim</code> → <code>_syllabus_audit</code>",
+  sse:"<code>submit_question_set</code> · <em>“Submitted 7 (7T + 0C)”</em>",
+  wrong:["<strong>Representation is enforced, not requested.</strong> The MMR bonus goes dead whenever attribution collapses onto one session, so a session with candidates is now guaranteed a slot — and one with <em>none</em> is reported, never padded.",
+         "<strong>The scope trim runs here, after relevance — deliberately.</strong> The same rule applied at retrieval time fires on 155 of 1,400 bank rows and destroys comparison questions (“difference between supervised and <s>unsupervised</s> learning”).",
+         "The <strong>syllabus audit</strong> is the only thing that reads the reading material to ask “is this concept even taught here?”. The relevance judge never sees the material."],
+  check:["<code>question.original_content</code> — set only when the scope trim shortened it (<code>adapted</code> tag).",
+         "<code>question.off_syllabus_concept</code> — on-domain but never taught (<code>off-syllabus</code> tag)."]
+ },
+ {
+  tag:"9 Gate", n:"STEP 11", title:"Quality gate — critique, revise, then score honestly",
+  who:"LLM critique + scored verdict",
+  does:"An LLM critiques the whole set and the Evaluation agent gets <strong>up to 2 revision rounds</strong>. Then a scored verdict is computed from signals that are independent of the selector.",
+  flow:["final set", "LLM critique", "≤2 revisions", "composite + gate_checks"],
+  code:"<code>_critique_question_set</code>, <code>_evaluate_and_gate</code>, <code>_build_quality_report</code>",
+  sse:"<code>critique [running|retry|done]</code> · <em>“Force-passed after 2 revision(s)…”</em>",
+  wrong:["<strong>There are two gates.</strong> The LLM critique can pass while the scored verdict fails, and vice versa. <code>gate_checks</code> lists all four conditions with value and bar so the verdict is never unexplained — the report used to carry <code>pass_fail</code> and nothing else.",
+         "<strong>Coverage is scored as efficiency, not as a share of the syllabus.</strong> Topic coverage is bounded by supply: 5 questions cannot cover 22 topics, and one run scored 0.227 — its exact maximum — and was failed for it.",
+         "<code>predicted_accept</code> has <strong>no veto</strong>. It is a 1-NN estimate over ~15 labels and read 0.2 on topics that simply had few labels.",
+         "A <strong>force-passed</strong> set is recorded, so it can never display as a clean pass."],
+  check:["<code>report.gate_checks</code> — the failing condition, its value, its bar.",
+         "<code>report.critique</code> — force-pass, supply caps, off-syllabus counts, per-session split."]
+ },
+ {
+  tag:"10 Review", n:"STEP 12", title:"You review; rejection teaches the next run",
+  who:"Human · React review screen",
+  does:"Keyboard-first triage of every question. <strong>Approve</strong> writes the Google Sheet; <strong>reject</strong> distils your reasons into learned rules and re-generates with the same sessions.",
+  flow:["question set", "accept / reject + reason", "Sheets  ·or·  learned rules + re-run"],
+  code:"<code>frontend/src/pages/Review.jsx</code>, <code>main.py:api_approve</code>, <code>sheets_writer.py</code>, <code>rejection_rules.py</code>",
+  sse:"— (post-run; the UI reads <code>/api/result/{run_id}</code>)",
+  wrong:["Tags to read before accepting: <code>NIAT</code> vs a real company, <code>via &lt;site&gt;</code> (provenance, <em>not</em> the asker), <code>adapted</code>, <code>off-syllabus</code>, <code>unvetted source</code>.",
+         "Bulk actions write explicit per-question decisions so <code>decisions_sent</code> stays truthful — an all-rejected set must be refused at export, not read as “no filter requested”.",
+         "Sheet tab 1 has exactly 10 LMS columns and takes <strong>only</strong> a verified company; a site name must never land there."],
+  check:["<code>j/k</code> move · <code>a</code> accept · <code>r</code> reject · <code>1–7</code> reason · <code>u</code> undo · <code>?</code> help.",
+         "Every run is persisted to <code>run_results</code>, so <code>scripts/yield_report.py</code> can replay it later."]
+ },
+ {
+  tag:"⚑ Debug", n:"STEP 13", title:"Reading the funnel — the one number that matters",
+  who:"scripts/yield_report.py",
+  does:"Nine of ten “quality” problems are really <strong>yield</strong> problems. Run the harness before and after any threshold change: a change that improves one metric while lowering the median final set size is a regression.",
+  flow:["run_results (SQLite)", "yield_report.py", "funnel per run"],
+  code:"<code>python3 scripts/yield_report.py</code> · <code>--last 10</code> · <code>--topic n8n</code>",
+  sse:"— (offline; reads persisted runs, never calls an LLM)",
+  table:true,
+  wrong:["<code>raw → pool</code> is the form gate, topic-trim and per-source caps. <code>pool → final</code> is the three semantic filters.",
+         "A <code>final</code> at or below 5 means <strong>supply-starved</strong>, not necessarily bad quality.",
+         "Exclude runs missing <code>session_grounding</code>/<code>predicted_accept</code> from any replay — their composite renormalises to ~1.0 and will flatter a change by 20 points."],
+  check:["Median final set size, before vs after. That is the number.",
+         "<code>removed[].stage</code> tells you which filter took them."]
+ }
+];
+
+const FUNNEL = [
+  {run:"2048e1f9", raw:"1,554", pool:"270", fit:"—", pre:"—", rel:"—", fin:"5", v:"approved", cls:"good"},
+  {run:"62e3578d", raw:"1,834", pool:"270", fit:"169", pre:"54", rel:"42", fin:"3", v:"fail", cls:"bad"},
+  {run:"5d1d5d58", raw:"1,920", pool:"270", fit:"140", pre:"80", rel:"78", fin:"7", v:"pass", cls:"good"}
+];
+
+const stage=document.getElementById('stage'), rail=document.getElementById('rail'),
+      prev=document.getElementById('prev'), next=document.getElementById('next'),
+      counter=document.getElementById('counter');
+let i=0;
+
+STEPS.forEach((s,idx)=>{
+  const b=document.createElement('button');
+  b.textContent=s.tag; b.onclick=()=>go(idx); rail.appendChild(b);
+});
+
+function funnelTable(){
+  return `<div class="card wide"><div class="lbl">Real runs — same topic, three attempts</div>
+    <div style="overflow-x:auto"><table>
+      <tr><th>run</th><th>raw</th><th>pool</th><th>−fit</th><th>−pre</th><th>−rel</th><th>FINAL</th><th>verdict</th></tr>
+      ${FUNNEL.map(f=>`<tr class="${f.cls}"><td>${f.run}</td><td class="n">${f.raw}</td><td class="n">${f.pool}</td>
+        <td class="n">${f.fit}</td><td class="n">${f.pre}</td><td class="n">${f.rel}</td>
+        <td class="n"><strong>${f.fin}</strong></td><td class="v">${f.v}</td></tr>`).join('')}
+    </table></div>
+    <p style="margin-top:10px">Same topic, same settings. The middle row is what a broken keyword floor plus an
+    over-eager clause trimmer cost; the last row is after fixing both and adding the open-web top-up.</p></div>`;
+}
+
+function render(){
+  const s=STEPS[i];
+  stage.innerHTML=`
+    <div class="stepno">${s.n}</div>
+    <h2>${s.title}</h2>
+    <div class="who"><span class="dot"></span>${s.who}</div>
+    <div class="grid">
+      <div class="card wide"><div class="lbl">What happens</div><p>${s.does}</p></div>
+      <div class="card wide"><div class="lbl">In → out</div>
+        <div class="flow">${s.flow.map((f,k)=>(k?'<span class="arrow">→</span>':'')+`<span>${f}</span>`).join('')}</div></div>
+      <div class="card"><div class="lbl">Code</div><p>${s.code}</p></div>
+      <div class="card"><div class="lbl">Live step id (SSE)</div><p>${s.sse}</p></div>
+      ${s.table?funnelTable():''}
+      <div class="card risk"><div class="lbl">What goes wrong here</div><ul>${s.wrong.map(w=>`<li>${w}</li>`).join('')}</ul></div>
+      <div class="card check"><div class="lbl">How to check it</div><ul>${s.check.map(c=>`<li>${c}</li>`).join('')}</ul></div>
+    </div>`;
+  [...rail.children].forEach((b,k)=>b.setAttribute('aria-current', k===i?'true':'false'));
+  rail.children[i].scrollIntoView({block:'nearest',inline:'nearest'});
+  prev.disabled=(i===0); next.disabled=(i===STEPS.length-1);
+  next.textContent = i===STEPS.length-1 ? 'End' : 'Next →';
+  counter.textContent=`step ${i+1} of ${STEPS.length}`;
+  window.scrollTo({top:0});
+}
+function go(n){ i=Math.max(0,Math.min(STEPS.length-1,n)); render(); }
+prev.onclick=()=>go(i-1); next.onclick=()=>go(i+1);
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' ') { e.preventDefault(); go(i+1); }
+  if(e.key==='ArrowLeft') { e.preventDefault(); go(i-1); }
+  if(e.key==='Home') go(0);
+  if(e.key==='End') go(STEPS.length-1);
+});
+render();
+</script>
+</body>
+</html>

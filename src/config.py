@@ -15,10 +15,13 @@ INTERVIEW_QUESTIONS_JSON = DATA_DIR / "interview_questions.json"
 GENAI_BANK_JSON = DATA_DIR / "genai_question_bank.json"
 KNOWLEDGE_GRAPH_JSON = DATA_DIR / "knowledge_graph.json"
 
-# Curriculum context (KP supplements — runtime, loaded by data_loader)
-GEN_AI_JSON = DATA_DIR / "curriculum/gen_ai_final.json"
-LLM_APPS_JSON = DATA_DIR / "curriculum/llm_applications_kp_links_final_fixed.json"
-FLASK_JSON = DATA_DIR / "curriculum/flask_kp_links_final.json"
+# NOT declared here on purpose: data/curriculum/*.json.
+# Those are course assessment items (1,610 of 1,822 are multiple-choice), and they are BUILD-TIME
+# inputs only — `scripts/build_knowledge_graph.py` reads them by literal path to regenerate
+# knowledge_graph.json. They are never loaded at runtime and must never reach the retrieval corpus.
+# Constants for them used to live here and `data_loader` used them to build a question list nothing
+# read, while printing "Loaded 1819 curriculum questions into bank" — which is exactly the confusion
+# an unused path invites, so the path is gone rather than merely unused.
 # Reading materials (runtime, used by session_understanding)
 GEN_AI_RM = DATA_DIR / "reading_materials/gen_ai_reading_material.md"
 LLM_APPS_RM = DATA_DIR / "reading_materials/llm_applications_reading_material.md"
@@ -55,22 +58,25 @@ MODEL_OPTIONS = [
 # OpenRouter
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# Per-request timeout. The OpenAI SDK's default is 600s, long enough for one wedged call to hold a
+# run — and its SSE stream — open for ten minutes.
+LLM_TIMEOUT_SECONDS = float(os.getenv("LLM_TIMEOUT_SECONDS", "120"))
 
 # Question constraints
 MIN_QUESTIONS = 5
-# Upper bound only for the coding-slot math + UI slider — the FINAL set is NOT trimmed to this
-# (see tool_submit_question_set: every outcome-relevant question is kept). Raised so the legacy
-# app cap doesn't clip the now-uncapped deliverable.
+# Upper bound of the UI's "target count" slider. tool_submit_question_set DOES trim the final set to
+# the run's own `config.max_questions` (clamped by FINAL_SET_CAP) — an earlier comment here claimed
+# the set was never trimmed, which was true for one release and has not been since.
 MAX_QUESTIONS = 60
-# Candidates are gathered into a WIDE pool, scored for relevance across the whole pool, ranked,
-# and (now) ALL relevant ones are kept — no trim-to-max. Per-source caps stop any single source
-# monopolising the pool; they are raised so the relevance judge sees far more candidates.
+# Candidates are gathered into a WIDE pool and scored for relevance across the whole pool; selection
+# then ranks and keeps the best up to the requested count. Per-source caps stop any single source
+# monopolising the pool, and are generous so the relevance judge sees plenty of candidates.
 BANK_POOL_CAP = 150       # curated interview data
 WEB_POOL_CAP = 120        # fresh company-attributed questions (Tavily)
 GITHUB_POOL_CAP = 30      # curated GitHub repos (disabled by default)
-# Overall cost guard — total candidates that reach the (LLM-scored) relevance stage. Every candidate
-# costs an LLM call, so this caps spend even though per-source caps sum higher.
-CANDIDATE_POOL_TARGET = 300
+# NOTE: a CANDIDATE_POOL_TARGET / pool_target() pair used to sit here as an "overall pool cost guard".
+# Nothing ever read it, and its only apparent consumer (AgentState.remaining_capacity) was itself dead
+# and fed a phantom key into the progress summary. The pool is bounded by the per-source caps above.
 RELEVANCE_BATCH_SIZE = 25  # candidates scored per LLM call in validate_relevance (smaller → no JSON truncation)
 # Keep candidates scoring at/above this relevance; below → dropped (min-floor still applies).
 # 0.5 (not 0.6) because the scorer rates good foundational questions ~0.55–0.75; a stricter
@@ -101,9 +107,15 @@ SELECT_DIFFICULTY_BONUS = 0.10    # nudge toward the Easy/Medium/Hard target mix
 SELECT_SESSION_BONUS = 0.12       # nudge so each session (multi-session topic) is represented
 SELECT_ATTRIBUTION_BONUS = 0.12   # nudge so the set mixes real-company + source-labeled questions
 SELECT_ROLE_BONUS = 0.12          # nudge questions for a TARGET job role above generic ("General") ones
+# Demote candidates that look more like a REJECTED question than an ACCEPTED one. Exact repeats are
+# dropped outright upstream (normalized-string match); this catches REWORDINGS, which otherwise come
+# back every run and get rejected again. Scaled by the RELATIVE margin (see tools._feedback_penalty),
+# which is typically 0.0–0.3, so the effective demotion is up to ~0.15 — enough to reorder near-ties
+# without overriding relevance. A ranking penalty, not a hard filter: a thin pool still fills.
+SELECT_REJECTED_PENALTY = float(os.getenv("SELECT_REJECTED_PENALTY", "0.5"))
 
-# The final set is NOT trimmed to a product cap (keep every outcome-relevant question); this is only a
-# high safety guard against a pathological pool so review/export never explode.
+# Hard ceiling on the delivered set, whatever the UI asked for — a safety guard against a
+# pathological pool so review and export never explode.
 FINAL_SET_CAP = 200
 
 # Target job roles per course category. `query_titles` seed role-framed Tavily searches; `bonus_tags`
@@ -122,25 +134,122 @@ DEFAULT_TARGET_ROLES = TARGET_ROLES["GEN_AI"]
 def target_roles(category: str | None) -> dict:
     return TARGET_ROLES.get((category or "").upper(), DEFAULT_TARGET_ROLES)
 
+
+# ── Per-session-type tuning ──────────────────────────────────────────────────
+# `session_type` (theory_heavy | code_heavy | mixed) was computed, stored, printed into two prompt
+# headers, and acted on NOWHERE. These two tables are what make it mean something.
+
+SESSION_TYPES = ("theory_heavy", "code_heavy", "mixed")
+
+
+def normalize_session_type(value: str | None) -> str:
+    """Coerce anything to a known session type. Unknown/None → 'mixed' (the neutral default)."""
+    v = (value or "").strip().lower()
+    return v if v in SESSION_TYPES else "mixed"
+
+
+# Difficulty mix per type. A code-heavy session's questions are implementation and design work, which
+# sits higher on the scale than recall; a theory session legitimately has more Easy definitional
+# questions. One global 30/50/20 penalised whichever type it didn't describe.
+#
+# IMPORTANT: read via `difficulty_targets()` at the two places that actually decide the mix —
+# `tools.tool_check_difficulty_balance` and `tools._select_final`. Do NOT route this through
+# `SessionContext.difficulty_distribution`: that field is hardcoded at every construction site and read
+# by nothing, so setting it looks like a fix and changes no behaviour.
+DIFFICULTY_BY_TYPE = {
+    "theory_heavy": {"Easy": 0.35, "Medium": 0.50, "Hard": 0.15},
+    "code_heavy":   {"Easy": 0.20, "Medium": 0.50, "Hard": 0.30},
+    "mixed":        {"Easy": 0.30, "Medium": 0.50, "Hard": 0.20},
+}
+
+
+def difficulty_targets(session_type: str | None) -> dict[str, float]:
+    """Target Easy/Medium/Hard proportions for this session type."""
+    return DIFFICULTY_BY_TYPE[normalize_session_type(session_type)]
+
+
+# Eval pass/fail bars per type. A code-heavy session is scored against banks that hold almost no
+# implementation questions (`interview_questions.json` is project/auth/Python; the GenAI bank is
+# conceptual), so it scores systematically lower on coverage and grounding for reasons that are about
+# SOURCE COVERAGE, not question quality. A single bar therefore either fails every code session or
+# sets theory's bar too low — neither tells you anything.
+#
+# Raise the code-heavy bars as implementation questions actually reach the banks; that rise is the
+# signal that the source gap is closing.
+EVAL_THRESHOLDS_BY_TYPE = {
+    "theory_heavy": {"accept": 0.60, "coverage": 0.60, "grounding": 0.45},
+    "code_heavy":   {"accept": 0.55, "coverage": 0.45, "grounding": 0.35},
+    "mixed":        {"accept": 0.60, "coverage": 0.55, "grounding": 0.40},
+}
+
+
+def eval_thresholds(session_type: str | None) -> dict[str, float]:
+    return EVAL_THRESHOLDS_BY_TYPE[normalize_session_type(session_type)]
+
 # Semantic embeddings (free, local sentence-transformers) for redundancy/coverage/attribution.
 # Falls back to TF-IDF automatically if the model/library is unavailable.
 EMBEDDINGS_ENABLED = os.getenv("EMBEDDINGS_ENABLED", "1") == "1"
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+# Disk cache for corpus embedding matrices (keyed by corpus digest + model), so the one-off encode
+# of ~1.5k bank questions isn't repaid on every process start.
+EMBED_CACHE_DIR = PROJECT_ROOT / ".cache" / "embeddings"
+# HYBRID bank retrieval: score = w·embedding_cosine + (1−w)·tfidf_cosine.
+# Semantic-dominant because pure TF-IDF matched words not meaning (an F5-TTS query returned RAG
+# questions); TF-IDF keeps a real minority weight because exact tool names ("n8n", "LoRA", "F5-TTS")
+# are exactly where lexical matching beats a small embedding model.
+HYBRID_EMBED_WEIGHT = float(os.getenv("HYBRID_EMBED_WEIGHT", "0.6"))
+# Floor on the hybrid score. Unlike TF-IDF (0 for no shared words), embedding cosine is non-trivial
+# even for unrelated text, so a real floor is needed to stop the long tail entering the pool.
+HYBRID_MIN_SCORE = float(os.getenv("HYBRID_MIN_SCORE", "0.12"))
+# Session-grounded pre-gate (replaces relying on pooled COURSE-TOPIC profiles alone). A candidate is
+# scored against THIS session's own profile — curated learning outcomes + interview topics + reading
+# material. Below the floor it is dropped before the (expensive) LLM relevance pass.
+SESSION_FIT_FLOOR = float(os.getenv("SESSION_FIT_FLOOR", "0.18"))
+# …and a RELATIVE floor, as a fraction of the best fit found for THIS session. An absolute floor alone
+# is mis-calibrated because the achievable fit depends on how well the banks happen to cover a session:
+# measured over the GenAI bank, "Introduction to AI Agents" peaks at 0.86 while "Mastering Image
+# Generation with Stable Diffusion" peaks at 0.66, so a floor of 0.18 keeps 85% of candidates for the
+# first and 68% for the second — i.e. it barely filters either. Scaling to the session's own ceiling
+# keeps a comparable proportion of the best candidates whatever the coverage. The absolute floor above
+# still applies, so a session where nothing fits is not rescued by having a low ceiling.
+SESSION_FIT_RELATIVE = float(os.getenv("SESSION_FIT_RELATIVE", "0.5"))
+# Review tiering: candidates at/above this session_fit are surfaced as "high confidence" in the UI.
+SESSION_FIT_HIGH = float(os.getenv("SESSION_FIT_HIGH", "0.35"))
+# How much of the session profile is reading material (vs curated outcomes). The reading material is
+# long and dilutes short outcome statements, so outcomes are embedded separately and we take the MAX
+# similarity over profile texts; this cap just bounds how many RM chunks join the profile.
+SESSION_PROFILE_RM_CHUNKS = int(os.getenv("SESSION_PROFILE_RM_CHUNKS", "12"))
+# Reading-material chunks are instructional prose, not statements of interview intent — a setup
+# walkthrough about copying an auth token matches generic auth questions. Discount them so an
+# RM-only match has to be distinctly stronger than a curated-outcome match to keep a candidate.
+SESSION_PROFILE_RM_WEIGHT = float(os.getenv("SESSION_PROFILE_RM_WEIGHT", "0.85"))
 EMBED_COVERAGE_THRESHOLD = float(os.getenv("EMBED_COVERAGE_THRESHOLD", "0.30"))  # cosine ≥ ⇒ outcome covered
-DEFAULT_DIFFICULTY_DISTRIBUTION = {"easy": 0.3, "medium": 0.5, "hard": 0.2}
 
 
-def pool_target(max_questions: int) -> int:
-    """Total candidate-pool ceiling before relevance ranking — never below max_questions."""
-    return max(CANDIDATE_POOL_TARGET, max_questions or 0)
 DEDUP_THRESHOLD = 0.85            # TF-IDF cosine (fallback path / cross-run dedup)
 # Semantic (embeddings) near-duplicate threshold for within-run dedup. TF-IDF misses REWORDED dupes
 # ("What are LLMs?" vs "What are Large Language Models in AI?"); embeddings catch them. 0.82 collapses
 # clear rewordings while keeping genuinely distinct angles ("how do LLMs work?" stays separate).
 DEDUP_SEMANTIC_THRESHOLD = float(os.getenv("DEDUP_SEMANTIC_THRESHOLD", "0.82"))
-QUALITY_PASS_THRESHOLD = 0.75
-MAX_EVAL_RETRIES = 2
-MAX_TOOL_CALLS = int(os.getenv("MAX_TOOL_CALLS", "20"))
+# Removed: QUALITY_PASS_THRESHOLD, MAX_EVAL_RETRIES, DEFAULT_DIFFICULTY_DISTRIBUTION — defined here
+# and read by nothing, not even inside this file. QUALITY_PASS_THRESHOLD was the actively
+# misleading one: the gate decides with the explicit per-condition bars in
+# `pipeline._build_quality_report` (`gate_checks`), so a stale "pass threshold" constant read
+# like the thing being enforced. Same hazard that got the curriculum path constants deleted —
+# an unused path is what invites the confusion.
+# Per-agent tool-call budgets live on each agent class (BaseAgent.max_tool_calls), which is what
+# actually applies. A module-level MAX_TOOL_CALLS used to sit here reading an env var that nothing
+# consumed, so setting it appeared to work and did nothing.
+
+# The mock interview is CONVERSATIONAL — answered out loud, with no keyboard, IDE or whiteboard. So a
+# question demanding a produced artifact ("Write a Python program to…", "Implement an input box…") cannot
+# be answered at all and only burns a slot. `interview_format.is_hands_on_task` decides; the pool filter
+# lives in `pipeline._drop_hands_on`.
+#
+# This is POLICY, not a data defect, which is why it is a runtime flag and not a `quality.py` rule: the
+# form gate feeds `scripts/clean_bank.py`, so putting it there would permanently delete 217 real
+# company-attributed coding questions the LMS coding tabs exist for. Set to 0 to ship them again.
+CONVERSATIONAL_ONLY = os.getenv("CONVERSATIONAL_ONLY", "1") == "1"
 
 # Live question harvesting (tools 12 & 13 — search_github_questions / search_web_questions)
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
@@ -150,6 +259,50 @@ GITHUB_ENABLED = os.getenv("GITHUB_ENABLED", "0") == "1"
 TAVILY_MAX_RESULTS = int(os.getenv("TAVILY_MAX_RESULTS", "10"))
 TAVILY_MAX_OUTCOMES = int(os.getenv("TAVILY_MAX_OUTCOMES", "14"))
 TAVILY_MAX_RECORDS = int(os.getenv("TAVILY_MAX_RECORDS", "800"))
+
+# ── Open-web tier: LAST RESORT only ──────────────────────────────────────────
+# Searches WITHOUT `include_domains`, so it can reach content the 67-domain allowlist cannot — the
+# banks and the allowlist hold nothing on n8n nodes, Gemini configuration or Automatic1111, which is
+# exactly what several sessions teach. Measured: "n8n workflow automation interview questions" returns
+# 0 allowlisted records and 24 open-web candidates, including "What is the Merge node and what merge
+# modes does it support?", which matches a session outcome verbatim.
+#
+# It runs ONLY when the trusted tiers under-deliver (see tools.tool_search_web_questions), because open
+# results are much noisier: of 71 measured candidates ALL 71 passed the form gate while only 29 came
+# from a genuine interview-question page. Hence the two extra gates below.
+OPEN_WEB_ENABLED = os.getenv("OPEN_WEB_ENABLED", "1") == "1"
+OPEN_WEB_MAX_RECORDS = int(os.getenv("OPEN_WEB_MAX_RECORDS", "60"))
+OPEN_WEB_MAX_TERMS = int(os.getenv("OPEN_WEB_MAX_TERMS", "4"))
+
+# How short a set has to be before the open web is worth the noise. Fraction of the REQUESTED count,
+# floored at MIN_QUESTIONS: at the default request of 15 the tier engages below 9.
+#
+# It used to engage below MIN_QUESTIONS alone, and that is why this tier — written specifically for the
+# n8n gap — had never once run on a live run. Run 8fb9fcb3 asked for 15, survived with EXACTLY 5, and
+# `surviving >= MIN_QUESTIONS` read that as satisfied. Landing precisely on the floor is the most
+# starved a run can be while still producing output. See `pipeline._open_web_shortfall`, which keeps a
+# separate `<= MIN_QUESTIONS` clause so a request of 5 cannot reintroduce the same off-by-one.
+OPEN_WEB_TRIGGER_RATIO = float(os.getenv("OPEN_WEB_TRIGGER_RATIO", "0.6"))
+
+# The page must LOOK like an interview-question page. This one test kept the 29 clean candidates and
+# dropped all 42 noisy ones (forum chatter, vendor docs, tutorial headings) in the measurement above.
+# It is the EDU_PLATFORM_DOMAINS "interview must be in the URL" rule, generalised to any domain.
+OPEN_WEB_PAGE_TELLS = (
+    "interview question", "interview-question", "interview questions", "interviewquestions",
+    "/interview", "interview-prep", "questions and answers", "questions-and-answers", "q&a",
+)
+
+# Domains that produced the junk. Forums and social are conversation, not interview questions
+# ("Are you willing to work on this?"); code hosts return template prose; vendor docs return
+# documentation headings ("What it does?" from ai.google.dev).
+OPEN_WEB_BLOCKED_DOMAINS = {
+    "facebook.com", "linkedin.com", "twitter.com", "x.com", "instagram.com", "tiktok.com",
+    "reddit.com", "quora.com", "github.com", "gitlab.com", "bitbucket.org", "youtube.com",
+    "pinterest.com", "slideshare.net", "scribd.com", "coursera.org", "udemy.com",
+}
+# Subdomain prefixes that mark a forum or a documentation site whatever the registrable domain.
+OPEN_WEB_BLOCKED_PREFIXES = ("community.", "forum.", "forums.", "docs.", "developer.", "support.",
+                             "help.", "status.", "blog.")
 
 # Approximate USD price per 1M tokens (input/output) for cost ESTIMATES only.
 # Update as provider pricing changes — figures are representative, not billed amounts.

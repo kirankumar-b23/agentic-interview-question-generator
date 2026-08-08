@@ -16,7 +16,6 @@ from src.config import (
     PROJECT_ROOT, DATA_DIR,
     INTERVIEW_QUESTIONS_JSON, KNOWLEDGE_GRAPH_JSON,
     GEN_AI_RM, LLM_APPS_RM, SESSION_MAP_JSON,
-    GEN_AI_JSON, LLM_APPS_JSON, FLASK_JSON,
 )
 
 
@@ -42,13 +41,11 @@ class DataStore:
 
         # From interview_questions.json
         self.interview_questions: list[dict] = []
-        self.curriculum_questions: list[dict] = []
 
         # From reading materials
         self.reading_materials: dict[str, str] = {}  # session_name -> section text
         self._rm_norm_index: dict[str, str] = {}     # normalized name -> canonical key
 
-        # From curriculum JSONs (for KP catalog building)
         self.csv_taxonomy: list[dict] = []
 
         self._loaded = False
@@ -59,7 +56,6 @@ class DataStore:
         self._load_knowledge_graph()
         self._load_interview_questions()
         self._load_reading_materials()
-        self._load_curriculum_kps()
         self._loaded = True
 
     def _load_knowledge_graph(self):
@@ -119,45 +115,26 @@ class DataStore:
         }
         print(f"Loaded reading material for {len(self.reading_materials)} sessions")
 
-    def _load_curriculum_kps(self):
-        """Load KP catalog from curriculum JSONs and add questions to bank."""
-        json_files = [
-            (GEN_AI_JSON, "gen_ai"),
-            (LLM_APPS_JSON, "llm_applications"),
-            (FLASK_JSON, "flask"),
-        ]
-        for filepath, course_name in json_files:
-            if not filepath.exists():
-                continue
-            with open(filepath, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            for q in data.get("questions", []):
-                # KP catalog
-                kps = q.get("selected_knowledge_points", [])
-                for kp in kps:
-                    kp_id = kp["resolved_kp_id"]
-                    if kp_id not in self.kp_catalog:
-                        self.kp_catalog[kp_id] = kp["resolved_kp_label"]
-                        self.kp_source_map[kp_id] = course_name
-                # Normalize into question bank format
-                text = (q.get("question_text_with_code_context") or "").strip()
-                if not text or len(text) < 10:
-                    continue
-                topic = kps[0].get("resolved_kp_label", course_name) if kps else course_name
-                diff_raw = q.get("question_difficulty", "medium")
-                difficulty = diff_raw.capitalize() if diff_raw else "Medium"
-                self.curriculum_questions.append({
-                    "id": q.get("question_id", ""),
-                    "content": text,
-                    "difficulty": difficulty,
-                    "category": q.get("question_type", "GENERAL"),
-                    "topic": topic,
-                    "sub_topic": None,
-                    "company": None,
-                    "role": None,
-                    "source": "curriculum",
-                })
-        print(f"Loaded {len(self.curriculum_questions)} curriculum questions into bank")
+    # NOTE: `_load_curriculum_kps` was removed here, deliberately and entirely.
+    #
+    # It parsed the three `data/curriculum/*.json` files (~2MB) on every startup and printed
+    # "Loaded 1819 curriculum questions into bank". That message was false and actively misleading —
+    # printed immediately above "Question bank ready: 1509 questions indexed", it read as though the
+    # curriculum rows had been indexed. They never were: the list it filled
+    # (`self.curriculum_questions`) was read by NOTHING, and `question_bank.py` indexes only
+    # `interview_questions.json` and `genai_question_bank.json`.
+    #
+    # Those files are course assessment items, not interview questions: 1,610 of 1,822 are
+    # MULTIPLE_CHOICE / MORE_THAN_ONE_MULTIPLE_CHOICE. Worse, 61% of them PASS the form gate
+    # ("Which of the following images represents the node used to send HTTP requests…"), so the dead
+    # path was a loaded gun — anything that ever wired it into retrieval would have poisoned the corpus
+    # quietly. Removing it is protection, not tidying.
+    #
+    # Its KP-catalog merge was dead too: the curriculum files reference 106 KPs and ALL 106 are already
+    # in `knowledge_graph.json` (113 total), so it contributed zero labels.
+    #
+    # The FILES stay on disk. `scripts/build_knowledge_graph.py` reads them by literal path to
+    # regenerate `data/knowledge_graph.json` — they are build-time inputs, not runtime data.
 
     # ── Public API ──────────────────────────────────────────────────────
 
@@ -190,12 +167,20 @@ class DataStore:
         return None
 
     def get_session_info(self, session_name: str) -> dict | None:
-        """Get structured session info from knowledge graph (KPs, outcomes, type)."""
+        """Structured session info from the knowledge graph (KPs, outcomes, type), or None.
+
+        Exact key first, then a NORMALIZED match — the same rule `get_session_content` uses. The old
+        substring match (`a in b or b in a`) is precisely what that method was hardened against: it
+        let "… | Part 1" inherit "… | Part 2"'s knowledge points, and any short custom session name
+        that happened to be a substring of a real one silently adopted the wrong session's outcomes.
+        Those outcomes then ground retrieval, the session-fit gate and the relevance judge, so a
+        near-miss produces a confident-looking set about the wrong subject.
+        """
         if session_name in self.sessions:
             return self.sessions[session_name]
-        lower = session_name.lower()
+        target = _normalize_session_key(session_name)
         for name, info in self.sessions.items():
-            if lower in name.lower() or name.lower() in lower:
+            if _normalize_session_key(name) == target:
                 return info
         return None
 

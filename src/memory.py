@@ -72,13 +72,6 @@ def init_db():
             PRIMARY KEY (question_id, run_id)
         );
 
-        CREATE TABLE IF NOT EXISTS suppress_boost (
-            question_id TEXT PRIMARY KEY,
-            score       REAL NOT NULL,
-            action      TEXT NOT NULL,
-            updated_at  TEXT DEFAULT (datetime('now'))
-        );
-
         CREATE TABLE IF NOT EXISTS question_bank (
             question_id  TEXT PRIMARY KEY,
             session_name TEXT NOT NULL,
@@ -134,6 +127,25 @@ def cache_resolution(session_name: str, resolution: dict):
     )
     conn.commit()
     conn.close()
+
+
+def clear_session_resolution(session_name: str) -> int:
+    """Delete cached resolutions for `session_name`. Returns the number of rows removed.
+
+    Resolutions are keyed by a COMPOSITE string — `"{name}::{reading_material_hash}::ov{overrides}"`
+    (see session_understanding.cache_resolution callers) — so an exact-match DELETE on the bare name
+    matches nothing. The regenerate-after-reject path did exactly that and silently cleared 0 rows,
+    which is why rejecting a set never actually re-derived its outcomes.
+    """
+    conn = get_connection()
+    cur = conn.execute(
+        "DELETE FROM session_resolutions WHERE session_name = ? OR session_name LIKE ?",
+        (session_name, f"{session_name}::%"),
+    )
+    removed = cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+    conn.commit()
+    conn.close()
+    return removed
 
 
 # --- Run History ---
@@ -272,24 +284,11 @@ def get_run_history(limit: int = 100) -> list[dict]:
     return result
 
 
-# --- Suppress/Boost Lists ---
-
-def get_suppress_list() -> list[str]:
-    conn = get_connection()
-    rows = conn.execute(
-        "SELECT question_id FROM suppress_boost WHERE action = 'suppress'"
-    ).fetchall()
-    conn.close()
-    return [r["question_id"] for r in rows]
-
-
-def get_boost_list() -> list[str]:
-    conn = get_connection()
-    rows = conn.execute(
-        "SELECT question_id FROM suppress_boost WHERE action = 'boost'"
-    ).fetchall()
-    conn.close()
-    return [r["question_id"] for r in rows]
+# NOTE: a `suppress_boost` table with get_suppress_list()/get_boost_list() readers used to live here.
+# It had no writer and no caller anywhere in the codebase, and the table was empty after 36 runs, so
+# it was removed rather than left looking like a working feature. Suppression of rejected questions is
+# handled by `rejected_questions` (exact, below) plus the semantic penalty in tools._select_final.
+# An existing memory.db may still contain the unused table; it is harmless and simply ignored.
 
 
 # --- Learned Rules (distilled from human rejections) ---
@@ -324,11 +323,17 @@ def append_learned_rule(rule: str) -> bool:
     return True
 
 
-def distill_rule(session_name: str, reason: str) -> str:
-    """Use LLM to distil a rejection reason into a reusable validation rule."""
+def distill_rule(session_name: str, reason: str, model: str | None = None) -> str:
+    """Distil a free-text rejection reason into a reusable validation rule.
+
+    `model` is optional and defaults to the UI's current selection. Unlike the pipeline stages, this is
+    a single short call triggered by a human clicking Reject — there is no run to inherit a model from,
+    so the UI default is the correct source here.
+    """
     from src.llm_client import chat_completion_json
     try:
         result = chat_completion_json(
+            model=model,
             system_prompt="You convert interview question rejection reasons into reusable validation rules.",
             user_prompt=(
                 f'A reviewer rejected an interview question for a session on "{session_name}" '
@@ -376,30 +381,61 @@ def normalize_content(text: str) -> str:
     return " ".join(re.sub(r"[^\w\s]", " ", (text or "").lower()).split())
 
 
+def _split_sessions(session_name: str) -> list[str]:
+    """Explode a combined run name ("A + B + C") into its individual session names.
+
+    Rejections must be stored per INDIVIDUAL session, not against the joined string. Keyed on the
+    combination, a rejection learned while running "A + B" would not suppress anything when "A" is
+    later run with "C" — the same bad question would come back and be rejected again.
+    """
+    parts = [p.strip() for p in (session_name or "").split(" + ")]
+    return [p for p in parts if p] or ([session_name] if session_name else [])
+
+
 def record_rejections(session_name: str, contents: list[str]) -> int:
-    """Persist rejected question texts (by normalized content) so they never resurface for this session."""
+    """Persist rejected question texts (by normalized content) so they never resurface.
+
+    Recorded once per individual session in `session_name`, so suppression follows the session
+    into any future combination. Returns the number of NEW (session, content) rows stored —
+    re-rejecting the same question does not inflate the count.
+    """
     conn = get_connection()
     n = 0
+    sessions = _split_sessions(session_name)
     for c in contents:
         norm = normalize_content(c)
         if not norm:
             continue
-        conn.execute(
-            "INSERT OR IGNORE INTO rejected_questions (session_name, content_norm, content) VALUES (?, ?, ?)",
-            (session_name, norm, c),
-        )
-        n += 1
+        for sess in sessions:
+            cur = conn.execute(
+                "INSERT OR IGNORE INTO rejected_questions (session_name, content_norm, content) "
+                "VALUES (?, ?, ?)",
+                (sess, norm, c),
+            )
+            n += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
     conn.commit()
     conn.close()
     return n
 
 
 def get_rejected_norms(session_name: str) -> set[str]:
-    """Normalized contents previously rejected for this session (for suppression on re-run)."""
+    """Normalized contents previously rejected for any of these session(s).
+
+    Accepts a combined name and unions the rejections of each individual session, so a question
+    rejected in one combination stays suppressed in every other combination containing that session.
+    """
+    sessions = _split_sessions(session_name)
+    if not sessions:
+        return set()
+    # Include the combined name too: rows written before rejections were keyed per-session are
+    # stored under the joined string, and they must keep suppressing.
+    if session_name and session_name not in sessions:
+        sessions = sessions + [session_name]
     conn = get_connection()
+    placeholders = ",".join("?" for _ in sessions)
     rows = conn.execute(
-        "SELECT content_norm FROM rejected_questions WHERE session_name = ?",
-        (session_name,)
+        f"SELECT content_norm FROM rejected_questions WHERE session_name IN ({placeholders})",
+        sessions,
     ).fetchall()
     conn.close()
     return {r["content_norm"] for r in rows}
@@ -447,5 +483,39 @@ def get_feedback_examples() -> list[dict]:
     return []
 
 
+def _backfill_rejections_per_session() -> int:
+    """One-time migration: re-key rejections stored under a COMBINED run name ("A + B + C") so each
+    individual session also has its own row.
+
+    Rejections used to be keyed on the joined name, so a question rejected while running "A + B" did
+    not suppress when "A" was later run with "C" — it came back and was rejected again. Splitting the
+    existing rows makes those already-recorded rejections useful in every future combination.
+
+    Idempotent (INSERT OR IGNORE) and cheap, so it is safe to run on every import. Returns the number
+    of rows added.
+    """
+    try:
+        conn = get_connection()
+        rows = conn.execute(
+            "SELECT session_name, content_norm, content FROM rejected_questions "
+            "WHERE session_name LIKE '% + %'"
+        ).fetchall()
+        added = 0
+        for row in rows:
+            for sess in _split_sessions(row["session_name"]):
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO rejected_questions (session_name, content_norm, content) "
+                    "VALUES (?, ?, ?)",
+                    (sess, row["content_norm"], row["content"]),
+                )
+                added += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+        conn.commit()
+        conn.close()
+        return added
+    except Exception:  # noqa: BLE001 — a failed migration must not stop the app from starting
+        return 0
+
+
 # Initialize on import
 init_db()
+_backfill_rejections_per_session()

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
+import Icon from '../components/Icon.jsx'
+import TopBar from '../components/TopBar.jsx'
 
 const TYPES = [
   { v: 'mixed', l: 'Mixed' },
@@ -63,38 +65,40 @@ export default function AddCourse() {
 
   return (
     <>
-      <header className="topbar">
-        <div className="topbar-title-group">
-          <span className="topbar-title">Add a Course</span>
-          <span className="topbar-sub">Provide reading material — questions are retrieved &amp; validated against it</span>
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>← Home</button>
-      </header>
+      <TopBar
+        title="Add a course"
+        sub="Provide reading material — questions are retrieved &amp; validated against it"
+        actions={
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>
+            <Icon name="arrowLeft" size={13} /> Home
+          </button>
+        }
+      />
 
       <div className="page-content">
         {/* Mode toggle */}
         <div className="addc-modes">
           <button className={`addc-mode ${mode === 'session' ? 'active' : ''}`} onClick={() => { setMode('session'); reset() }}>
-            ＋ Single session
+            <Icon name="plus" size={13} /> Single session
           </button>
           <button className={`addc-mode ${mode === 'course' ? 'active' : ''}`} onClick={() => { setMode('course'); reset() }}>
-            📚 Full course (paste Markdown)
+            Full course (paste Markdown)
           </button>
         </div>
 
         <section className="card addc-form">
           {/* Shared course fields */}
-          <label className="field-label">Course name</label>
-          <input className="text-input" placeholder="e.g. Full-Stack Development" value={courseName} onChange={e => setCourseName(e.target.value)} />
+          <label className="field-label" htmlFor="ac-name">Course name</label>
+          <input id="ac-name" className="text-input" placeholder="e.g. Full-Stack Development" value={courseName} onChange={e => setCourseName(e.target.value)} />
 
           <div className="addc-row">
-            <div style={{ flex: 1 }}>
-              <label className="field-label">Category tag (for the sheet)</label>
-              <input className="text-input" placeholder="auto from name (e.g. FULL_STACK)" value={category} onChange={e => setCategory(e.target.value)} />
+            <div className="addc-grow">
+              <label className="field-label" htmlFor="ac-cat">Category tag (for the sheet)</label>
+              <input id="ac-cat" className="text-input" placeholder="auto from name (e.g. FULL_STACK)" value={category} onChange={e => setCategory(e.target.value)} />
             </div>
-            <div style={{ width: 160 }}>
-              <label className="field-label">Type</label>
-              <select className="text-input" value={courseType} onChange={e => setCourseType(e.target.value)}>
+            <div className="addc-type-field">
+              <label className="field-label" htmlFor="ac-type">Type</label>
+              <select id="ac-type" className="text-input" value={courseType} onChange={e => setCourseType(e.target.value)}>
                 {TYPES.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
               </select>
             </div>
@@ -102,12 +106,12 @@ export default function AddCourse() {
 
           {mode === 'session' ? (
             <>
-              <label className="field-label">Topic</label>
-              <input className="text-input" placeholder="e.g. Databases" value={topic} onChange={e => setTopic(e.target.value)} />
-              <label className="field-label">Session / unit name</label>
-              <input className="text-input" placeholder="e.g. SQL Basics" value={sessionName} onChange={e => setSessionName(e.target.value)} />
-              <label className="field-label">Reading material</label>
-              <textarea className="addc-textarea" placeholder="Paste this session's reading material / notes…" value={reading} onChange={e => setReading(e.target.value)} />
+              <label className="field-label" htmlFor="ac-topic">Topic</label>
+              <input id="ac-topic" className="text-input" placeholder="e.g. Databases" value={topic} onChange={e => setTopic(e.target.value)} />
+              <label className="field-label" htmlFor="ac-session">Session / unit name</label>
+              <input id="ac-session" className="text-input" placeholder="e.g. SQL Basics" value={sessionName} onChange={e => setSessionName(e.target.value)} />
+              <label className="field-label" htmlFor="ac-reading">Reading material</label>
+              <textarea id="ac-reading" className="addc-textarea" placeholder="Paste this session's reading material / notes…" value={reading} onChange={e => setReading(e.target.value)} />
               <button className="btn btn-primary btn-full" disabled={busy} onClick={submitSession}>
                 {busy ? 'Adding…' : 'Add session'}
               </button>
@@ -129,10 +133,10 @@ export default function AddCourse() {
             </>
           )}
 
-          {err && <div className="alert alert-error" style={{ marginTop: '0.8rem' }}>{err}</div>}
+          {err && <div className="alert alert-error addc-alert">{err}</div>}
           {msg && (
-            <div className="alert alert-success" style={{ marginTop: '0.8rem' }}>
-              {msg} <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>Go generate ▸</button>
+            <div className="alert alert-success addc-alert">
+              {msg} <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>Go generate <Icon name="arrowRight" size={13} /></button>
             </div>
           )}
         </section>

@@ -1,3 +1,4 @@
+import Icon from './Icon.jsx'
 const STAGE_DEFS = [
   { key: 'select',        label: 'Select',       phaseKey: null },
   { key: 'understanding', label: 'Understand',   phaseKey: 'understanding' },
@@ -53,7 +54,9 @@ export default function PipelineStepper({
           <div key={stage.key} className="ts-wrap">
             <div className={`ts-step ts-${status}${gateActive ? ' ts-gate-active' : ''}`}>
               <div className="ts-circle">
-                {status === 'done' ? '✓' : status === 'active' ? '▶' : String(i + 1)}
+                {status === 'done' ? <Icon name="check" size={11} />
+                  : status === 'active' ? <Icon name="chevronRight" size={11} />
+                  : String(i + 1)}
               </div>
               <span className="ts-label">{stage.label}</span>
             </div>
