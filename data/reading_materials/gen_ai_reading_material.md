@@ -1,11 +1,228 @@
 <iframe src="https://genairoadmap.niat.tech/" width="100%" height="580" frameborder="0" marginwidth="0" marginheight="0" scrolling="yes" style="border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;" allowfullscreen></iframe>
-"# Exploring Gen AI Capabilities
+
+# Generative AI Foundations
+
+
+
+So far in this course we have covered the Generative AI Awareness Session, Generative AI Applications, the Generative AI Landscape, and the evolution of the ecosystem — from models to **Agents** and the pursuit of **AGI**. In this session, we go deeper into the technology that powers all of it: the **Large Language Model (LLM)**.
+
+# 1. LLMs – The Brain Behind Generative AI
+
+**Understanding with a Car Example**
+
+We all know what a car is and how it works. But what is the most important component in a car? It's the **engine** — the core engine gives the power to the car, driving the wheels and determining its performance.
+
+Similarly, when building a Generative AI application, the **Large Language Model (LLM)** acts like the powerful **engine**. Just as an engine powers a car, the LLM is the powerful engine behind most Generative AI applications.
+
+## 1.1 Large Language Models (LLMs)
+
+An LLM is the core part of Generative AI. It is an advanced type of AI model that is trained on vast amounts of text data to understand, generate, and process human language. It behaves like a **Super Intelligent Model**.
+
+**Capabilities:**
+
+- Text Generation
+- Language Translation
+- Summarization
+- Language Understanding
+- Reasoning
+
+**Resources Required to Build an LLM:**
+
+- **Compute:** CPU / GPU / TPU (Millions)
+- **Memory:** Terabytes
+- **Time & Cost:** Months of training, hundreds of crores
+- **Datasets:** Peta Bytes
+- **Research & Development:** Top-notch researchers, developers, and entrepreneurs
+
+**Number of Parameters:**
+
+The scale of an LLM is often described by its number of parameters, which spans a huge range:
+
+- 1 Billion
+- 4.5 Billion
+- 125 Billion
+
+### A High-Level Look
+
+> When you give a prompt (Input) to an LLM, it processes your request and provides an Output — this is how text generation tools like chatbots or content creators work.
+
+### Multimodal LLMs
+
+> These are advanced models that can handle different types of data like text, images, audio, and video. Instead of just understanding and generating text, they can process input and generate output across multiple formats.
+
+### Pre-Trained LLM Models
+
+> Pre-trained LLM models — for example, **GPT-5.5** — are large language models that have already been trained by big companies on massive amounts of data. These models are ready to use, allowing small companies and individuals to build solutions without spending a lot of time, money, or resources on training their own models.
+
+### Fine-Tuned LLM Models
+
+> Fine-tuned models start from a pre-trained base and are further trained with specific context for specialized tasks or domains. In short: **Fine-Tuning = Adding Specific Context + a Pre-trained model.**
+
+### Fine-Tuning a Pre-Trained Model
+
+> For example, imagine an 8th-grade student who has already **passed** 8th-grade mathematics — that prior learning is the **pre-trained** knowledge. When the same student prepares specifically for the **9th-grade mathematics exam**, that focused, goal-based preparation is the **fine-tuning**. Similarly, LLMs are fine-tuned with additional data for targeted performance.
+
+## 1.2 Open vs Closed Source Models
+
+Models broadly fall into two categories. **Open source** models are publicly available and allow anyone to use, modify, and distribute them. **Closed source** models are not publicly accessible and are developed and maintained by organizations or companies.
+
+| Model Type     | Open Source Models                                                        | Closed Source Models                                                        |
+| -------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Definition** | Publicly available; anyone can use, modify, and distribute the software.  | Not publicly accessible; developed and maintained by organizations/companies. |
+| **Examples**   | **Llama 4**, **Mistral Large 3**, **Gemma 4** …and many more              | **Claude Opus 4.8**, **Gemini 3**, **GPT-5.5** …and many more               |
+
+### Closed Source Models
+
+**Pros:**
+
+1. Easy to use (just sign up and start)
+2. Regular updates and improvements
+3. Better customer support
+
+**Cons:**
+
+1. Can be expensive for heavy usage
+2. Privacy concerns (data goes to their servers)
+3. Limited customization
+
+### Open Source Models
+
+**Pros:**
+
+1. Free to use and modify
+2. Complete control over the model
+3. Privacy — run locally on your own computer
+
+**Cons:**
+
+1. Requires technical knowledge to set up
+2. May need powerful hardware
+3. No official customer support
+
+## 1.3 The Open Source Community & Ecosystem
+
+### Open Source AI Research & Model Developers
+
+A growing set of organizations research and release open models for everyone to build on:
+
+| Organization     | Description                                        |
+| ---------------- | -------------------------------------------------- |
+| **Meta**         | Releases state-of-the-art open models.             |
+| **Mistral AI**   | Specializes in high-performance, open-weight LLMs. |
+| **Hugging Face** | Leading hub for AI models, datasets, and tools.    |
+| **Stability AI** | Focuses on open generative AI for images and text. |
+| **DeepSeek**     | AI research in science, health, and reasoning.     |
+| …many more       |                                                    |
+
+### Open Source Model Hosting Platforms
+
+Once built, models need to be hosted and shared. Some of the leading platforms are:
+
+| Platform           | Description                                         |
+| ------------------ | --------------------------------------------------- |
+| **Hugging Face**   | The largest open-source AI model repository.        |
+| **TensorFlow Hub** | Model repository for Google's TensorFlow ecosystem. |
+| **PyTorch Hub**    | PyTorch-based model repository.                      |
+| **Civit AI**       | Specializes in AI art models and LoRA sharing.      |
+| …many more         |                                                     |
+
+## 1.4 Hugging Face
+
+Hugging Face is the AI community that is building the future — the platform where the machine learning community collaborates on models, datasets, and applications.
+
+### GitHub vs Hugging Face
+
+#### **GitHub**
+
+- **Launched:** 2008
+- **Monthly Visits:** ~462.4 million
+- **Acquisition:** Acquired by Microsoft for $7.5B
+- GitHub is a widely popular platform among developers worldwide, where software developers collaborate to build and share applications.
+
+#### **Hugging Face**
+
+- **Launched:** 2016
+- **Monthly Visits:** ~37.9 million
+- **Valuation:** ~$4 Billion
+- Hugging Face is where the machine learning community collaborates on and shares models, datasets, and AI applications.
+
+---
+
+### Top Tech Companies
+
+More than **50,000 companies** have deployed models on Hugging Face, making it a central platform where the community collaborates, gives feedback, and improves models together.
+
+---
+
+### What Hugging Face Contains
+
+On Hugging Face you will find a massive, ever-growing collection of resources:
+
+- **Models** — 2M+
+- **Applications** — 1M+
+- **Datasets** — 500K+
+
+---
+
+### Build Your Portfolio
+
+Hugging Face also lets you share your work with the world and build your ML profile through:
+
+- **Research Papers**
+- **Models Built**
+- **Applications**
+
+---
+
+### Accelerate Your ML
+
+Hugging Face provides the compute and memory resources you need to accelerate your machine learning work:
+
+- **CPU**
+- **GPU**
+- **TPU**
+- **Memory**
+
+---
+
+### Using Hugging Face Models
+
+We can use/run the Hugging Face models in different ways:
+
+- Using Inference Providers
+- Running Locally, etc.
+
+---
+
+### Using Inference Providers
+
+- Hugging Face integrates with multiple inference providers (e.g., Together AI, Replicate, fal.ai, Cohere, etc.).
+- The model runs on the provider's cloud servers.
+
+---
+
+### Hands-on: Meta Llama Model
+
+<details>
+
+<summary>Meta Llama 3.1 8B Instruct</summary> <a href="https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct" target="_blank">huggingface.co/meta-llama/Llama-3.1-8B-Instruct</a>
+<br>
+</details>
+
+---
+
+### Hugging Face vs GitHub — Who Uses What?
+
+- **GitHub** → built for **programmers** collaborating on software.
+- **Hugging Face** → open to **everyone**, including non-programmers, to discover, use, and share AI models.
+
+# Exploring Gen AI Capabilities
 
 In the previous unit, we learned how Gen AI can help us talk better, be more creative, learn new things, and solve problems in daily life. In this unit, we will explore useful Gen AI capabilities like searching the internet for the latest information, doing deep research from many websites, talking to AI using our voice interaction, getting help by sharing our screen, and choosing the right AI model for tasks like quick answers, writing code, or solving hard problems.
 
-> *""Think of a task or problem you faced recently where you think Gen AI could have been helpful""*
+> *"Think of a task or problem you faced recently where you think Gen AI could have been helpful"*
 
-> *""Let's explore the most practical and powerful capabilities we can start using immediately""*
+> *"Let's explore the most practical and powerful capabilities we can start using immediately"*
 
 # 1. Gen AI Capabilities
 
@@ -219,6 +436,7 @@ Try using Claude, Gemini, and Llama
 >```
 
 </details>
+
 ### Chat GPT Voice Mode
 During a voice chat, we can ask ChatGPT to search for something and it will provide us with fast, timely answers
 
@@ -313,7 +531,7 @@ What is the next number in the series? 2, 6, 12, 20, 30, ___?
 
 
 ### 1.5.3 Flash Models
-Flash models (sometimes called ""fast"" models) are optimized for speed and efficiency, rather than deep reasoning
+Flash models (sometimes called "fast" models) are optimized for speed and efficiency, rather than deep reasoning
 
 **Capabilities:**
 
@@ -330,7 +548,7 @@ Create a simple weekly workout plan for a beginner
 ```
 </details>
 
-###Models
+### Models
 **Specialized in Coding**
 
 - Anthropic Claude Opus 4
@@ -338,7 +556,7 @@ Create a simple weekly workout plan for a beginner
 - DeepSeek-Coder-V2
 - Meta Code Llama
 
-**General Purpose: **
+**General Purpose: ** 
 **For day-to-day Use**
 
 - GPT-4o, 
@@ -357,16 +575,15 @@ Create a simple weekly workout plan for a beginner
 **Choosing an LLM**
 
 Make sure you choose the ‘best’ LLM depending on your needs..!"
-"# Introduction
+
+# Productivity Power Up with AI Tools
+
 In this unit, we will learn how **AI tools** can significantly improve productivity. We’ll see how they help in tasks such as creating presentations, understanding complex code, and automating everyday processes.
 
 ## Let’s Explore the Tools We Are Going to Learn
 - **Gamma AI**: A tool to create professional presentations in minutes.
-- **Code2Tutorial**: Turns GitHub repositories into easy-to-follow tutorials.
+- **DeepWiki**: Understand any GitHub repository by generating wiki-style documentation.
 - **ChatGPT**: Uncover hidden features for automation and customization.
-
---- 
-
 
 # 1. Gamma AI: Create Professional Presentations in Minutes
 
@@ -379,7 +596,7 @@ Creating presentations is time-consuming: brainstorming ideas, finding images, f
 <details>
 <summary><strong>Step 1: Create an Account</strong></summary>
 
-- Visit <a href=""https://gamma.app/"" target=""_blank"">Gamma AI</a>.
+- Visit <a href="https://gamma.app/" target="_blank">Gamma AI</a>.
 - Create an account using email or Google account.
 - Get free credits (usually 400 credits) to start.
 </details>
@@ -393,7 +610,7 @@ Choose from three options:
 - `IMPORT`: Upload existing content.
 - `PASTE`: Copy-paste your text content.
 
-If you choose **""Generate""**, here's how to write effective prompts:
+If you choose **"Generate"**, here's how to write effective prompts:
 
 ```
 Create a presentation on Generative AI. Keep it engaging and beginner-friendly.
@@ -416,59 +633,52 @@ Gamma generates your presentation in 2-3 minutes.
 - **Professional Design**:AI creates visually appealing layouts without design skills
 - **Content Focused**: Spend time on ideas, not formatting
 
-##Similar Tools
+## Similar Tools
 Gamma is powerful, but it’s not the only option. Depending on comfort, there are other tools that can also be tried
 
 - **Beautiful.ai**
 - **Sendsteps.ai**
 - **Canva**
 
----
-
-#2. Code2Tutorial: Simplifying GitHub Repos into Learning Materials
+# 2. DeepWiki: Simplifying GitHub Repos into Learning Materials
 
 Have you ever struggled to understand complex code in a GitHub repo?
 
-- **Code2Tutorial** helps you understanding complex code in GitHub repos without proper documentation can be overwhelming
+- **DeepWiki** helps you understand complex code in GitHub repos without proper documentation can be overwhelming
 - It turns complex GitHub projects into easy-to-follow tutorials, helping you understand the code better
 
-## How to Use Code2Tutorial
-
+## How to Use DeepWiki
 
 <details>
-<summary><strong>Step 1: Visit Code2Tutorial</strong></summary>
+<summary><strong>Step 1: Visit DeepWiki</strong></summary>
 
-- Go to <a href=""https://www.code2tutorial.com"" target=""_blank"">code2tutorial.com</a>.
+- Go to <a href="https://www.deepwiki.com" target="_blank">deepwiki.com</a>.
 </details>
 
 <details>
-<summary><strong>Step 2: Converting Repository to Tutorial</strong></summary>
+<summary><strong>Step 2: Converting Repository to Wiki</strong></summary>
 
-- GitHub Repo - <a href=""https://github.com/rammcodes/WowFolio"" target=""_blank"">WowFolio</a>
 - Paste the complete GitHub URL.
 - Ensure the repository is **public**.
-- Click **""Generate Tutorial""**.
+- Click **"Enter"**.
 </details>
 
 <details>
-<summary><strong>Step 3: Learn Generated Tutorials</strong></summary>
+<summary><strong>Step 3: Learn from Generated Wiki</strong></summary>
 
-- Each tutorial breaks down into `logical learning chapters`.
-- Explains `file structure` and relationships between components.
-- Provides `line-by-line breakdowns` of complex functions.
-- Offers `explanations of design patterns` and architectural decisions.
+- Read `architecture diagrams` that show how the parts of the project connect.
+- Browse `chapter-style pages` explaining the file structure and main components.
+- Follow `links to the exact source code` behind each explanation.
+- Ask questions in plain English (and get answers grounded in the code).
 </details>
 
 ## Advantages
 
 - **Instant Code Understanding**: Converts complex repositories into beginner-friendly tutorials.
-- **Interactive Learning**: Creates chapter-based breakdowns with explanations.
+- **Visual Learning**: Generates architecture diagrams and links to source code.
 - **Time-Saving**: No need to spend hours figuring out code structure.
 
----
-
-
-#3. ChatGPT's Hidden Productivity Features
+# 3. ChatGPT's Hidden Productivity Features
 
 Most students use ChatGPT for basic questions, while ChatGPT's true potential remains hidden below
 
@@ -476,13 +686,13 @@ Most students use ChatGPT for basic questions, while ChatGPT's true potential re
 1. Custom GPTs
 2. Agent Mode (ChatGPT Pro)
 
-###1. Custom GPTs
+### 1. Custom GPTs
 
 ChatGPT allows you to access thousands of specialized GPTs created by the community for specific tasks
 
-- ####**How to Access GPTs**
+- #### **How to Access GPTs**
 
-    - Open ChatGPT → Click ""GPTs"" → Search the GPT you want → Select it → Click ""Try""
+     - Open ChatGPT → Explore GPTs (sidebar) → search → Start Chat
 
 - **Hands On Scholar GPT**
     Find and explore over 200 million research papers, patents, and books to discover new ideas and learn more about any topic
@@ -501,7 +711,7 @@ ChatGPT allows you to access thousands of specialized GPTs created by the commun
 You can also create Custom GPTs with a ChatGPT Plus or Pro account
 </MultiLineQuickTip>
 
-###2. Agent Mode (ChatGPT Pro)
+### 2. Agent Mode (ChatGPT Pro)
 
 - **What is Agent Mode?**
 Agent Mode turns ChatGPT into a smart assistant that can work on its own to finish complex tasks that have multiple steps
@@ -527,32 +737,7 @@ Agent Mode turns ChatGPT into a smart assistant that can work on its own to fini
     
     AI Agents can order groceries, add items to the cart, complete the purchase, and confirm the order automatically.
     
-    - #### Applying to Jobs
-     
-         
-    <details>
-      <summary>Prompt</summary>
-      ```
-    Apply for Software Engineer fresher jobs in Hyderabad, India on LinkedIn using the ""Easy Apply"" filter.
-    Credentials:
-    Username: [REPLACE_WITH_USERNAME]
-    Password: [REPLACE_WITH_PASSWORD]
-    Candidate Details:
-    Phone Number: 9876543219
-    Country: India
-    Resume: [REPLACE_WITH_FILE_PATH_TO_RESUME]
     
-    Important Constraints:
-    Only apply to jobs that support Easy Apply.
-    If a job requires any additional information beyond phone, country, or resume, skip it and move to the next.
-    
-    For each application submitted, record:
-    Job Title
-    Company Name
-    Date Applied
-    
-    ```
-          </details>
       
     <MultiLineNote>
     Agent mode is currently available on Pro, Plus, Team, Enterprise, and Edu plans
@@ -564,7 +749,7 @@ Agent Mode turns ChatGPT into a smart assistant that can work on its own to fini
     
     <details>
       <summary>Sample Resume</summary>
-      <a href=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/sample_resume.pdf"" target=""_blank"">
+      <a href="https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/sample_resume.pdf" target="_blank">
      Open Sample Resume (PDF)
      </a>
       </details>
@@ -577,14 +762,15 @@ Agent Mode turns ChatGPT into a smart assistant that can work on its own to fini
     ```
       </details>
     
-    ---"
-"# Introduction 
+    ---
+
+# Introduction 
 
 In the previous unit, we explored how AI tools can enhance productivity, from creating presentations to understanding complex code and automating tasks.
 In this unit, we dive into prompt engineering, the art of crafting clear and detailed prompts to help large language models (LLMs) generate accurate and high-quality answers. We’ll cover the fundamentals, techniques, and best practices for effective prompt creation.
 
 
-#Prompt Engineering Fundamentals
+# Prompt Engineering Fundamentals
 
 Have you ever asked an LLM a question and received a confusing or unhelpful response?
 
@@ -593,7 +779,7 @@ Have you ever asked an LLM a question and received a confusing or unhelpful resp
 
 The natural language text, which describes the task that an LLM should perform, is called a prompt
 
-##Examples
+## Examples
 
 <details>
 <summary><strong>Basic Prompt:</strong></summary>
@@ -636,7 +822,7 @@ I'm a first-year B.Tech student with exams in two weeks. Can you recommend a stu
 
 The clearer and more detailed your prompt is, the better the model output will be
 
-#1. Prompt Engineering
+# 1. Prompt Engineering
 Prompt engineering is the art of creating prompts that help an LLM generate more accurate and higher-quality answers
 
 **Think of it like this**
@@ -644,7 +830,7 @@ Prompt engineering is the art of creating prompts that help an LLM generate more
 - If an LLM is like a highly knowledgeable intern on their first day
 - Prompt engineering is the skill of giving that intern clear, detailed instructions 
 
-##Why Prompt Engineering?
+## Why Prompt Engineering?
 
 - **Better results**: More accurate, relevant, and useful responses.
 - **Consistency**: Well-engineered prompts produce reliable results each time.
@@ -675,7 +861,7 @@ Can you help me create a professional resume for a BTech CSE student? Include se
 ```
 </details>
 
-#3. Basic Prompt Structure
+# 3. Basic Prompt Structure
 
 ## The RCATF Framework
 
@@ -691,7 +877,7 @@ Can you help me create a professional resume for a BTech CSE student? Include se
 - This technique is known as **role prompting**.  
 - The more detail you provide about the role and context, the better the results.  
 - Priming an LLM with a specific role can enhance its performance across various tasks, from writing to coding to summarizing.  
-- It's like how humans can sometimes be helped when told to ""think like a ______"".  
+- It's like how humans can sometimes be helped when told to "think like a ______".  
 - Role prompting can also change the style, tone, and manner of the LLM’s response.
 
 <details>
@@ -705,7 +891,7 @@ Can you help me create a professional resume for a BTech CSE student? Include se
 <summary><strong>Prompt</strong></summary>
 
 ```
-Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 ```
 </details>
 
@@ -718,18 +904,18 @@ Act as an experienced travel consultant who specializes in budget-friendly trips
 <summary><strong>Examples</strong></summary>
 
 
-- **Personal situation**: ""I'm planning a trip to Japan.""
-- **Audience information**: ""This is for high school students.""
-- **Project details**: ""We're launching a new product next month.""
-- **Constraints**: ""We have a limited budget.""
-- **Prior knowledge**: ""I have no experience with coding.""
+- **Personal situation**: "I'm planning a trip to Japan."
+- **Audience information**: "This is for high school students."
+- **Project details**: "We're launching a new product next month."
+- **Constraints**: "We have a limited budget."
+- **Prior knowledge**: "I have no experience with coding."
 </details>
 
 <details>
 <summary><strong>Prompt</strong></summary>
 
 ```
-Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 
 Context: I'm a 22-year-old college student planning my first solo trip. I have a budget of 20,000, 10 days to travel in June, and I'm interested in both outdoor activities and experiencing local culture. I'm somewhat adventurous but also concerned about safety as a solo traveler.
 ```
@@ -739,24 +925,24 @@ Context: I'm a 22-year-old college student planning my first solo trip. I have a
 ## Action/Task
 
 - The specific action or task you want the LLM to perform.  
-- This is the ""verb"" of your prompt – the specific action you want the LLM to take.
+- This is the "verb" of your prompt – the specific action you want the LLM to take.
 
 <details>
 <summary><strong>Examples</strong></summary>
 
-- **Explain/teach**: ""Explain Generative AI.""
-- **Create/generate**: ""Create a marketing plan.""
-- **Analyze/evaluate**: ""Analyze this paragraph.""
-- **Summarize**: ""Summarize this research paper.""
-- **Compare/contrast**: ""Compare these two approaches.""
-- **Brainstorm**: ""Brainstorm names for my startup.""
+- **Explain/teach**: "Explain Generative AI."
+- **Create/generate**: "Create a marketing plan."
+- **Analyze/evaluate**: "Analyze this paragraph."
+- **Summarize**: "Summarize this research paper."
+- **Compare/contrast**: "Compare these two approaches."
+- **Brainstorm**: "Brainstorm names for my startup."
 </details>
 
 <details>
 <summary><strong>Prompt</strong></summary>
 
 ```
-Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 
 Context: I'm a 22-year-old college student planning my first solo trip. I have a budget of 20,000, 10 days to travel in June, and I'm interested in both outdoor activities and experiencing local culture. I'm somewhat adventurous but also concerned about safety as a solo traveler.
 
@@ -765,7 +951,7 @@ Action: Recommend 2 specific destinations that would be ideal for my situation, 
 
 </details>
 
-##Format
+## Format
 - Format tells the LLM how you want your answer organized and presented.
 
 <details>
@@ -781,8 +967,9 @@ Action: Recommend 2 specific destinations that would be ideal for my situation, 
 
 <details>
 <summary><strong>Prompt</strong></summary>
+
 ```
-Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 
 Context: I'm a 22-year-old college student planning my first solo trip. I have a budget of 20,000, 10 days to travel in June, and I'm interested in both outdoor activities and experiencing local culture. I'm somewhat adventurous but also concerned about safety as a solo traveler.
 
@@ -793,7 +980,6 @@ A short overview (3–5 sentences)
 An estimated cost breakdown (accommodation, food, activities, transport)
 Safety tips for solo travelers
 
-
 Then provide a day-by-day itinerary in table format with columns for:
 Day #
 Morning activity
@@ -803,6 +989,7 @@ Accommodation
 Finally, end with a pros and cons list for each destination
 ```
 </details>
+
 
 ## Tone
 
@@ -822,8 +1009,9 @@ The style, voice, or emotional quality you want the LLM to use in its response. 
 </details>
 <details>
 <summary><strong>Prompt</strong></summary>
+
 ```
-Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations.""
+Role: Act as an experienced travel consultant who specializes in budget-friendly trips and has personally visited over 50 destinations."
 
 Context: I'm a 22-year-old college student planning my first solo trip. I have a budget of 20,000, 10 days to travel in June, and I'm interested in both outdoor activities and experiencing local culture. I'm somewhat adventurous but also concerned about safety as a solo traveler.
 
@@ -848,15 +1036,15 @@ Tone: Include some humor where appropriate, and write as if you're a slightly ol
 </details>
 
 
-#Example Prompt Templates
+# Example Prompt Templates
 <details>
 <summary><strong>Interview Preparation</strong></summary>
 
 ```
-Template: ""You're an experienced career counselor. I have an upcoming {{INTERVIEW_TYPE}} interview for a {{JOB_ROLE}} position. Provide me with 8-10 targeted practice questions I should prepare for, along with strategic tips for answering them effectively. Present this as a clear study guide with practical examples I can practice.""
+Template: "You're an experienced career counselor. I have an upcoming {{INTERVIEW_TYPE}} interview for a {{JOB_ROLE}} position. Provide me with 8-10 targeted practice questions I should prepare for, along with strategic tips for answering them effectively. Present this as a clear study guide with practical examples I can practice."
 Inputs:
-{{INTERVIEW_TYPE}}: ""technical"" / ""behavioral"" / ""panel"" / ""phone screening"" / ""final round""
-{{JOB_ROLE}}: ""software engineer"" / ""marketing manager"" / ""data analyst"" / ""sales representative"" / ""project manager”
+{{INTERVIEW_TYPE}}: "technical" / "behavioral" / "panel" / "phone screening" / "final round"
+{{JOB_ROLE}}: "software engineer" / "marketing manager" / "data analyst" / "sales representative" / "project manager”
 
 ```
 </details>
@@ -866,15 +1054,15 @@ Inputs:
 <summary><strong>Summarizing an Article</strong></summary>
 
 ```
-Template: ""You're a research assistant skilled at distilling complex information. I need to quickly understand the key insights from {{ARTICLE_TOPIC}}. Read through the content and create a concise summary that captures the main arguments, supporting evidence, and conclusions. Format this as bullet points with the most important takeaways first, using clear and objective language.""
+Template: "You're a research assistant skilled at distilling complex information. I need to quickly understand the key insights from {{ARTICLE_TOPIC}}. Read through the content and create a concise summary that captures the main arguments, supporting evidence, and conclusions. Format this as bullet points with the most important takeaways first, using clear and objective language."
 Inputs:
-{{ARTICLE_TOPIC}}: ""climate change research paper"" / ""new technology trends report"" / ""healthcare policy analysis"" / ""market research study"" / ""historical analysis piece""
+{{ARTICLE_TOPIC}}: "climate change research paper" / "new technology trends report" / "healthcare policy analysis" / "market research study" / "historical analysis piece"
 
 ```
 </details>
 
-#Tricks and Tips
-##Separating Data from Instructions
+# Tricks and Tips
+## Separating Data from Instructions
 
 - Instead of writing a new prompt each time, 
 you can create a reusable prompt template and 
@@ -901,15 +1089,15 @@ I will tell you the name of an animal. Please respond with the sound that animal
 <summary><strong>Example</strong></summary>
 
 ```
-Template: ""Explain {{CONCEPT}} at a {{LEVEL}} level with examples.""
+Template: "Explain {{CONCEPT}} at a {{LEVEL}} level with examples."
 Inputs:
-{{CONCEPT}}: ""recursion in programming"" / ""object-oriented programming"" / ""Ohm’s Law"" 
-{{LEVEL}}: ""high school"" / ""first year btech student"" / ""intermediate"" / ""advanced""
+{{CONCEPT}}: "recursion in programming" / "object-oriented programming" / "Ohm’s Law" 
+{{LEVEL}}: "high school" / "first year btech student" / "intermediate" / "advanced"
 
 ```
 
 ```
-Final Prompt: ""Explain recursion in programming at a high school level with examples.""
+Final Prompt: "Explain recursion in programming at a high school level with examples."
 ```
 </details>
 
@@ -926,10 +1114,13 @@ Final Prompt: ""Explain recursion in programming at a high school level with exa
   [Microsoft Prompts for Education - Students](https://github.com/microsoft/prompts-for-edu/tree/main/Students/Prompts)  
   [OpenAI Examples](https://platform.openai.com/docs/examples)  
   [Google Cloud Vertex AI Prompt Gallery](https://cloud.google.com/vertex-ai/generative-ai/docs/prompt-gallery)  
-  [Microsoft Prompts for Education - Students (GitHub)](https://github.com/microsoft/prompts-for-edu/tree/main/Students/Prompts)"
-"# Introduction
+  [Microsoft Prompts for Education - Students (GitHub)](https://github.com/microsoft/prompts-for-edu/tree/main/Students/Prompts)
 
-In the previous unit, we learned about **prompt engineering** and how to create clear prompts that help AI give better and more accurate answers. In this unit, we will focus on **AI workflows**, which are automated steps that use AI to complete tasks like creating content, analyzing data, and executing tasks automatically without needing human involvement.
+---
+
+# Building Social Media Content Automation Workflow | Part 1
+
+In the previous unit, we learned about **prompt engineering** and how to create clear prompts that help AI give better and more accurate answers. In this unit, we will focus on **AI workflows**, which are automated steps that use AI to complete tasks like creating content, analyzing data, and executing tasks automatically .
 
 ---
 
@@ -940,7 +1131,7 @@ What if you had a system that could handle all of this stuff automatically?
 # AI Workflows
 AI workflows are predefined sequences of steps that use artificial intelligence to complete tasks automatically
 
-##Automated Workflow
+## Automated Workflow
 
 An automated workflow typically follows the same structure:
 
@@ -958,7 +1149,6 @@ While some tasks may still require human involvement, particularly when judgment
 
 You don’t need AI to do everything. You just place it in the right steps to save the most time.
 
-
 ### Example: AI-Powered Social Media Content Automation
 
 In an AI-powered workflow, content from an article is automatically summarized and adapted for social media posts. Here’s how the process works:
@@ -970,27 +1160,27 @@ In an AI-powered workflow, content from an article is automatically summarized a
 
 Once set up, it’s a one-click process.
 
-##Workflow vs Manual Process
+## Workflow vs Manual Process
 
-- ###Manual Process
+- ### Manual Process
     Involves reading articles, writing posts, creating different versions for various platforms, and manually posting them.
     
 **Read Article Manually ** →  **Write LinkedIn Post** →  **Create Instagram Post** →  **Create Twitter Version** → **Post on All Platforms**
     
     Time Taken: **30-45** minutes per article.
 
-- ###AI Workflow Process
-    Involves adding a link to an article in a Google Sheet, which then triggers the workflow to create content suitable for multiple platforms and post it.
+- ### AI Workflow Process
+    Involves adding a link to an article in a Google Sheet, which then triggers the workflow in n8n to create content suitable for multiple platforms and post it.
     
   **Add Article to Sheet** →  **Auto-generate Content** → **Post Everywhere Simultaneously** →  **Send Confirmations**
     
-    Time Taken: Less than **2 **minutes of human effort.
+    Time Taken: Less than **2 minutes** of human effort.
 
-##Applications
+## Applications
 <details>
 <summary><strong>Customer Service</strong></summary><br>
 
-We've all experienced customer service where we get an instant reply — almost like someone was waiting for our message. Chances are, that ""someone"" was AI.
+We've all experienced customer service where we get an instant reply — almost like someone was waiting for our message. Chances are, that "someone" was AI.
 
 Here’s how it works:
 1. A customer sends a query.
@@ -1040,27 +1230,13 @@ Without automation, Walmart would need a huge team working around the clock. Wit
    
 ---
 
-# Building AI-Powered Social Media Content Automation Workflow
-
-You don't always need to code everything from scratch to build an AI workflow. There are platforms available that make the process faster, ranging from those that require coding knowledge to completely no-code solutions.
-
-Here are some examples:
-
-- **Make.com**: A visual platform for connecting apps and automating workflows with AI integration.
-- **n8n.io**: Open-source workflow automation tool with a visual interface.
-- **Zapier**: Popular automation platform that now integrates with AI services.
-- **Power Automate**: Microsoft’s workflow tool with AI capabilities.
-- **Workato**: Enterprise-grade automation platform with robust AI capabilities.
-
-##Using n8n
+## Using n8n
 - n8n is a workflow automation platform that enables users to automate tasks with ease
 - It also allows us to connect with popular services like Google Sheets, Slack, Twitter, GitHub, and hundreds more
 
----
+# Building Blocks
 
-#Building Blocks
-
-###Nodes
+### Nodes
 Each step in the workflow is represented by a node that performs specific actions such as retrieving, transforming, or sending data
 
 Nodes You Might See in Workflows
@@ -1076,195 +1252,24 @@ Nodes You Might See in Workflows
 
 - **Slack Node**: Sends messages or interacts with your Slack workspace.
 
-- **Gmail Node**: Reads emails, downloads attachments, or triggers when new emails arrive.
-
 - **HTTP Request Node**: Allows n8n to talk to almost any web service that has an API.
 
-###Connections
+### Connections
 A connection establishes a link between nodes to route data through the workflow.
 
----
 
-#Creating an AI Workflow for Social Media Content Automation
+# Building AI-Powered Social Media Content Automation Workflow | Part 2
 
-##Pre-requisites
-- **N8n Account**: <a href=""https://n8n.io"" target=""_blank"">n8n.io</a>
-- **Google Account**
-- **LinkedIn Account**
-- **X Account** (formerly Twitter)
 
 ## Step-by-Step Guide
-
 
 <details>
 <summary><strong>Add Google Sheets Trigger</strong></summary>
 
-
-- This guide walks through setting up Google APIs with OAuth 2.0 authentication for n8n automation workflows.
-
-    <details>
-    <summary><strong>Step 1: Google Cloud Project Setup</strong></summary>
-
-    #### Create a New Project
-    - Log in to the <a href=""https://console.cloud.google.com"" target=""_blank"">Google Cloud Console</a>  
-    - Click on the `Select a project` dropdown at the top of the page  
-    - Select `New Project`  
-    - Enter a project name and select the location  
-    - Click `Create`   
-
-   <MultiLineNote> Ensure you have selected the project you've created in the dropdown before proceeding.
-    </MultiLineNote> 
-
-    #### Enable Required APIs
-    - In the Google Cloud Console, navigate to `APIs & Services` > `Library`  
-    - Search for the specific Google API you need (`Gmail`, `Sheets`, `Drive`, `Calendar`, etc.)  
-    - Click on the API from the results  
-    - Click `ENABLE` button   
-
-    <MultiLineWarning text=""Important"">
-    Some integrations need additional APIs:  
-    - **Google Docs/Sheets/Slides** → Also enable **Google Drive API**  
-    - **Google Vertex AI** → Also enable **Cloud Resource Manager API**  
-    - **Google Perspective** → Requires separate access request  
-    - **Google Ads** → Requires Developer Token  
-    </MultiLineWarning>
-    
-
-    </details>
-
-    <details>
-    <summary><strong>Step 2: OAuth 2.0 Configuration</strong></summary>
-    
-    ####OAuth Consent Screen Setup
-        
-    - Go to `APIs & Services` > `OAuth consent screen`  
-    - Click `Get started` to begin configuration  
-    - Fill in the basic information:  
-      - `App name`: Your application name  
-      - `User support email`: Your email address  
-    - For `Audience`, choose `External` (for any user with a Google account)  
-    - Add your contact email in the developer contact information  
-    - Read and accept Google's User Data Policy  
-    - Click `Create`  
-
-    
-    ---
-    
-    ####Configure Branding and Domains
-    
-    - In the left menu, select `Branding`  
-    - In the `Authorized domains` section, click `Add domain`:  
-      - Add `ccbp.in` (your n8n instance domain)  
-    - Click `Save` at the bottom  
-
-    
-    ---
-    
-    #### Create OAuth 2.0 Credentials
-    
-    - Navigate to `APIs & Services` > `Credentials`  
-    - Click `Create Credentials` > `OAuth client ID`  
-    - Select `Web application` as the application type  
-    - Update the name to something recognizable  
-    - Add authorized redirect URL:  
-      - `https://workflow.ccbp.in/rest/oauth2-credential/callback`  
-    
-      To get this URL follow Step 3  
-    
-    - Click `Create`  
-    - Save the `Client ID` and `Client Secret` — you'll need these for n8n  
-
-    </details>
-
-    <details>
-    <summary><strong>Step 3: n8n Integration Setup</strong></summary>
-    
-    ####Add OAuth2 Credential in n8n
-    
-    - Open your n8n workflow  
-    - Click `+` to add new node  
-    - Search for `Google Sheets Trigger`  
-    - Select `Google Sheets Trigger`  
-    - Click `Create New Credential`  
-    - Select `OAuth2` authentication  
-    - Copy the `OAuth Redirect URL` from n8n (should be `https://workflow.ccbp.in/rest/oauth2-credential/callback`)  
-    - Fill in the credential details:  
-      - `Client ID`: From Google Cloud Console  
-      - `Client Secret`: From Google Cloud Console  
-    - Click `Sign in with Google`  
-    - Select your Gmail account from the list of available accounts  
-    - You may see a security warning screen. Click `Advanced` at the bottom left  
-    - Click `Go to earlywave (unsafe)` link that appears  
-    - Review the permissions requested by the application  
-    - Click `Select all` to grant all necessary permissions  
-    - Click `Continue` or `Allow` to proceed  
-    - Click `Save` to store the credential in n8n  
-
-    </details>
-
-    <details>
-    <summary><strong>Step 4: Publish Your App (Important!)</strong></summary>
-    
-    ####For Production Use
-    
-    - Go back to `APIs & Services` > `OAuth consent screen`  
-    - Navigate to the `Audience` section  
-    - Find the `Publishing status`  
-    - Click `PUBLISH APP`  
-    - Confirm publication  
-
-    
-    <MultiLineNote>Publishing your app ensures stable authentication without expiration issues.  
-    </MultiLineNote>
-
-    </details>
-
-    <details>
-    <summary><strong>Common Issues and Solutions</strong></summary><br>
-    
-    **Issue**: `Google hasn't verified this app` warning  
-    - **Solution**: Create OAuth credentials from the same account you want to authenticate, or follow Google's verification process  
-    
-    **Issue**: `Access blocked` error  
-    - **Solution**: Ensure OAuth consent screen is properly configured and published  
-    
-    **Issue**: `Invalid redirect URI` error  
-    - **Solution**: Verify the redirect URI in Google Cloud Console matches exactly:  
-      `https://workflow.ccbp.in/rest/oauth2-credential/callback`  
-    
-    </details>
-
-    <details>
-    <summary><strong>Supported Google APIs</strong></summary><br>
-    
-    This setup process applies to all Google APIs including:  
-    
-    - Gmail API  
-    - Google Sheets API  
-    - Google Drive API  
-    - Google Calendar API  
-    - Google Forms API  
-    - YouTube Data API  
-    - Google Maps API  
-    - Cloud Vision API  
-    - Google Translate API  
-    - And many more  
-    
-    </details>
-
-    <details>
-    <summary><strong>Support Resources</strong></summary>
-    
-    - <a href=""https://console.cloud.google.com"" target=""_blank"">Google Cloud Console</a>  
-    - <a href=""https://developers.google.com/identity/protocols/oauth2/scopes"" target=""_blank"">OAuth 2.0 Scopes for Google APIs</a>  
-    - <a href=""https://docs.n8n.io"" target=""_blank"">n8n Documentation</a>  
-
-    </details>
-</details>
+<a href="https://learning.ccbp.in/course?c_id=d8360c96-9d99-4614-b1da-8f3a26ee57df&s_id=b6d8e5ed-7734-4324-add0-2edc5accefbb&t_id=31bf8d17-9d87-41fa-8d3a-b1b6250ccfac" target="_blank">Refer the Steps Present in the Unit</a>  
 
 
 <details>
-
 <summary><strong> Summarize the Article Using Gemini Chat Model</strong></summary>
 
 - Add a new node → **Basic LLM Chain** 
@@ -1273,9 +1278,9 @@ A connection establishes a link between nodes to route data through the workflow
 - Add **prompt** 
     
 ```
-   System: ""You are a social media strategist with expertise in content adaptation""
+   System: "You are a social media strategist with expertise in content adaptation"
 
-    User: ""Analyze this article and create a summary that:
+    User: "Analyze this article and create a summary that:
     1. Captures the 3 most important insights
     2. Includes any actionable advice or tips
     3. Maintains the original tone and perspective
@@ -1290,13 +1295,12 @@ A connection establishes a link between nodes to route data through the workflow
 - Click on the `+` for the Basic LLM Model to select a model  
 - Choose `Google Gemini Chat Model`  
 - Click `Create New Credential`  
-- Go to `API key` from <a href=""https://aistudio.google.com/app/apikey"" target=""_blank"">Google AI Studio</a>  
+- Go to `API key` from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>  
 - Sign in with your Google account  
 - Click `Create API key`  
 - Copy the key and keep it safe  
 
 </details>
-
 
 <details>
 <summary><strong>LLM Chain Node for Generating the LinkedIn Post</strong></summary><br>
@@ -1317,41 +1321,6 @@ Assume the role of an industry expert and draft a LinkedIn post discussing key p
 
 </details>
 
-<MultiLineWarning text="" Important Note"">
-- **X (formerly Twitter)** Developer Portal has been updated to a **pay-for-use model**. New developer accounts now require a paid plan to access API features, which results in a ""Payment Required"" error during workflow execution
-- Posting to X is not possible 
-with newly created developer accounts
-
-</MultiLineWarning> 
-
-
-<details>
-<summary><strong>LLM Chain Node for Generating Twitter Post</strong></summary><br>
-
-- Add Another **Basic LLM Chain** Node
-- Name it as `Generate X/Twitter PostContent`
-- Select `Define below`  
-- Add **prompt**
-
-```
-Draft an X post as an AI industry expert analyzing a key news article. The post should:
-
-Deliver sharp insights on the article's main points
-Connect to current AI trends
-Spark discussion with a thought-provoking question
-Be punchy and engaging
-End with a clear call to action
-Length: Within 30 words
-
-Focus: What matters most to the AI community. Make every word count.
-Article summary:
-
-```
-
-- Search and Add `Google Gemini Chat Model`
-- select the account which is already saved
-- Connect it to the `Summarize News Article` node's output
-</details>
 
 
 <details>
@@ -1360,7 +1329,7 @@ Article summary:
 - Add `LinkedIn Node` to the `Generate LinkedIn Post Content`
 - Name it as `Post to LinkedIn`
 - create new credentials 
-Go to <a href=""https://www.linkedin.com/developers/apps/new"" target=""_blank"">LinkedIn Developer Apps</a>  
+Go to <a href="https://www.linkedin.com/developers/apps/new" target="_blank">LinkedIn Developer Apps</a>  
 - Enter an `App Name` (e.g., `n8n_post`)  
 - In the `LinkedIn Page` field, search for `NIAT` and select the first option  
 - Upload a `logo` of NIAT  
@@ -1380,62 +1349,19 @@ Go to <a href=""https://www.linkedin.com/developers/apps/new"" target=""_blank""
 - Click `Create My Account` and complete `Sign In`  
 - Connection should now be successful  
 
-
-####Final Steps in LinkedIn Node
+#### Final Steps in LinkedIn Node
 
 - In the `LinkedIn Node parameters`, click `Person name or id` 
 - Select the appropriate `Name or ID`  
 
 </details>
 
-<details>
-<summary><strong>Twitter Node Configuration</strong></summary><br>
-
-####Add Twitter (X) Node in n8n
-
-- Add a new node → **Post to Twitter** to `Generate X/Twitter PostContent` 
-- Go to  <a href=""https://developer.x.com/en/portal/dashboard"" target=""_blank"">X Developer Portal</a>
-- click on `developer portal` on the top right 
-- click on sign in for free
-- In the left menu, select `Projects and Apps`, then select the `Overview` tab  
-- If a project already exists, click on the existing project  
-- If not, find the `Apps` section and click `Add App`  
-- Enter a `Name` for your app → Click `Next`  
-- Go to `App Settings`  
-
-####Configure User Authentication
-
-- In `User authentication settings`, select `Set Up`  
-- Set the `App permissions`:  
-  - `Read and write`  
-
-- In `Type of app`, select one:  
-  - `Web App`, `Automated App`, `Bot`  
-
-
-####Configure OAuth Redirect URL
-
-- In n8n, copy the `OAuth Redirect URL`  
-- In `App Info` → Paste the URL in `Callback URI / Redirect URL`  
-- Add a `Website URL` for your app  
-- Save your changes  
-
-#### Add Credentials to n8n
-
-- Copy the `Client ID` and `Client Secret` from X  
-- Paste them into the corresponding fields in your n8n credential  
-- Connection should now be successful  
-
-</details>
-
-
 
 <details>
 <summary><strong>Auto-Post to Social Media</strong></summary>
 - Automatically post the generated content to the respective social media platforms.
 
-
-- ####Auto-Post to LinkedIn
+- #### Auto-Post to LinkedIn
 
     - Add LinkedIn Node
     - Select `Create a Post`
@@ -1445,33 +1371,28 @@ Go to <a href=""https://www.linkedin.com/developers/apps/new"" target=""_blank""
     
     <MultiLineNote>Save and Reload the workflow after connected to linkedIn</MultiLineNote>
 
-- ####Auto-Post to X(Twitter)
 
-    - Add X (Twitter) Node
-    - Authenticate to Your X Account
-    - Create Your X API Credentials for Client ID and Secret Key
-    - Fill in the Text to Be Posted
 
 </details>
 
 ---
 
-##Workflow Testing
+## Workflow Testing
 
 <details>
-<summary>**Trigger Testing**</summary>
+<summary><strong>Trigger Testing</strong></summary>
 - Add test article to Google Sheet  
 - Execute the workflow  
 - Check data passes between nodes  
 </details>
 <details>
-<summary>**Content Quality Testing**</summary>
+<summary><strong>Content Quality Testing</strong></summary>
 - Review AI-generated summaries  
 - Verify platform-specific adaptations  
 - Check character limits and formatting  
 </details>
 <details>
-<summary>**End-to-End Testing**</summary>
+<summary><strong>End-to-End Testing</strong></summary>
 
 - Complete workflow execution  
 - Verify posts appear on platforms  
@@ -1481,16 +1402,10 @@ Go to <a href=""https://www.linkedin.com/developers/apps/new"" target=""_blank""
 
 ---
 
-# Common Issues you may Encounter
-- **402 Errors:** Content length exceeds the maximum characters allowed
-- **Authentication Failures:** API credentials expired or incorrect
-- **Rate Limiting: **Too many API calls in short timeframe
-- **Content Quality: ** Prompts need refinement for better output
 
----
 
 #  Setting the Scheduler to Run Every Week
-##Common Scheduling Options
+## Common Scheduling Options
 
 In n8n, there are three common ways to run workflows:
 
@@ -1501,7 +1416,7 @@ In n8n, there are three common ways to run workflows:
 * **Event-based**  
    Starts when something specific happens, like a webhook receiving new data.
 
-##Time Based Schedule
+## Time Based Schedule
 
 - The time-based schedule triggers the node at the specified interval or exact time
 - At the trigger time, the node checks for new or updated rows since the last check
@@ -1511,21 +1426,22 @@ n8n triggers the workflow only for new or updated rows since the last check, not
 
 ---
 
-#Automating the Execution
+# Automating the Execution
 - Try automating the execution of our workflow every week at a specific time
 
-###Workflow Should be in Active State
-- To ensure your workflow is automated and triggers as expected, make sure the workflow is active
+### Workflow Should be in Active State
+
+- To ensure your workflow is automated and triggers as expected, make sure the workflow is published
 
 <MultiLineNote>
-- The Active button has been updated to Publish, allowing you to publish your workflows.
-- Kindly note that the Publish feature is restricted to a limited number of uses on the portal.
-</MultiLineNote>"
-"# Introduction 
+ Kindly note that the Publish feature is restricted to a limited number of uses on the portal.
+</MultiLineNote>
+
+# Advanced Prompt Engineering 
 
 In this unit, we will move beyond the basics of prompting and learn how to guide AI more effectively. We’ll explore key prompting techniques such as Zero-shot, One-shot, Few-shot, and Chain-of-Thought, understand the limitations of large language models, and see practical ready-to-use prompts.
 
-##1. Prompting Techniques
+## 1. Prompting Techniques
 
 - Prompting is about guiding the AI effectively. While simple prompts may work for basic tasks, they often fail when the task gets complex.The moment tasks get complex, simple prompts aren’t enough.
 - So, these Prompting techniques
@@ -1543,7 +1459,7 @@ Prompt engineering techniques allow us to perform more complex tasks and enhance
 - **Few-shot**
 - **Chain-of-Thought**
 
-###1.1  Zero-shot Prompting
+### 1.1  Zero-shot Prompting
 
 Zero-shot prompting is a technique that instructs an LLM to perform a task without providing any examples.
 
@@ -1554,7 +1470,7 @@ Zero-shot prompting is a technique that instructs an LLM to perform a task witho
 ```
 Summarize the following paragraph about Generative AI:
 
-Generative AI refers to artificial intelligence systems capable of creating new content, such as text, images, music, and videos that resemble human-created work. Unlike traditional AI, which focuses on analysis and prediction, generative AI can produce original outputs based on patterns learned from training data. Popular examples include GPT models for text, DALL-E for images, and MusicLM for music creation. These systems have sparked discussions about creativity, copyright, and the future of human-machine collaboration in creative fields.""
+Generative AI refers to artificial intelligence systems capable of creating new content, such as text, images, music, and videos that resemble human-created work. Unlike traditional AI, which focuses on analysis and prediction, generative AI can produce original outputs based on patterns learned from training data. Popular examples include GPT models for text, DALL-E for images, and MusicLM for music creation. These systems have sparked discussions about creativity, copyright, and the future of human-machine collaboration in creative fields."
 
 ```
 </details>
@@ -1570,7 +1486,7 @@ The restaurant was incredible, best meal I've had all year.
 ```
 </details>
 
-###1.2 One-shot Prompting
+### 1.2 One-shot Prompting
 
 One-shot prompting involves providing a single example to the model so it has something to imitate in order to complete the task more effectively.
 
@@ -1578,7 +1494,7 @@ One-shot prompting involves providing a single example to the model so it has so
 <summary><strong>One-shot Example 1</strong></summary>
 
 ```
-Write a birthday message for my best friend who loves bikes""
+Write a birthday message for my best friend who loves bikes"
 
 
 Example:
@@ -1608,7 +1524,7 @@ Sentiment:
 <summary><strong>One-shot Exercise</strong></summary>
 
 ```
-Act as an AI career coach named ""CareerBuddy"". Your goal is to help students make informed career decisions by guiding them through different career options, resume tips, and interview preparation.
+Act as an AI career coach named "CareerBuddy". Your goal is to help students make informed career decisions by guiding them through different career options, resume tips, and interview preparation.
 
 You should maintain a friendly, professional, and informative tone.
 
@@ -1624,7 +1540,7 @@ CareerBuddy:  Sorry, I’m CareerBuddy, and I provide career advice. Do you have
 </details>
 
 
-###1.3 Few-shot Prompting 
+### 1.3 Few-shot Prompting 
 - Providing multiple examples to the model
 - It is similar to one-shot, but we provide multiple examples of the desired pattern which increases the chance that the model follows the pattern
 
@@ -1658,9 +1574,9 @@ Sentiment:
 ```
 </details>
 
-###1.4 Chain-of-Thought
+### 1.4 Chain-of-Thought
 
-<MultiLineWarning text=""Problem"" > 
+<MultiLineWarning text="Problem" > 
 AI models can make mistakes on complex problems because they might skip steps or guess
 
 </MultiLineWarning>
@@ -1730,9 +1646,9 @@ A:
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-##2. LLM Limitations
+## 2. LLM Limitations
 
-###2.1 Knowledge Cutoff
+### 2.1 Knowledge Cutoff
 - LLMs are trained on data up to a certain date (called the “knowledge cutoff”)
 - They don’t know anything that happened after that date by default
 
@@ -1748,7 +1664,7 @@ Can you recommend the latest iPhone model (do not use web search)?
 ```
 </details>
 
-###2.2 Hallucination
+### 2.2 Hallucination
 - AI can sometimes produce wrong or confusing information that doesn’t match the facts or the given input
 
 <details>
@@ -1760,7 +1676,7 @@ What is greater 10.11 or 10.9?
 ```
 </details>
 
-###2.3 LLMs are Passive
+### 2.3 LLMs are Passive
 - LLMs do not take actions on their own. They only respond when given a prompt (like a question or command)
 
 <details>
@@ -1771,7 +1687,7 @@ Can you apply to SDE jobs and send an email to my email (xyz) once applied?
 ```
 </details>
 
-<MultiLineWarning text=""LLM Limitations"">
+<MultiLineWarning text="LLM Limitations">
 **Hallucinations** - Can generate incorrect or nonsensical information that isn't supported by the input data or factual accuracy
 
 **Knowledge CutOff** - Doesn’t know anything that happened after the date it was trained on
@@ -1782,7 +1698,7 @@ Can you apply to SDE jobs and send an email to my email (xyz) once applied?
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-##3. Time-Saving AI Prompts for Boosting LLM Performance (Ready to Use)
+## 3. Time-Saving AI Prompts for Boosting LLM Performance (Ready to Use)
 
 <details>
 <summary><strong>Natural Language Writer</strong></summary>
@@ -1798,32 +1714,32 @@ You are writing the following:
 Follow these detailed step-by-step guidelines:
  
 Step 1: Use plain and simple language. Avoid long or complex sentences. Opt for short, clear statements.
-- Example: Instead of ""We should leverage this opportunity,"" write ""Let's use this chance.""
+- Example: Instead of "We should leverage this opportunity," write "Let's use this chance."
  
-Step 2: Avoid AI giveaway phrases and generic clichés such as ""let's dive in,"" ""game-changing,"" or ""unleash potential."" Replace them with straightforward language.
-- Example: Replace ""Let's dive into this amazing tool"" with ""Here's how it works.""
+Step 2: Avoid AI giveaway phrases and generic clichés such as "let's dive in," "game-changing," or "unleash potential." Replace them with straightforward language.
+- Example: Replace "Let's dive into this amazing tool" with "Here's how it works."
  
 Step 3: Be direct and concise. Eliminate filler words and unnecessary phrases. Focus on getting to the point.
-- Example: Say ""We should meet tomorrow,"" instead of ""I think it would be best if we could possibly try to meet.""
+- Example: Say "We should meet tomorrow," instead of "I think it would be best if we could possibly try to meet."
  
-Step 4: Maintain a natural tone. Write like you speak. It's okay to start sentences with ""and"" or ""but."" Make it feel conversational, not robotic.
-- Example: ""And that's why it matters.""
+Step 4: Maintain a natural tone. Write like you speak. It's okay to start sentences with "and" or "but." Make it feel conversational, not robotic.
+- Example: "And that's why it matters."
  
 Step 5: Avoid marketing buzzwords, hype, and overpromises. Use neutral, honest descriptions.
-- Avoid: ""This revolutionary app will change your life.""
-- Use instead: ""This app can help you stay organized.""
+- Avoid: "This revolutionary app will change your life."
+- Use instead: "This app can help you stay organized."
  
 Step 6: Keep it real. Be honest. Don't try to fake friendliness or exaggerate.
-- Example: ""I don't think that's the best idea.""
+- Example: "I don't think that's the best idea."
  
 Step 7: Simplify grammar. Don't worry about perfect grammar if it disrupts natural flow. Casual expressions are okay.
-- Example: ""i guess we can try that.""
+- Example: "i guess we can try that."
  
 Step 8: Remove fluff. Avoid using unnecessary adjectives or adverbs. Stick to the facts or your core message.
-- Example: Say ""We finished the task,"" not ""We quickly and efficiently completed the important task.""
+- Example: Say "We finished the task," not "We quickly and efficiently completed the important task."
  
 Step 9: Focus on clarity. Your message should be easy to read and understand without ambiguity.
-- Example: ""Please send the file by Monday.""
+- Example: "Please send the file by Monday."
  
 Follow this structure rigorously. Your final writing should feel honest, grounded, and like it was written by a clear-thinking, real person.
  
@@ -1841,11 +1757,11 @@ Never present generated, inferred, speculated, or deduced content as fact
 
 If you cannot verify something directly, say:
 
-""I cannot verify this.""
+"I cannot verify this."
 
-""I do not have access to that information.""
+"I do not have access to that information."
 
-""My knowledge base does not contain that.""
+"My knowledge base does not contain that."
 
 Label unverified content at the start of a sentence:
 
@@ -1883,9 +1799,9 @@ Do not invent or assume facts
 
 If unconfirmed, say:
 
-""I cannot verify this.""
+"I cannot verify this."
 
-""I do not have access to that information.""
+"I do not have access to that information."
 
 Label all unverified content:
 
@@ -1924,9 +1840,9 @@ Do not present guesses or speculation as fact
 
 If not confirmed, say:
 
-""I cannot verify this.""
+"I cannot verify this."
 
-""I do not have access to that information.""
+"I do not have access to that information."
 
 Label all uncertain or generated content:
 
@@ -1955,9 +1871,12 @@ If you break this rule, say:
 Correction: I made an unverified claim. That was incorrect.
 ```
 </details>"
-"# Introduction
 
-In the previous unit, we built an AI-Powered Social Media Content Creator & Publisher that automated article listing, summarization, and posting using n8n. In this unit, we’ll focus on building our own AI News Summarizer — a personal assistant that fetches news from RSS feeds, summarizes it, and delivers a daily email update.
+
+
+# Build Your Own AI News Summarizer | Part 1
+
+In the previous unit, we built an AI-Powered Social Media Content Creator & Publisher that automated article listing, summarization, and posting using n8n. In this unit, we’ll focus on building our own AI News Summarizer — a personal assistant that fetches news using the RSS Feed Read Node, summarizes it with Gemini AI, and delivers a daily email update via the Gmail Send Node.
 
 ## Build Your Own AI News Summarizer
 
@@ -1971,7 +1890,7 @@ Every morning, many professionals face the same challenge when trying to stay up
 
 This process typically consumes 30-45 minutes each morning, which could be better utilized for productive work.
 
-<MultiLineWarning text=""Solution"">
+<MultiLineWarning text="Solution">
 Instead of spending half an hour browsing multiple websites, imagine receiving a perfectly summarized email at 10 AM with only the most relevant AI news.
 </MultiLineWarning>
 
@@ -1979,12 +1898,12 @@ Instead of spending half an hour browsing multiple websites, imagine receiving a
 
 The AI News Summarizer is an automated system that:
 
--  Fetches AI news from multiple sources
+1. Fetches AI news from multiple sources
 2. Collects tech updates automatically
 3. Summarizes content using Gemini AI
 4. Delivers a newsletter directly to your email
 
-<MultiLineWarning text=""End result"">
+<MultiLineWarning text="End result">
 From 30 minutes of browsing ➡ 2-minute personalized Newsletter!
 </MultiLineWarning>
 
@@ -1992,11 +1911,18 @@ From 30 minutes of browsing ➡ 2-minute personalized Newsletter!
 
 Before building the system, you'll need:
 
-- n8n Account
 - Google Account
 - RSS Feed URLs
 
-##How can we Fetch the Latest News?
+## How can we Fetch the Latest News?
+
+### RSS Feed Read Node
+
+RSS is like a news delivery system. Instead of visiting many websites, updates come directly to you. Think of it like subscribing to a newspaper, but online.
+
+### Using RSS Feed Read Node
+
+With RSS Feed URLs, we can fetch the latest articles, posts, or news published on a website. The RSS Feed Read Node in n8n automatically retrieves new articles since the last check and processes the feed data into a usable format.
 
 ### RSS Feed
 
@@ -2008,40 +1934,78 @@ Before building the system, you'll need:
 
 There are several ways to locate RSS feeds:
 
-- Look for the `RSS icon at the bottom of websites`
-    - <a href=""https://www.theverge.com/24036427/rss-feed-reader-best"" target=""_blank"">https://www.theverge.com/24036427/rss-feed-reader-best</a>
-    - <a href=""https://thehackernews.com/"" target=""_blank"">https://thehackernews.com/</a>
+- Look for the RSS icon at the bottom of the website.
+- Try adding `/rss` or `/feed` at the end of a website’s URL.
 
+#### Examples:
+- <a href="https://www.reddit.com/r/technology/.rss">Reddit Technology RSS Feed</a>
+- <a href="https://techcrunch.com/category/artificial-intelligence/feed/">TechCrunch AI RSS Feed</a>
 
-2. Try `adding /rss` or `/feed` at the end of a website's URL
-    - <a href=""https://www.reddit.com/r/technology/.rss"" target=""_blank"">https://www.reddit.com/r/technology/.rss</a>
-    - <a href=""https://techcrunch.com/category/artificial-intelligence/feed/"" target=""_blank"">https://techcrunch.com/category/artificial-intelligence/feed/</a>
+Most tech sites have RSS feeds:
+
+- <a href="https://openrss.org/">OpenRSS</a> – Discover and generate RSS feeds for websites.
+- <a href="https://www.theverge.com/24036427/rss-feed-reader-best">The Verge RSS Feed Guide</a>
+- <a href="https://thehackernews.com/">The Hacker News</a>
+
 
 - Some websites provide ready-to-use RSS feeds
 - We can use these feeds directly when needed
 - Example:
-    - Website - <a href=""https://aibusiness.com/"" target=""_blank"">https://aibusiness.com/</a>
-    - RSS Feed URL - <a href=""https://aibusiness.com/rss.xml"" target=""_blank"">https://aibusiness.com/rss.xml</a>
+    - Website - <a href="https://aibusiness.com/" target="_blank">aibusiness.com/</a>
+    - RSS Feed URL - <a href="https://aibusiness.com/rss.xml" target="_blank">aibusiness.com/rss.xml</a>
 - With this RSS Feed URLs, we can get the latest articles, posts, or news published on that website
 - However, the actual coverage depends on the website's configuration and choices
 
 - You can follow these to get latest rss feeds from:
-    - <a href=""https://github.com/foorilla/allainews_sources"" target=""_blank"">https://github.com/foorilla/allainews_sources</a>
-    - <a href=""https://github.com/vishalshar/awesome_ML_AI_RSS_feed"" target=""_blank"">https://github.com/vishalshar/awesome_ML_AI_RSS_feed</a>
-    - <a href=""https://github.com/RSS-Renaissance/awesome-AI-feeds"" target=""_blank"">https://github.com/RSS-Renaissance/awesome-AI-feeds</a>
+    - <a href="https://aws.amazon.com/blogs/machine-learning/feed/ " target="_blank">machine-learning/feed/ </a>
+    - <a href="https://github.com/vishalshar/awesome_ML_AI_RSS_feed" target="_blank">awesome ML AI RSS feed</a>
+    - <a href="https://github.com/RSS-Renaissance/awesome-AI-feeds" target="_blank">RSS-Renaissance/awesome-AI-feeds</a>
 
-##Let's build a workflow for Fetching RSS News and Sending Summarized Emails
+**Fetching News from RSS Feeds**
 
-###Steps to Follow
+- Use the RSS Feed Read Node in n8n to fetch the latest updates from any RSS feed URL.
+- Automatically retrieves new articles since the last check.
+- Processes the feed data into a usable format.
+
+## Let's build a workflow for Fetching RSS News and Sending Summarized Emails
+
+### Steps to Follow
+
+
+1. **Adding a Trigger Node**
+   - Use the **Schedule Trigger Node** in n8n.
+   - Set the trigger time to 10:00 AM daily.
+   
+2. **Fetching News from RSS Feeds**
+   - Use the **RSS Feed Read Node** in n8n.
+   - Paste the RSS feed URL and execute to fetch the latest updates.
+
+3. **Aggregating All Content**
+   - Add the **Aggregate Node** in n8n.
+   - Set it to "Aggregate All Item Data".
+   - Include only specified fields: title, link, contentSnippet.
+
+4. **Summarizing Using Gemini AI**
+   - Add a **Basic LLM Chain** node and attach the **Google Gemini Chat Model** as its language-model sub-node.
+   - Select the **gemini-3.1-flash-lite** model.
+   - Configure with the provided summarization prompt.
+
+5. **Sending Email**
+   - Use the **Gmail Send Node**.
+   - Configure recipient, subject, and message body.
+
+### Final Workflow
+- Automates fetching AI news, summarizing it, and sending a personalized newsletter to your email every day at 10 AM.
+
+### Steps to Follow
 <details>
-<summary>**Adding a Trigger Node**</summary>
+<summary><strong>Adding a Trigger Node</strong></summary>
 - Let's say we want to receive news updates everyday at 10:00 AM
 
-####How can we schedule it?
+#### How can we schedule it?
 - A special node in n8n that automatically starts your workflow at specific times
     - Wakes up your automation exactly when you want
     - No manual clicking – runs in background
-
 
 #### Why Schedule Trigger?
 - Instead of manually running your news summarizer every morning, the Schedule Trigger does it for you
@@ -2054,13 +2018,13 @@ A Schedule Trigger is a special node in n8n that automatically starts your workf
 **Configuration Steps:**
 1. Position at start of workflow
 2. Add Schedule Trigger node
-3. Set interval to ""Every Day""
-4. Configure trigger time to ""10:00 AM""
+3. Set interval to "Every Day"
+4. Configure trigger time to "10:00 AM"
 
 </details>
 
 <details>
-<summary>**Fetching News from RSS Feeds**</summary>
+<summary><strong>Fetching News from RSS Feeds</strong></summary>
 
 #### RSS Feed Read Node
 
@@ -2072,32 +2036,32 @@ The RSS Feed Read Node in n8n serves three main purposes:
 
 **Fetching News from RSS Feeds:**
 1. Connect RSS Read node to Schedule Trigger
-2. Paste RSS Feed URL (e.g., <a href=""https://aibusiness.com/rss.xml"" target=""_blank"">https://aibusiness.com/rss.xml</a>)
+2. Paste RSS Feed URL (e.g., `"https://aibusiness.com/rss.xml"` )
 3. Execute to test the connection
 
 </details>
 
 <details>
-<summary>**Aggregating All Content**</summary>
+<summary><strong>Aggregating All Content</strong></summary>
 <br>
 Sometimes you have separate pieces of data from the RSS feed. The Aggregate node bundles them together, and the result is a single piece of data.
 
 **Configuration:**
 
 - Add Aggregate node after RSS Feed Read
-2. Set to ""Aggregate All Item Data""
+2. Set to "Aggregate All Item Data"
 3. This creates a single JSON object with all articles
 
 </details>
 
 <details>
-<summary>**Summarizing Using Gemini AI**</summary>
+<summary><strong>Summarizing Using Gemini AI</strong></summary>
 <br>
+
 #### Gemini AI Model Setup
 
-- Add Basic LLM Chain Node
-- Then Search and Add Google Gemini Chat Model
-- Choose gemini-2.5-flash model 
+- Add Gemini AI Node
+- Choose gemini-3.1-flash-lite model
 
 <details>
 <summary>Configure with this Prompt</summary>
@@ -2127,27 +2091,23 @@ AI News Bot
 
 ```
 </details>
-
 </details>
 
+
 <details>
-<summary>**Sending Email**</summary>
+<summary><strong>Sending Email</strong></summary>
 
 #### Step 1: Create a Gmail Send Node
 - Open your n8n workflow.  
 - Click `+` to add a new node.  
-- Search for `Gmail → Send a message`.  
-- Click `Create New Credential` → Select `OAuth2 authentication`.
-
----
+- Search for `Gmail Send Node`.  
+- Configure recipient, subject, and message body as per your requirements.
 
 #### Step 2: Enable Required APIs
 - Go to `APIs & Services → Library` in the Google Cloud Console.  
-- Search for the required API (e.g., `Gmail`, `Sheets`, `Drive`, `Calendar`).  
+- Search for the required API (e.g., `Gmail`).  
 - Select `Gmail API`.  
 - Click `Enable`.
-
----
 
 #### Step 3: Configure OAuth Consent Screen
 - Go to `APIs & Services → OAuth consent screen`.  
@@ -2161,12 +2121,10 @@ AI News Bot
 - Click `Create`.
 
 ##### Configure Branding and Domains
-- From the left menu, select `Branding`.  
-- In `Authorized domains`, click `Add domain`.  
-- Add the domain: `earlywave.in`.  
+- From the left menu, select `Branding`.
+- In `Authorized domains`, click `Add domain`.
+- Add the domain: `earlywave.in`.
 - Click `Save`.
-
----
 
 #### Step 4: Create OAuth 2.0 Credentials
 - Navigate to `APIs & Services → Credentials`.  
@@ -2182,13 +2140,10 @@ AI News Bot
 
 ---
 
-#### Step 5: Publish the App
-- Go to `APIs & Services → OAuth consent screen`.  
-- Navigate to the `Audience` section.  
-- Under `Publishing status`, click `Publish App`.  
-- Confirm the publication.
-
----
+#### Step 5: Sending Email
+- Use the `Gmail Send Node` in n8n.
+- Configure the recipient's email address, subject line, and message body.
+- Test the node to ensure the email is sent successfully.
 
 #### Step 6: Gmail Send Node Integration (n8n)
 - Open the `Gmail Send` node in the n8n workflow.  
@@ -2202,63 +2157,67 @@ AI News Bot
 ---
 
 #### Step 7: Configure Recipient Details (n8n)
-- In the same Gmail node:
+- In the same Gmail Send Node:
   - Set the `To` field with the recipient’s email address.  
   - Set `Subject:` Today's AI News for you...  
-  - Set `Email Type:` Text  
   - In the `Message` field, insert:  
     ```
-    {{ $json.text }}
+    {{ $json["summary"] }}
     ```
-
 </details>
 
+
+# Build Your Own AI News Summarizer | Part 2
+
+In Build Your Own AI News Summarizer | Part 1, we built an AI News Summarizer that fetches news from RSS feed, summarizes it using Gemini AI, and delivers daily email updates. In this unit, we'll expand our workflow by adding Mutiple RSS Feeds.
+
+
 ### Adding Multiple News Categories
-<MultiLineWarning text=""Question"">
+<MultiLineWarning text="Question">
 What if we want technology news along with AI news?
 
 </MultiLineWarning>
 
-<MultiLineWarning text=""Solution"">
+<MultiLineWarning text="Solution">
 So far, we have been fetching AI news from one RSS feed. Now, let's learn how to add technology news from another RSS feed to get a complete view of the news
 
 </MultiLineWarning>
 
-
 ### Updated Workflow Steps
-1. Adding a Trigger Node (already completed)
+
+**1. Adding a Trigger Node (already completed)**
 
 <details>
-<summary>**2.Fetching News from Multiple RSS Feeds**</summary>
+<summary><strong>2.Fetching News from Multiple RSS Feeds</strong></summary>
 
 #### Add RSS Read Node for Technology Updates
 
 - Click on the end of the `Schedule Trigger` node.  
 - Add another node and select `RSS Read`.  
 - Name the node as `Technology Updates Feed`.  
-- Set the `Feed URL` to:  <a href=""https://techcrunch.com/feed/"" target=""_blank"">https://techcrunch.com/feed/</a>
+- Set the `Feed URL` to:  <a href="https://techcrunch.com/feed/" target="_blank">https://techcrunch.com/feed/</a>
 - Execute the node to fetch the latest news.
 
 </details>
 
-
 <details>
-<summary>**3.Merging the Data**</summary>
 
+<summary><strong>3.Merging the Data</strong></summary>
 
 ### Understanding the Merge vs Aggregate Difference
+
 **n8n Merge Node**
 
 - Data can come from multiple sources
 - The Merge node combines them into one output stream
 - Each piece of data still remains separate
 
-
-<MultiLineWarning text= ""Merge vs Aggregate"">
+<MultiLineWarning text= "Merge vs Aggregate">
 **Merge** is like collecting papers from different files into one stack (still separate sheets)
 But **Aggregate** is like stapling all those sheets together into one document
 
 </MultiLineWarning>
+
 #### What Merge Does?
 
 - Collects items from different sources
@@ -2273,16 +2232,20 @@ But **Aggregate** is like stapling all those sheets together into one document
 - Creates a single document
 - Like stapling all those sheets together into one document
 
-
 ### Merge Configuration
 
 -  Add Merge node
-2. Set ""Number of Inputs"" to 2
+2. Set "Number of Inputs" to 2
 3. Connect both RSS nodes to Merge inputs
 4. This combines articles from both sources
 
+</details>
+
+**4. Aggregating All Content**
+
 <details>
-<summary>Updating the AI Prompt</summary>
+
+<summary><strong>5.Updating the AI Prompt</strong></summary>
 
 ```
 You are an AI news summarizer handling multiple categories.
@@ -2313,16 +2276,9 @@ Keep it professional, concise, and easy to read.
 
 ```
 
-
 </details>
 
-</details>
-
-
-4. Aggregating All Content
-5. Summarizing Using Gemini AI
-6. Sending Email via Gmail
-
+**6. Sending Email via Gmail**
 
 ## Testing and Deployment
 
@@ -2331,22 +2287,26 @@ Keep it professional, concise, and easy to read.
 Schedule Trigger → Parallel RSS Fetching → Merge → Aggregate → AI Summary → Gmail
 
 ### Test Checklist
-1. Click ""Execute Workflow"" for manual test
+1. Click "Execute Workflow" for manual test
 2. Verify each node processes correctly
 3. Check email formatting
 4. Activate for daily automation
+
 ## Key Benefits
 
 ### What You've Built
 - Automated news monitoring from multiple sources
 - AI-powered summarization
 - Daily email delivery at 10 AM
-- 30+ minutes saved every day"
-"# Introduction
+- 30+ minutes saved every day
 
-In Build Your Own AI News Summarizer | Part 1, we built an AI News Summarizer that fetches news from RSS feeds, summarizes it using Gemini AI, and delivers daily email updates. In this unit, we'll expand our workflow by adding real-time event updates to give us a complete view of what's happening in the AI world.
 
-## What We Built in Part 1
+
+# Build Your Own AI News Summarizer | Part 3
+
+In Build Your Own AI News Summarizer | Part 1 and Part 2, we built an AI News Summarizer that fetches news from RSS feeds, summarizes it using Gemini AI, and delivers daily email updates. In this unit, we'll expand our workflow by adding real-time event updates to give us a complete view of what's happening in the AI world.
+
+## What We Built in Part 1 and Part 2
 
 Our existing workflow:
 
@@ -2356,21 +2316,21 @@ Our existing workflow:
 - Summarizes the content using Gemini AI
 - Delivers it straight to our inbox through Gmail
 
-## What We're Building in Part 2
+## What We're Building in Part 3
 
 The updated AI News Summarizer will:
 
 1. Fetch AI news from RSS feeds
 2. Collect tech updates from RSS feeds
-3. Discover AI Events using real-time search
+3. Discover AI Events using SERP API
 4. Summarize everything with Gemini AI
 5. Deliver newsletter to your email
 
-<MultiLineWarning text=""End Result"">
+<MultiLineWarning text="End Result">
 From 30 minutes of browsing ➡ 2-minute personalized Newsletter with live events!
 </MultiLineWarning>
 
-##Expanding beyond RSS Feed
+## Expanding beyond RSS Feed
 
 ### What We Have So Far
 
@@ -2378,10 +2338,9 @@ From 30 minutes of browsing ➡ 2-minute personalized Newsletter with live event
 - We can fetch news from multiple websites
 - Everything gets summarized and emailed
 
-<MultiLineWarning text=""Reality Check"">
+<MultiLineWarning text="Reality Check">
 RSS feeds only show information that websites have already published. We need to search across the entire internet!
 </MultiLineWarning>
-
 
 Using RSS Feeds we may not get live information like:
 
@@ -2390,12 +2349,11 @@ Using RSS Feeds we may not get live information like:
 - Search results for specific topics (from the entire internet)
 - Events happening this week (across ALL websites)
 
-
+To address this limitation, we integrate SERP API to fetch live and comprehensive data from the internet.
 
 ### Application Programming Interface (API)
 
 API stands for Application Programming Interface. Applications interact with each other through Application Programming Interface (API)
-
 
 #### API - Waiter in a Restaurant
 
@@ -2429,37 +2387,35 @@ API works the same way:
 6. Summarizing Using Gemini AI  
 7. Sending Email via Gmail  
 
-###RSS and API
+### RSS and API
 
 Some websites offer both RSS feeds and their own API, but they only provide content from their own website.
 
-<MultiLineWarning text=""What We Really Need"">
+<MultiLineWarning text="What We Really Need">
 An API that can search the entire internet, not just one website!
 </MultiLineWarning>
 
-###SERP API
+### SERP API
 
 - SERP API is a real-time service that lets you fetch and structure search results from Google (and other engines) through an API.
 
 **Why SERP API for Live Events?**
 
-####RSS Feeds:**
+#### RSS Feeds:
 
 - RSS feeds only display content that websites decide to publish.
 - They are limited to the sources you subscribe to.
 
-####SERP API:**
+#### SERP API:
 
 - SERP API searches across Google’s entire search results
 - It can find events or information from any source, not just your subscribed ones
 
-
-###How we can call the SERP API?
+### How we can call the SERP API?
 
 **Understanding the `HTTP Request Node`**
 
 - N8N provides a HTTP Request node that allows us to make API calls
-
 
 Earlier we discussed that an API is like a waiter — you tell them what you want, they go to the kitchen, and bring it back.
 
@@ -2478,10 +2434,10 @@ Where does the HTTP Request Node fit into this picture?
 - Website = Kitchen
 - Data = Food
 
-###Fetching News from SERP API
+### Fetching News from SERP API
 
 <details>
-<summary>**Add HTTP Request Node**</summary>
+<summary><strong>Add HTTP Request Node</strong></summary>
 
 - Open your workflow
 2. Click on the Nodes panel + icon on the right side
@@ -2491,12 +2447,12 @@ Where does the HTTP Request Node fit into this picture?
 </details>  
 
 <details>
-<summary>**Configure the API Request**</summary>
+<summary><strong>Configure the API Request</strong></summary>
 
-####What are “Parameters”?
+#### What are “Parameters”?
 Parameters are specific pieces of information you send to an API to tell it exactly what you want in return. 
 
-####Our Parameters**
+#### Our Parameters**
 
 | Parameter | Value | 
 |-----------|-------|
@@ -2506,37 +2462,37 @@ Parameters are specific pieces of information you send to an API to tell it exac
 | `gl` | Country code for localized results  | 
 | `api_key` | Authentication credential required to access the SerpAPI service | 
 
-####Configuration of HTTP node
+#### Configuration of HTTP node
 
-- Open your browser and Go to <a href=""https://serpapi.com/google-events-api"" target=""_blank"">https://serpapi.com/google-events-api</a>
+- Open your browser and Go to <a href="https://serpapi.com" target="_blank">https://serpapi.com</a>
 
-- sign in
+- Sign in.
 - In the dashboard, select `Google Events API`.
-- Scroll down until you find a **cURL command**
+- Scroll down until you find a **cURL command**.
 - Copy that entire cURL command.
 - Go back to n8n → open your **HTTP Request node**.
 - Look for the option **Import cURL** (near the top of the node settings).
 - Click it → paste the cURL command you copied from SerpAPI.
-- click on `import`
+- Click on `import`.
 - Now go to the **Query Parameters** section.
-    - q : `AI Tech Events in india`
-- Add api key, go to <a href=""https://serpapi.com/manage-api-key"" target=""_blank"">https://serpapi.com/manage-api-key</a> for the key
-- execute the node
+    - q : `AI Tech Events in India`
+- Add API key. Go to <a href="https://serpapi.com/manage-api-key" target="_blank">https://serpapi.com/manage-api-key</a> for the key.
+- Execute the node.
 
-</details>  
+</details>
 
-###Merging The Data
+### Merging The Data
 
 <details>
-<summary>**Steps**</summary>
+<summary><strong>Steps</strong></summary>
 
 - Click on your existing Merge node
-2. Change ""Number of Inputs"" from 2 to 3
+2. Change "Number of Inputs" from 2 to 3
 3. Connect HTTP Request as the third input
 </details>
 
 <details>
-<summary>**Test The New Addition**</summary>
+<summary><strong>Test The New Addition</strong></summary>
 
 #### Testing Steps
 
@@ -2547,7 +2503,7 @@ Parameters are specific pieces of information you send to an API to tell it exac
 </details>
 
 <details>
-<summary>**Final AI Prompt**</summary>
+<summary><strong>Final AI Prompt</strong></summary>
 
 ```
 You are an AI newsletter assistant creating a daily intelligence report from multiple categories.
@@ -2576,7 +2532,7 @@ Link: <paste link>
 UPCOMING AI EVENTS
 ======================
 [List events with date, location, description]
-If no events found: ""No AI events scheduled this week""
+If no events found: "No AI events scheduled this week"
 
 For each Event Item
 HEADLINE IN ALL CAPS
@@ -2585,11 +2541,14 @@ Link: <paste link>
 
 Keep the summaries professional, concise, and easy to read.
 
-Sign off as ""Your AI Intelligence Team""
+Sign off as "Your AI Intelligence Team"
 
 ```
-</details>"
-"# Introduction
+</details>
+
+
+# Productivity Power-Up with AI Tools | Part 2
+
 In this unit, we will explore additional AI tools that can significantly enhance productivity. We'll examine how they assist with tasks such as creating presentations, understanding complex code, and automating everyday processes.
 
 ## Let's Explore the Tools That We Are Going to Study
@@ -2601,7 +2560,7 @@ In this unit, we will explore additional AI tools that can significantly enhance
 --- 
 
 
-#1. Otter AI - Your AI Note-Taking Assistant
+# 1. Otter AI - Your AI Note-Taking Assistant
 
 Have you ever felt difficulty in keeping track of all your meeting notes, or struggle to recall key points discussed during long virtual meetings?
 
@@ -2612,7 +2571,7 @@ Have you ever felt difficulty in keeping track of all your meeting notes, or str
 <details>
 <summary><strong>Step 1: Create Account</strong></summary>
 
-- Visit <a href=""https://otter.ai"" target=""_blank"">otter.ai</a>.
+- Visit <a href="https://otter.ai" target="_blank">otter.ai</a>.
 - Create an account using email or Google account.
 - Sync your calendar to auto-join and transcribe meetings.
 </details>
@@ -2624,7 +2583,7 @@ Have you ever felt difficulty in keeping track of all your meeting notes, or str
 
    <details>
   <summary><strong>Audio</strong></summary>
-  <a href=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/sample%20audio.mp3"" target=""_blank"">
+  <a href="https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/sample%20audio.mp3" target="_blank">
     Open Sample Audio
   </a>
 </details>
@@ -2633,7 +2592,7 @@ Have you ever felt difficulty in keeping track of all your meeting notes, or str
 <details>
 <summary><strong>Step 3: Creating Summary & Transcripts</strong></summary>
 
-- ###Post-Recording
+- ### Post-Recording
  
     - Review the transcript for accuracy.
     - Create a summary by clicking **Summary**.
@@ -2656,7 +2615,7 @@ Have you ever felt difficulty in keeping track of all your meeting notes, or str
 <details>
 <summary><strong>Step 1: Create Account</strong></summary>
 
-- Visit <a href=""https://napkin.ai"" target=""_blank"">napkin.ai</a>.
+- Visit <a href="https://napkin.ai" target="_blank">napkin.ai</a>.
 - Create an account using email or Google account.
 </details>
 
@@ -2701,7 +2660,7 @@ What are Newton's three laws of motion?
 
 ---
 
-#3.  QuizGecko - AI-Powered Quiz Generator
+# 3.  QuizGecko - AI-Powered Quiz Generator
 
 **QuizGecko** automatically generates quizzes, flashcards, and practice tests from your study materials, letting you focus on studying
 
@@ -2710,7 +2669,7 @@ What are Newton's three laws of motion?
 <details>
 <summary><strong>Step 1: Create Account</strong></summary>
 
-- Visit <a href=""https://quizgecko.com"" target=""_blank"">quizgecko.com</a>.
+- Visit <a href="https://quizgecko.com" target="_blank">quizgecko.com</a>.
 - Create an account using email or Google account.
 </details>
 <details>
@@ -2721,8 +2680,8 @@ Choose an input method:
 - **Upload Files**: Textbooks, lecture notes, or articles.
     <details>
     <summary><strong>Sample PDF</strong></summary>
-    <a href=""
-    https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/generative_ai_tutorial_u1cjga.pdf"" target=""_blank"">PDF</a>
+    <a href="
+    https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/generative_ai_tutorial_u1cjga.pdf" target="_blank">PDF</a>
     </details>
 
 - **Question Type**: Multiple choice, true/false, short answer.
@@ -2738,14 +2697,14 @@ Choose an input method:
 - Track performance analytics and improvement over time.
 </details>
 
-##Advantages
+## Advantages
 
 - **Multiple Question Types**: Creates MCQs, true/false, fill-in-the-blanks, and essay questions.
 - **Adaptive Difficulty**: Adjusts question complexity based on your performance.
 - **Progress Tracking**: Monitor your learning progress and identify weak areas.
 - **Instant Feedback**: Get explanations for correct and incorrect answers.
 
-##Similar Tools
+## Similar Tools
 
 - **Anki**
 - **StudyFetch**
@@ -2753,7 +2712,7 @@ Choose an input method:
 
 ---
 
-#4. Perplexity - Your AI Research Assistant
+# 4. Perplexity - Your AI Research Assistant
 **Perplexity** combines AI with real-time web search to provide accurate, referenced answers, making research easier and faster.
 
 ## How to Use Perplexity
@@ -2761,7 +2720,7 @@ Choose an input method:
 <details>
 <summary><strong>Step 1: Create Account</strong></summary>
 
-- Visit <a href=""https://www.perplexity.ai"" target=""_blank"">Perplexity.ai</a>.
+- Visit <a href="https://www.perplexity.ai" target="_blank">Perplexity.ai</a>.
 - Create an account (optional, just for history).
 </details>
 
@@ -2782,7 +2741,7 @@ Find recent academic papers (2020-2024) about the effects of social media on tee
 <details>
 <summary><strong>Step 3: Advanced Research Techniques</strong></summary>
 
-- **Study-Focused Questions**: Ask things like ""school articles about..."" or ""trusted research on...""
+- **Study-Focused Questions**: Ask things like "school articles about..." or "trusted research on..."
 - **Keep the Conversation Going**: Ask follow-up questions to get deeper answers.
 - **Choose Your Sources**: Ask for certain types like school journals, news articles, or government info.
 - **Check if It’s True**: Ask for more than one source to make sure the info is correct.
@@ -2796,21 +2755,20 @@ Try out the different features available in Perplexity(voice Dictation, working 
 ## Similar Tools
 - **Scholar AI**
 - **ChatGPT**
-- **Gemini**"
-"# Introduction  
+- **Gemini**
+
+
+# Mastering Image Generation  
 
 In this unit, we will understand about AI image generation, how it works, and its applications. We will explore different types of AI image generation and the models used. Finally, we will focus on Diffusion models, understanding what they are and how they work.
 
-
-##AI Image Generation
+## AI Image Generation
 
 Have you come across stunning images while scrolling through your social media feeds/articles?
 
 - AI image generation refers to the process of using AI models to create realistic and visually appealing images
 
 - AI Image Generation is the process where artificial intelligence systems create visual content - whether that's photorealistic images, artistic illustrations, or completely new visual concepts- either from **textual prompts** or from **existing visuals**.
-
-
 
 ### AI Image Generation Applications
 
@@ -2822,11 +2780,10 @@ These AI-generated images are everywhere, and sometimes, you may not even realiz
     - TV and Entertainment
     - Articles and Blogs
 
-
 ### Real-World Applications Across Industries
 
 <details>
-<summary>**Creative Industries**</summary><br>
+<summary><strong>Creative Industries</strong></summary><br>
 
 AI image generation is revolutionizing creative work through:
 
@@ -2837,7 +2794,7 @@ AI image generation is revolutionizing creative work through:
 </details>
 
 <details>
-<summary>**Entertainment and Media**</summary><br>
+<summary><strong>Entertainment and Media</strong></summary><br>
 
 The entertainment industry uses AI for:
 
@@ -2848,7 +2805,7 @@ The entertainment industry uses AI for:
 </details>
 
 <details>
-<summary>**E-Commerce**</summary><br>
+<summary><strong>E-Commerce</strong></summary><br>
 
 Online businesses leverage AI for:
 
@@ -2859,7 +2816,7 @@ Online businesses leverage AI for:
 </details>
 
 <details>
-<summary>**Architecture and Design**</summary><br>
+<summary><strong>Architecture and Design</strong></summary><br>
 
 Design professionals use AI for:
 
@@ -2869,226 +2826,251 @@ Design professionals use AI for:
 </details>
 ---
 
-##Understanding Image Generation Types
+## Understanding Image Generation Types
 
 ### Text-to-Image Generation
 
 - Takes text descriptions as input and generates corresponding images as output
 
-###Image-to-Text
+### Image-to-Text
 
 - Takes images as input and generates descriptive text as output
 
-###Image-to-Image
+### Image-to-Image
 
 - Transforms one image into another based on style, content, or specific modifications
 
+## Closed Source & Open Source Models
+ 
+- **Closed approach**: Models are not fully publicly accessible. They are developed and maintained by organizations or companies, and you access them via certain interfaces like mobile apps or web apps.
+- **Open source approach**: Publicly available models that allow anyone to use, modify, and work with the software.
+
+### Generation Models (Text to Image & Image to Image)
+ 
+ 
+| Model | Type | Best for |
+|---|---|---|
+| **GPT Image 2 (OpenAI)** | Closed | Easy all-rounder |
+| **Gemini 3 Pro Image (Google)** | Closed | Instructions + correct text in images |
+| **Imagen 4 Ultra** | Closed | Most photorealistic results |
+| **Midjourney v8.1** | Closed | Artistic, polished style |
+
+
+| Model | Type | Best for |
+|---|---|---|
+| **Stable Diffusion 4** | Open | Beginner-friendly; biggest community |
+| **FLUX.2** | Open | Production quality |
+| **Qwen-Image** | Open | Readable text inside images |
+ 
+ 
+### Understanding Models (Image to Text)
+ 
+ 
+| Model | Type | Best for |
+|---|---|---|
+| **GPT-5.5 vision** | Closed | General image understanding |
+| **Claude Opus 4.8 vision** | Closed | Documents & detailed descriptions |
+| **Gemini 3 Pro vision** | Closed | Multimodal understanding |
+ 
+ 
+| Model | Type | Best for |
+|---|---|---|
+| **Qwen3-VL** | Open | Strong text reading (OCR) |
+| **InternVL3** | Open | Leading open-source accuracy |
+| **Molmo** | Open | Lightweight, easy to learn with |
+ 
+---
+ 
+## Image Generation Best Practices
+ 
+The prompt is everything. Whether you're making an image, editing one, or describing one, a clear prompt gives you a much better result.
+ 
+- **Write a full sentence, not keywords** – describe the whole scene so the model sees how things connect (say "a cat sitting on a red sofa near a sunny window," not "cat, sofa, sun").
+- **Start with the subject** – say who or what the image is about first, and what it looks like.
+- **Then add setting → materials → lighting → composition** – the background, the textures, the light, and the camera angle or framing.
+- **Open with your intent** – begin with "Create an image of…" (to make one) or "Look at this image and tell me…" (to describe one) so the model knows what you want.
+- **Say what you want in a positive way** – "an empty street" works better than "no cars."
+- **Keep it tight** – around 15–50 words is plenty; every word should add something.
+- **Refine step by step** – start simple, then improve with small follow-ups like "make the lighting warmer," instead of rewriting the whole prompt.
+- **Stuck?** Ask an LLM to expand your idea into a detailed prompt, then tweak it.
+
+> **Note:** AI image tools are evolving fast. Even different versions of the same model (e.g., "flash" vs. "pro") can vary in quality. If your first result looks off — odd proportions, strange hands — that's normal. Just retry or refine your prompt.
+
+
+**References**
+ 
+- <a href="https://developers.googleblog.com/how-to-prompt-gemini-2-5-flash-image-generation-for-the-best-results/" target="_blank">How to prompt Gemini image generation for the best results</a>
+- <a href="https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/capabilities/gemini-image-generation-best-practices" target="_blank">Gemini image generation best practices</a>
+- <a href="https://deepmind.google/models/gemini-image/prompt-guide/" target="_blank">Gemini image prompt guide</a>
 ---
 
-## Closed Source Models
 
-- **GPT-4V (Vision)** – from OpenAI. **GPT-5** also provides similar support.  
-- **Claude 3 Haiku** – from Anthropic.  
-- **Gemini 2.5 Flash Image** – from Google.
-- **DALL-E 3** – from OpenAI
+## Try It Yourself
 
-**Hands-on**
-
-<a href=""https://gemini.google.com/app"" target=""_blank"">Gemini</a>
-
-
-####Example 1: Gemini Nano Banana (Image to Image)
-<details>
-<summary>Image</summary>
-<a href=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/image%201.jpg"" target=""_blank"">Reference mage</a>
-
-</details>
-<details>
-<summary>outfit</summary>
-<a href=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/men_outfit_hscc4u.jpg"" target=""_blank"">https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/men_outfit_hscc4u.jpg</a>
-
-</details>
-<details>
-<summary>Prompt</summary>
-```
-Replace the Outfit with the one I added
+<a href="https://gemini.google.com/app" target="_blank">Gemini</a>
  
+#### Gemini Nano Banana (Text to Image)
+
+<details>
+<summary>Prompt</summary>
+
+```
+Create an image of a calm tropical beach at sunset. The golden sun sits halfway below the horizon, casting warm orange and pink light across a soft sky. Gentle waves reflect the glow on smooth wet sand, and tall palm trees frame the left side. Shoot it like a wide, cinematic photograph — peaceful and dreamlike.
 ```
 </details>
-####Example 2: Gemini Nano Banana(Image to image)
+How this prompt applies the best practices:
+ 
+ 
+
+| Best practice | Where it appears |
+|---|---|
+| Open with intent | Starts with "Create an image of…" — tells the AI to make, not describe |
+| Subject first | "a calm tropical beach at sunset" |
+| Full sentences | The whole scene is described in connected sentences, not keywords |
+
+
+#### Gemini Nano Banana (Image to Image)
 
 <details>
 <summary>Image</summary>
-<a href=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/image%202.jpg"" target=""_blank"">Gemini Example 2</a>
-
+<a href="https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/image%202.jpg" target="_blank">Reference Image</a>
 </details>
 <details>
 <summary>Prompt</summary>
+
 ```
-Using the nano-banana model, create a 1/7 scale commercialised figurine of the characters in the picture, designed in a realistic style and placed in a real environment. The figurine should be on a computer desk with a round transparent acrylic base, without any text. TOn the computer screen, display the brush modelling process of this figurine.
-
-Next to the computer screen is a BANDAI-style toy packaging box printed with original artwork. The packaging features two-dimensional flat illustrations. The original photo should be transformed into a figurine, and behind it, there should be a model packaging box with the character from this photo printed on it.  In front of the box, add a round plastic base showcasing the figure version of the given photo. Ensure that the PVC material of the figurine is clearly represented, and for added realism, set the background indoors.
-
+Create an image that turns the character in my photo into a 1/7 scale commercial figurine, sculpted in a realistic style. Place the figurine on a computer desk, standing on a round, transparent acrylic base that is clean and unmarked. On the computer screen behind it, show the 3D brush-modelling process of this same figurine. Next to the screen, add a BANDAI-style toy packaging box printed with flat, two-dimensional artwork of the same character. Make the figurine's PVC material clearly visible — smooth and slightly glossy — and light the whole scene like a cosy indoor room for a realistic look.
 ```
 </details>
 
-<a href=""https://chatgpt.com/"" target=""_blank"">ChatGPT</a>
+#### ChatGPT (Image to Text)
 
-####ChatGPT (Image to Text)
 <details>
 <summary>Image</summary>
-<a href=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/hair-cut_lhbifp.jpg"" target=""_blank"">https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/hair-cut_lhbifp.jpg</a>
-
+<a href="https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat-course-projects/hair-cut_lhbifp.jpg" target="_blank">Reference Image</a>
 </details>
+
 <details>
 <summary>Prompt</summary>
+
 ```
-[upload_your_image] ""What is my face shape?""
+[upload_your_image] "What is my face shape?"
 ```
+
 ```
-""Can you give me 3–5 specific haircut names or styles that would suit my face shape? 
-For each style, describe how it would frame my face and what features 
-it would enhance.""
+"Can you give me 3–5 specific haircut names or styles that would suit my face shape? 
+For each style, describe how it would frame my face and what features it would enhance."
 ```
+
 ```
-""Can you describe the types of haircuts that would balance or highlight my facial features? Include styles that [add length/soften angles/create symmetry/etc], depending on my face shape.""
-```
-```
-""I prefer [longer/shorter] hair and [do/don't] like to style it daily. Which one of the suggested styles would be easiest to maintain, and how often would I need to get it trimmed?""
+Look at the photo I've uploaded and tell me my face shape (oval, round, square, heart, and so on). Then suggest 3–5 specific haircut styles that would suit that face shape, and for each one explain how it would frame my face and which features it would highlight. I prefer low-maintenance hair I don't have to style daily — which option is easiest to keep up, and how often should I trim it?
 ```
 </details>
 
-##Open Source Models
+> **Note:** The image-generation space upgrades almost daily, so model names and rankings change fast. The models we discussed reflect the landscape as of mid-2026 — treat them as a snapshot, not a permanent list.
 
-- **Stable Diffusion 3.5** – from Stability AI  
-- **FLUX.1** – from Black Forest Labs  
-- **LLaVA** – from Microsoft / UW
-- **QWEN2.5-VL** – from Alibaba
 
-**Hands-on**
+---
+ 
+## Adding Image to Social Media Automation Workflow
 
-Stable Diffusion (<a href=""https://huggingface.co/spaces/stabilityai/stable-diffusion-3.5-large"" target=""_blank"">Stable Diffusion 3.5 Large</a>)
+**Recall: Building Social Media Workflow**
+ 
+We built a workflow that turns an article into a LinkedIn post — text only.
+ 
+`Article → Extract → Understand → Structure → Rewrite → Finalize → LinkedIn post`
+ 
+**The Idea**
+ 
+A post with a matching image gets noticed more. Let's enhance that same workflow to generate and attach an image.
+ 
+`Article → Extract → Understand → Structure → Rewrite → Generate Image → Finalize → LinkedIn post`
+ 
+**Updated Steps**
+ 
+| # | n8n node | What it does |
+|---|---|---|
+| 1 | Google Sheets Trigger | Starts on a new article link *(had it)* |
+| 2 | Google Gemini | Summarizes the article *(had it)* |
+| 3 | Google Gemini | Writes the LinkedIn post *(had it)* |
+| 4 | Google Gemini | Writes an image prompt *(new)* |
+| 5 | HTTP → FLUX.1 [schnell] | Generates the image *(new)* |
+| 6 | Download | Saves the image file *(new)* |
+| 7 | LinkedIn | Posts the text AND the image |
+ 
+A text model writes the prompt · an image model makes the picture.
 
-<details>
-<summary>Basic Prompt</summary>
-```
-Football player
+## How Image Generation Models Work
 
-```
-</details>
-<details>
-<summary>Ask An LLM To Enhance The Prompt</summary>
-```
-Help me write a prompt for Stable Diffusion to create an image of a football player. Make it creative and detailed.
-
-```
-</details>
-<details>
-<summary>Better Prompt</summary>
-```
-A professional studio photo Panini soccer card featuring football legend Lionel Messi wearing his iconic Argentina blue and white striped jersey, captured mid-kick with dynamic motion blur, the ball breaking through the holographic card boundary, metallic foil texture, trading card aesthetic, 8k quality""
-```
-</details>
-
-<a href=""https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev"" target=""_blank"">FLUX.1 [dev]</a>
-
-<details>
-
-<summary>Basic Prompt</summary>
-```
-Create a beach sunset
-
-```
-</details>
-<details>
-<summary>Ask An LLM To Enhance The Prompt</summary>
-```
-I want to create an image using DALL-E 3. Can you refine this prompt to make it more detailed and artistic: 'Create a beach sunset
-```
-</details>
-<details>
-<summary>Better Prompt</summary>
-```
-A breathtaking, ultra-realistic beach sunset scene. The golden sun is halfway below the horizon, casting warm orange, pink, and purple hues across the sky. Gentle waves reflect the glowing colors as they roll onto smooth, wet sand, leaving shimmering reflections. Wispy clouds scatter the light dramatically, adding depth and contrast. A few distant silhouettes of seagulls soar across the sky, and palm trees on one side frame the scene naturally. The atmosphere feels serene, cinematic, and dreamlike — perfect balance of realism and artistry.
-
-```
-</details>
-
-##How Image Generation Models Work
-
-###Core Training Process
+### Core Training Process
 
 - Image generation models learn by looking at millions of pictures
 - While text-based AI systems learn from written content
 
-###Input Processing
+### Input Processing
 
 - **Text prompts**
-
     - The system tries to generate images that align with text prompts
-
 - **Existing Images**
+    - When you input existing images, the system modifies them to match your chosen style or concept
 
-    - When you input existing images, 
-the system modifies them to match your chosen style or concept
-
-###Top Architectures Behind Image Generation
+### Top Architectures Behind Image Generation
 
 - **Diffusion Models**
-
     - Start with noise and gradually refine it into a clear image
-
 - **GAN (Generative Adversarial Network)**
-
     - Two AI systems compete - one creates images, one judges if they're real
-
-- ** VAE(Variational autoencoder)**
-
+- **VAE (Variational Autoencoder)**
     - Compress images into simple codes, then rebuild them from those codes
-
 - **Transformer-based Models**
-
     - Focus on how different parts of an image relate to each other
 
 ---
-
+ 
 ## Diffusion Models
 
 - Diffusion models are one of the top choices for creating high-quality images from text descriptions
 
-###How Diffusion Models Work
+### How Diffusion Models Work
 
 Let's understand the magic behind diffusion models! 
 
-These power most modern AI image generators,  such as **Stable Diffusion** and **DALL-E**
-
+These power most modern AI image generators, such as **Stable Diffusion** and **Flux AI**
+ 
 - Imagine you're looking at TV static - just random dots and noise
-- Now imagine if you could slowly ""clean up"" that static, bit by bit, until it becomes a beautiful picture
+- Now imagine if you could slowly "clean up" that static, bit by bit, until it becomes a beautiful picture
 - That's exactly how diffusion models work!
 
 **Phases of Diffusion Models**
-
+ 
 <details>
-<summary>**1.Training Phase (Teaching the AI)**</summary>
+<summary><strong>1.Training Phase (Teaching the AI)</strong></summary>
 
 - The AI learns by taking millions of real images
-- It gradually adds ""noise"" to them (like adding static to a TV channel)
+- It gradually adds "noise" to them (like adding static to a TV channel)
 - It learns the reverse process: how to remove that noise step by step
-
 </details>
-
 <details>
-<summary>**2.Generation Phase (Creating New Images)**</summary>
+<summary><strong>2.Generation Phase (Creating New Images)</strong></summary>
 
 - Start with pure random noise (like TV static)
-- The AI uses what it learned to gradually ""denoise"" this random pattern
-- With each step,it removes a bit of noise and adds meaningful details
-- After many steps (usually 20-50), get a clear, beautiful image!
-
+- The AI uses what it learned to gradually "denoise" this random pattern
+- With each step, it removes a bit of noise and adds meaningful details
+- After many steps (usually 20-50), you get a clear, beautiful image!
 - AI-generated images take 10–30 seconds because the AI cleans random noise step by step into the clear, beautiful image!
+</details>
 
-</details>"
-"# Introduction
+**The Two Phases**
+ 
+| | Training (done once) | Generation (every prompt) |
+|---|---|---|
+| **Direction** | Adds noise (forward) | Removes noise (reverse) |
+| **Starts with** | A real image | Pure random noise |
+| **What happens** | Add noise; learn to spot it | Remove noise; add detail |
+| **Ends with** | A model that can denoise | A brand-new image |
+
+
+# Introduction
 
 In this unit, we will learn how to access free, powerful computing resources through **cloud platforms**, specifically focusing on **Kaggle** as our primary workspace.
 
@@ -3136,7 +3118,7 @@ In cloud computing, all of these are available instantly through the internet, w
 
 ### On-Demand Delivery: The Key Advantage
 
-The ""on-demand"" aspect of cloud computing is what makes it powerful:
+The "on-demand" aspect of cloud computing is what makes it powerful:
 
 ✓ **Need Higher Storage?** Instantly increase storage space without buying new hard drives
 
@@ -3217,7 +3199,7 @@ Let's go through each step in detail.
 **Navigate to Kaggle Website**
 
 1. Open your web browser
-2. Go to <a href=""https://www.kaggle.com"" target=""_blank"">www.kaggle.com</a> 
+2. Go to <a href="https://www.kaggle.com" target="_blank">www.kaggle.com</a> 
 3. Click on `Register` button
 
 **Complete Your Profile**
@@ -3291,7 +3273,7 @@ Kaggle uses **Jupyter Notebooks**, interactive coding environments where you can
    
    ```
    # This is a code cell
-   print(""Hello, Kaggle!"")
+   print("Hello, Kaggle!")
    ```
 
 </details>
@@ -3418,18 +3400,18 @@ Kaggle provides 30 hours of GPU time per week. Here's how to make the most of it
 **Method 1**: Notebook Interface
 
 - Look at top-right corner when GPU is on
-- Shows something like ""GPU: On (27:15 remaining)""
+- Shows something like "GPU: On (27:15 remaining)"
 
 **Method 2**: Account Settings
 
 - Click profile picture → Settings
-- Find ""GPU Quota"" section
+- Find "GPU Quota" section
 - Shows detailed usage breakdown
 
 **What the Display Tells You**:
 
 ```
-""28:45 remaining this week""
+"28:45 remaining this week"
 ↓
 You have 28 hours and 45 minutes left until Saturday reset
 ```
@@ -3452,7 +3434,7 @@ You have 28 hours and 45 minutes left until Saturday reset
 **1. Disable GPU for Non-GPU Work**
 
    - If writing code, planning, or debugging (not generating images)
-   - Switch Accelerator back to ""None""
+   - Switch Accelerator back to "None"
    - GPU time stops counting immediately
 
 **2. Stop Session When Done**
@@ -3479,7 +3461,7 @@ Even with proper setup, you might encounter some issues. Here's how to solve the
 <details>
 <summary><strong>Issue 1: No GPU Available</strong></summary><br>
 
-**Problem**: When you try to enable GPU, the option is greyed out or shows ""Not available.""
+**Problem**: When you try to enable GPU, the option is greyed out or shows "Not available."
 
 **Solution**: Verify Phone Number
 </details>
@@ -3487,7 +3469,7 @@ Even with proper setup, you might encounter some issues. Here's how to solve the
 <details>
 <summary><strong>Issue 2: Session Disconnected</strong></summary><br>
 
-**Problem**: Your notebook session suddenly stops or shows ""Session crashed.""
+**Problem**: Your notebook session suddenly stops or shows "Session crashed."
 
 **Solution**: Normal 12-Hour Limit
 
@@ -3497,7 +3479,7 @@ Even with proper setup, you might encounter some issues. Here's how to solve the
 <details>
 <summary><strong>Issue 3: Out of GPU Hours</strong></summary><br>
 
-**Problem**: Message shows ""GPU quota exceeded"" or ""0:00 remaining this week.""
+**Problem**: Message shows "GPU quota exceeded" or "0:00 remaining this week."
 
 
 
@@ -3518,8 +3500,9 @@ Even with proper setup, you might encounter some issues. Here's how to solve the
 
 </details>
 
----"
-"# Introduction
+---
+
+# Mastering Image Generation with Stable Diffusion
 
 In the previous unit, we learned about **AI Image Generation fundamentals** and how diffusion models work to create images from text descriptions. In this unit, we will focus on **Stable Diffusion**, an open-source image generation model that you can run yourself, and learn how to control it to create exactly the images you want.
 
@@ -3639,9 +3622,9 @@ Kaggle is a platform for data science and machine learning that provides:
 - **Limited weekly hours** but enough for learning and experimentation
 
 <MultiLineNote>
-<a href=""https://learning.ccbp.in/course?c_id=b9811b34-585b-47e0-a0be-65f1081a74f2&s_id=04b5d8ae-3e91-4215-be28-63ec61554c26&t_id=4915a7b0-b8d7-4148-8914-d8d3fb086944"" target=""_blank"">Kaggle Setup</a>
+<a href="https://learning.ccbp.in/course?c_id=b9811b34-585b-47e0-a0be-65f1081a74f2&s_id=04b5d8ae-3e91-4215-be28-63ec61554c26&t_id=4915a7b0-b8d7-4148-8914-d8d3fb086944" target="_blank">Kaggle Setup</a>
 <br>
-<a href=""https://www.kaggle.com/code/contentgenai/mastering-image-generation-with-stable-diffusion/edit/run/268462724"" target=""_blank"">Mastering Image Generation Notebook</a>
+<a href="https://www.kaggle.com/code/contentgenai/mastering-image-generation-with-stable-diffusion/edit/run/268462724" target="_blank">Mastering Image Generation Notebook</a>
 
 **CHECK BEFORE PROCEEDING**: Make sure your Kaggle notebook is ready and running with GPU enabled.
 </MultiLineNote>
@@ -3703,7 +3686,7 @@ At this point:
 <details>
 <summary><strong>Create Ngrok Account</strong></summary><br>
 
-1. Visit <a href=""https://ngrok.com"" target=""_blank"">ngrok.com</a>
+1. Visit <a href="https://ngrok.com" target="_blank">ngrok.com</a>
 2. Sign up with your email or Google account
 3. Verify your email address
 4. Log in to your Ngrok dashboard
@@ -3713,7 +3696,7 @@ At this point:
 <details>
 <summary><strong>Get Your Auth Token</strong></summary><br>
 
-1. After logging in, go to ""Your Authtoken"" section
+1. After logging in, go to "Your Authtoken" section
 2. Copy the authentication token (looks like: `2a1b3c4d5e6f7g8h9i0j`)
 3. Keep this token safe - you'll need it in the next step
 
@@ -3802,7 +3785,7 @@ Here are the essential controls you'll use:
 
 The prompt box is where you tell the AI what image you want to create. This is your primary way of communicating with Stable Diffusion.
 
-**Problem**: *""How do I tell the AI what I want?""*
+**Problem**: *"How do I tell the AI what I want?"*
 
 **Solution**: Write a detailed description using clear, descriptive language.
 
@@ -3813,7 +3796,7 @@ The prompt box is where you tell the AI what image you want to create. This is y
 
 The negative prompt tells the AI what NOT to include in your image. This helps prevent common problems like blurry faces, extra fingers, or unwanted styles.
 
-**Problem**: *""The AI keeps adding things I don't want!""*
+**Problem**: *"The AI keeps adding things I don't want!"*
 
 **Solution**: List unwanted elements in the negative prompt box.
 
@@ -3823,7 +3806,7 @@ The negative prompt tells the AI what NOT to include in your image. This helps p
 
 The seed is a number that controls the randomness in image generation. Using the same seed with the same prompt always produces the same image.
 
-**Problem**: *""I want to generate the exact same image again!""*
+**Problem**: *"I want to generate the exact same image again!"*
 
 **Solution**: Use a specific seed number instead of random (-1).
 
@@ -3834,7 +3817,7 @@ The seed is a number that controls the randomness in image generation. Using the
 
 CFG (Classifier Free Guidance) Scale controls how strictly the AI follows your prompt instructions.
 
-**Problem**: *""My image doesn't match my prompt!""*
+**Problem**: *"My image doesn't match my prompt!"*
 
 **Solution**: Adjust the CFG Scale to control adherence to your instructions.
 
@@ -3844,7 +3827,7 @@ CFG (Classifier Free Guidance) Scale controls how strictly the AI follows your p
 
 Sampling steps determine how many times the AI refines the image. More steps = more refinement = better quality (but slower generation).
 
-**Problem**: *""My image looks rough or unfinished!""*
+**Problem**: *"My image looks rough or unfinished!"*
 
 **Solution**: Increase the sampling steps for more refined results.
 
@@ -3854,7 +3837,7 @@ Sampling steps determine how many times the AI refines the image. More steps = m
 
 Sampling methods are different algorithms (mathematical approaches) the AI uses to generate images. Each method has trade-offs between speed, quality, and consistency.
 
-**Problem**: *""I want different styles or faster results!""*
+**Problem**: *"I want different styles or faster results!"*
 
 **Solution**: Choose a sampling method based on your priorities.
 
@@ -3916,7 +3899,7 @@ Sampling methods are different algorithms (mathematical approaches) the AI uses 
 
 Image size sets the width and height of your generated image in pixels. Different Stable Diffusion versions work best at specific resolutions.
 
-**Problem**: *""I need specific image dimensions!""*
+**Problem**: *"I need specific image dimensions!"*
 
 **Solution**: Set appropriate width and height based on your SD version and needs.
 
@@ -3945,7 +3928,7 @@ Image size sets the width and height of your generated image in pixels. Differen
 
 Batch count determines how many different images are generated at once from the same prompt. Each image will have variation due to different random seeds.
 
-**Problem**: *""I want different versions to choose from!""*
+**Problem**: *"I want different versions to choose from!"*
 
 **Solution**: Increase batch count to generate multiple variations simultaneously.
 
@@ -4038,8 +4021,10 @@ bad hands, deformed face, extra fingers, missing fingers, fused fingers, mutated
 
 </details>
 
----"
-"# Introduction to AI Agents
+---
+
+
+# Introduction to AI Agents
 
 In the previous units, we learned about AI tools like ChatGPT Agents and we learned about building automated workflows using n8n and integrating AI for tasks like content creation and summarization. In this unit, we'll explore AI Agents — intelligent systems that can think, plan, and take actions autonomously to achieve specific goals.
 
@@ -4054,7 +4039,7 @@ AI Agents can:
 3. **Execute** actions on our behalf
 4. Learn from **success** and **failures**
 
-###Understanding with Analogy
+### Understanding with Analogy
 
 Let’s understand with a babysitter analogy
 
@@ -4072,25 +4057,25 @@ Let’s understand with a babysitter analogy
 
 ---
 
-##Core Components
+## Core Components
 
 - AI Model (like GPT-5 or Claude)
 - Tools (search engines, databases)
 - Memory
 
-###AI Model - LLM
+### AI Model - LLM
 
 - The model is essentially the agent’s “brain” – it interprets instructions, reasons about problems, and decides on actions (GPT-5, Claude, Llama, etc)
-- The ""brain"" of the agent that can do
+- The "brain" of the agent that can do
     - Goal Understanding
     - Planning & Reasoning
     - Adaptive Learning
     - Learning
 
-###Tools
+### Tools
 
 - Tools are external functions or interfaces the agent can use to interact with the outside world
-- Tools are the agent's ""arms and legs"".
+- Tools are the agent's "arms and legs".
     - Extends Capabilities: Allow the agent to perform actions it couldn't do alone
     - Access Real-Time Data: Connect to current information beyond the model's training cutoff
     - Executes Specific Functions: Perform specialized tasks with precision
@@ -4102,7 +4087,7 @@ Let’s understand with a babysitter analogy
 - **Retrieval**        Retrieves information from an external source 
 - **API Interface**    Interacts with an external API (GitHub, YouTube, Spotify, SERP API etc.) 
 
-###Memory
+### Memory
 
 - Memory allows the agent to
     - Store information
@@ -4111,7 +4096,7 @@ Let’s understand with a babysitter analogy
 
 ---
 
-##How Agents Work
+## How Agents Work
 
 - Agents operate in a continuous loop that integrates the components
 - Some of the commonly used Frameworks are:
@@ -4119,7 +4104,7 @@ Let’s understand with a babysitter analogy
     - Tool Use
     - Reflection
 
-###ReAct - Reasoning and Acting
+### ReAct - Reasoning and Acting
 
 One of the most commonly used patterns is:
 
@@ -4144,12 +4129,12 @@ One of the most commonly used patterns is:
 - Compares it with expected results
 - Refines understanding and approach based on feedback
 
-###Common Pattern - ReAct
+### Common Pattern - ReAct
 
 - The ReAct pattern involves three main stages — *Thought, Action,* and *Observation* — which repeat in a loop.  
 - This allows the agent to reason through problems, perform actions, observe outcomes, and refine its approach until it reaches the final **Answer**.
 
-###Example
+### Example
 
 - Let’s say you have to book a travel vacation to Ooty
 
@@ -4197,7 +4182,7 @@ Transportation will be a significant portion of the total cost based on the star
 
 
 #### Action
-Search for **""Cheapest transportation to Ooty from Bangalore/Chennai/Delhi.""**
+Search for **"Cheapest transportation to Ooty from Bangalore/Chennai/Delhi."**
 
 
 #### Observation
@@ -4214,7 +4199,7 @@ With approximately 7,000 INR remaining for accommodation, the budget allows for 
 
 
 #### Action
-Search for **""Budget hotels in Ooty under 2,500 INR with good reviews.""**
+Search for **"Budget hotels in Ooty under 2,500 INR with good reviews."**
 
 
 
@@ -4229,8 +4214,10 @@ Several options available: around 2,000–2,300 INR per night with an average ra
 - Booked flights and hotels
 - Budget breakdown
 - Travel and food recommendations
-- Reminders and confirmations"
-"# Introduction
+- Reminders and confirmations
+
+
+# Mastering AI Audio Generation
 
 In this unit, we will explore **AI Audio Generation**, a technology that uses artificial intelligence to create sounds, music, speech, and audio effects from simple text prompts or reference samples. We will learn about different types of audio generation, explore various models and platforms, and build a practical **AI Podcast Generator using Murf.ai**.
 
@@ -4461,9 +4448,9 @@ and many more models available in the open source community.
 <details>
 <summary><strong>Handson</strong></summary><br>
 
-<a href=""https://huggingface.co/spaces/Xenova/whisper-web"" target=""_blank"">Whisper</a>
+<a href="https://huggingface.co/spaces/Xenova/whisper-web" target="_blank">Whisper</a>
 <br>
-<a href=""https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat_programming_foundations/niat_coding_questions/A%20one%20minute%20TEDx%20Talk%20for%20the%20digital%20age%20%20Woody%20Roseland%20%20TEDxMileHigh.mp3"" target=""_blank"">Audio File</a>
+<a href="https://s3.ap-south-1.amazonaws.com/new-assets.ccbp.in/frontend/loading-data/niat_programming_foundations/niat_coding_questions/A%20one%20minute%20TEDx%20Talk%20for%20the%20digital%20age%20%20Woody%20Roseland%20%20TEDxMileHigh.mp3" target="_blank">Audio File</a>
 
 </details>
 
@@ -4483,8 +4470,9 @@ and many more models available in the open source community.
 <details>
 <summary><strong>Handson</strong></summary><br>
 
-<a href=""https://huggingface.co/spaces/neuromod0/MeloTTS-English-v3"" target=""_blank"">MeloTTS</a>
+<a href="https://huggingface.co/spaces/neuromod0/MeloTTS-English-v3" target="_blank">MeloTTS</a>
 <br>
+
 **Sample Text**:
 
 ```
@@ -4538,16 +4526,18 @@ Instead of working directly with models, many platforms provide user-friendly in
 
 <details>
 <summary><strong>Handson</strong></summary><br>
-<a href=""https://elevenlabs.io/"" target=""_blank"">ElevenLabs</a>
+<a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a>
 <br>
+
 **Text-to-Speech**:
 
 ```
 Generative AI is a type of artificial intelligence that focuses on creating new content, like text, images, music, audio, and videos, rather than analyzing or classifying existing data. It does this by learning from large datasets and using its learned patterns to generate novel outputs in response to prompts or inputs
 ```
 
-<a href=""http://murf.ai/"" target=""_blank"">Murf.ai</a>
+<a href="http://murf.ai/" target="_blank">Murf.ai</a>
 <br>
+
 **Text-to-Speech**:
 
 ```
@@ -4555,8 +4545,9 @@ Artificial Intelligence (AI) revolutionizes the way we live and work through mac
 ```
 
 
-<a href=""https://aistudio.google.com/live"" target=""_blank"">Google AI Studio</a>
+<a href="https://aistudio.google.com/live" target="_blank">Google AI Studio</a>
 <br>
+
 **Speech-to-Speech**:
 
 ```
@@ -4617,8 +4608,8 @@ The Chat Trigger is the starting point that initiates our workflow. It allows us
 **Add Chat Trigger Node**:
 
 1. Click the `+` button to add a new node
-2. Search for ""Chat Trigger""
-3. Select ""Chat Trigger"" from the results
+2. Search for "Chat Trigger"
+3. Select "Chat Trigger" from the results
 4. The node will appear on your canvas
 
 **How It Works**:
@@ -4627,7 +4618,7 @@ The Chat Trigger is the starting point that initiates our workflow. It allows us
 - The trigger captures this input
 - Passes the topic to the next step for script generation
 
-**Example Input**: ""The history of artificial intelligence""
+**Example Input**: "The history of artificial intelligence"
 
 This input will be used throughout the workflow to generate relevant content.
 
@@ -4641,8 +4632,8 @@ This input will be used throughout the workflow to generate relevant content.
 **Steps**:
 
 1. Click `+` to add a new node after Chat Trigger
-2. Search for ""Basic LLM Chain""
-3. Select ""Basic LLM Chain"" from results
+2. Search for "Basic LLM Chain"
+3. Select "Basic LLM Chain" from results
 4. This node will generate our podcast script
 
 **Define Prompt for Generating Podcast Script**
@@ -4665,12 +4656,12 @@ Avoid any headings, labels, or formatting. Output plain text only.
 
 **Prompt Breakdown**:
 
-- **Role**: ""You are a professional podcast script writer"" - Sets AI's identity
-- **Task**: ""Write a conversational and engaging podcast script"" - Clear instruction
+- **Role**: "You are a professional podcast script writer" - Sets AI's identity
+- **Task**: "Write a conversational and engaging podcast script" - Clear instruction
 - **Input**: `{{ $json.chatInput }}` - Takes topic from Chat Trigger
-- **Length**: ""Keep it around 2 minutes when spoken"" - Controls output length
-- **Tone**: ""friendly and informative tone"" - Defines style
-- **Format**: ""Output plain text only"" - Ensures clean output for audio conversion
+- **Length**: "Keep it around 2 minutes when spoken" - Controls output length
+- **Tone**: "friendly and informative tone" - Defines style
+- **Format**: "Output plain text only" - Ensures clean output for audio conversion
 
 **Search and Add Chat Model**
 
@@ -4678,14 +4669,14 @@ Avoid any headings, labels, or formatting. Output plain text only.
 
 1. In the Basic LLM Chain node, look for the model selection
 2. Click `+` to add a chat model
-3. Search for ""Google Gemini Chat Model""
+3. Search for "Google Gemini Chat Model"
 4. Select it from the results
 
 **Choose Model and Connect to LLM Chain**
 
 **Configuration**:
 
-1. Select ""Google Gemini Chat Model""
+1. Select "Google Gemini Chat Model"
 2. Add your Gemini API credentials (refer to previous setup guides)
 3. Connect the Chat Trigger output to the LLM Chain input
 4. The LLM Chain will now receive the topic and generate a script
@@ -4693,7 +4684,7 @@ Avoid any headings, labels, or formatting. Output plain text only.
 **What Happens**:
 
 ```
-Topic: ""The future of renewable energy""
+Topic: "The future of renewable energy"
     ↓
 Gemini processes with the prompt
     ↓
@@ -4711,18 +4702,18 @@ Generates: [A 2-minute conversational podcast script about renewable energy]
 
 Before implementing, explore the platform:
 
-- Visit <a href=""https://murf.ai"" target=""_blank"">Murf.AI</a>
+- Visit <a href="https://murf.ai" target="_blank">Murf.AI</a>
 - Create a free account
 - Test different voices and see how natural they sound
-- Note the voice names you like (e.g., ""en-US-natalie"")
+- Note the voice names you like (e.g., "en-US-natalie")
 
 ### Add HTTP Request Node
 
 **Steps**:
 
 1. Click `+` to add new node after LLM Chain
-2. Search for ""HTTP Request""
-3. Select ""HTTP Request"" node
+2. Search for "HTTP Request"
+3. Select "HTTP Request" node
 4. This will connect to Murf.ai's API
 
 ### Configure API Endpoint
@@ -4739,7 +4730,7 @@ Before implementing, explore the platform:
 
 ### Set Voice to en-US-natalie
 
-""en-US-natalie"" is a natural-sounding female voice with American English accent. You can choose different voices based on your preference.
+"en-US-natalie" is a natural-sounding female voice with American English accent. You can choose different voices based on your preference.
 
 **Popular Voice Options**:
 
@@ -4783,8 +4774,10 @@ Before implementing, explore the platform:
 
 </details>
 
----"
-"# Introduction
+---
+
+
+# Building No-Code Applications with AI
 
 In the previous unit, we built an AI Podcast Generator that automated audio content creation using n8n and Murf.ai. In this unit, we'll focus on transforming our workflow into a real web application — a user-friendly interface that anyone can access and use without knowing anything about n8n or automation.
 
@@ -4804,7 +4797,7 @@ What if others could use our workflows like normal apps?
 > 
 > No-Code Application Building
 
-###What to Achieve?
+### What to Achieve?
 
 We will be building a frontend application for our Podcast Generator workflow
 
@@ -4817,7 +4810,7 @@ We will be building a frontend application for our Podcast Generator workflow
     5. UI displays or plays podcast
 
 
-###No-Code Application Building
+### No-Code Application Building
 
 You might have built applications using:
 
@@ -4827,14 +4820,14 @@ You might have built applications using:
 complete applications in just minutes!
 
 
-###Vibe Coding
+### Vibe Coding
 
 - Vibe Coding is a new way to build interfaces
 - You simply describe what you want in natural language
 - AI generates the complete interface for you
 - Think of it like telling a designer your vision and watching it come to life
 
-###Meet the AI Application Builders
+### Meet the AI Application Builders
 
 There are 100s of tools like: 
 
@@ -4844,7 +4837,7 @@ There are 100s of tools like:
 
 ---
 
-##Building a Podcast Generator
+## Building a Podcast Generator
 
 ### What We're Building
 
@@ -4852,7 +4845,7 @@ There are 100s of tools like:
 - **N8n Workflow**: Update our workflow to accept requests
 - **Connection**: Link them seamlessly together
 
-###Steps to Follow
+### Steps to Follow
 
 <details>
 <summary>**Creating a Beautiful Frontend**</summary>
@@ -4866,13 +4859,14 @@ There are 100s of tools like:
 
 <details>
 <summary><b>Describe your Frontend (Prompt)**</b></summary>
+
 ```
 Design a minimal and visually appealing podcast interface. The interface should feature:
-A prominent text input field labeled ""Type podcast topic here..."" where users can enter their desired podcast topic.
-A ""Generate Podcast"" button, incorporating a speaker emoji, that triggers the podcast generation process. The button should exhibit a color change on hover.
+A prominent text input field labeled "Type podcast topic here..." where users can enter their desired podcast topic.
+A "Generate Podcast" button, incorporating a speaker emoji, that triggers the podcast generation process. The button should exhibit a color change on hover.
 A loading animation (e.g., pulsing dots) displayed while the podcast is being generated.
-An audio player area that initially displays ""Podcast will appear here.""
-Functionality: Upon clicking ""Generate Podcast,"" the loading animation should appear for 2 -3 seconds, followed by the message ""Feature coming soon!"" in the audio player area.
+An audio player area that initially displays "Podcast will appear here."
+Functionality: Upon clicking "Generate Podcast," the loading animation should appear for 2 -3 seconds, followed by the message "Feature coming soon!" in the audio player area.
 Visual Style: Utilize soft pastel colors (with appropriate contrast) and rounded corners throughout the design to create a cute and friendly appearance.
 Adaptive Design: Ensure the interface is flexible and adapts seamlessly to different screen sizes.
 
@@ -4894,7 +4888,7 @@ Adaptive Design: Ensure the interface is flexible and adapts seamlessly to diffe
 
 - To generate a podcast, n8n needs information We'll send this data in a specific format.
 
-`{""text"": ""whatever topic they typed""}`
+`{"text": "whatever topic they typed"}`
 
 <b>The Missing Link</b>
 <br>
@@ -4916,13 +4910,13 @@ We need to create a bridge between:
 - Think of a webhook like giving your workflow a phone number on the internet:
 
     - Your frontend knows this phone number
-    - It ""calls"" this number with the user's text - whenever a user enters text and presses the button
-    - Your workflow ""answers"" - processes the input and generates the podcast
-    - It ""calls back"" with the finished audio file - returns the final result
+    - It "calls" this number with the user's text - whenever a user enters text and presses the button
+    - Your workflow "answers" - processes the input and generates the podcast
+    - It "calls back" with the finished audio file - returns the final result
 
 <b>Replace Chat Trigger with Webhook</b>
 
-<MultiLineWarning text=""Why this change?"">
+<MultiLineWarning text="Why this change?">
 
 - Chat Trigger only works inside n8n
 - Webhook works from anywhere on the internet
@@ -5015,21 +5009,22 @@ The frontend is waiting for a response, but none has been sent yet.
 
 <details>
 <summary><b>Updated Prompt</b></summary>
+
 ```
 Update the podcast interface to connect with this web address: [PASTE WEBHOOK URL HERE]
 
 When someone clicks Generate Podcast:
 Take the text they typed about their podcast topic
-Send it to the web address in this format: {""text"": ""the topic they typed""}
-Show loading dots saying ""Creating podcast... please wait!""
+Send it to the web address in this format: {"text": "the topic they typed"}
+Show loading dots saying "Creating podcast... please wait!"
 
 When the response comes back:
-It will contain {""audioFile"": ""link to the podcast""}
+It will contain {"audioFile": "link to the podcast"}
 Show this audio in the player using the audioFile link
-Display message "" Podcast is ready! Click play to listen""
+Display message " Podcast is ready! Click play to listen"
 
 If something goes wrong:
-Show ""Oops! Something went wrong. Please try again""
+Show "Oops! Something went wrong. Please try again"
 
 After successful generation:
 Clear the text box for next topic
@@ -5064,7 +5059,7 @@ The Complete Flow
 
 - Execute the workflow in n8n (to keep it ready)  
 2. Open your Lovable preview  
-3. Type a podcast topic (e.g., ""Generative AI"")  
+3. Type a podcast topic (e.g., "Generative AI")  
 4. Click the `Generate Podcast` button  
 5. Watch the loading animation appear  
 6. Switch to the n8n tab — see nodes turning green as workflow executes  
@@ -5101,7 +5096,7 @@ To ensure your workflow is automated and triggers as expected, make sure the wor
 </details>
 ---
 
-###Before vs After
+### Before vs After
 
 <b>BEFORE:</b>
 
@@ -5116,283 +5111,16 @@ To ensure your workflow is automated and triggers as expected, make sure the wor
 - Beautiful public interface
 - Anyone can use it
 - Your own podcast generation service!"
-"# Building a Learning Path Generator
 
-In this session, we are going to build a Learning Path Generator AI Agent to take your learning experience to the next level.
-
-
-## What We're Building: Learning Path Generator
-
-We are moving from manual course planning to an automated learning path generator complete with calendar events!
-
-By the end of this session, we will have a working automation that:
-
--   Takes your learning goal as input.
--   Creates a structured day-wise learning path.
--   Researches and finds relevant learning resources.
--   Generates a Google Doc with the complete plan.
--   Schedules each day as a calendar event.
-
-### Model and Tools to be Used
-
--   **AI Model:** Google Gemini Chat Model (`gemini-2.0-flash`)
--   **Tools:**
-    -   **Serp API:** For researching and finding learning resources.
-    -   **Google Docs:** For creating and updating the learning path document (Create and Update tools).
-    -   **Google Calendar:** For scheduling learning sessions (Create Event tool).
 
 ---
 
-## Building the Learning Path Generator with n8n
-
-We will use **n8n**, a no-code/low-code automation tool, to build our AI agent.
-
-### Steps to be Followed
-
-<details>
-
-<summary> Adding a Chat Trigger</summary>
-
-The Chat Trigger provides a chat interface for users to interact with the agent and provide their learning goal.
-
-**Configuration:**
-
-1.  Place the **Chat Trigger** node at the beginning of your workflow.
-2.  This node will activate the workflow whenever a user sends a message, allowing them to input their learning goal (e.g., ""create a 5-day learning plan for React"").
-
-</details>
-
-<details>
-
-<summary>Setting Up the AI Agent</summary>
-
-The AI Agent is the core of our workflow. It understands the user's learning goal, plans the curriculum, and coordinates all the connected tools to create the complete learning path.
-
-**Configuration:**
-
-1.  Add an **AI Agent** node and connect it to the **Chat Trigger**.
-2.  Connect a **Google Gemini Chat Model** to the AI Agent's ""Language Model"" input.
-    -   Select the `gemini-2.0-flash` model.
-    -   You will need to provide an API Key from Google AI Studio.
-
-</details>
-
-<details>
-
-<summary> Adding SerpAPI for Research</summary>
-
-
-**Understanding SerpAPI **
-SerpAPI can help the agent search the web for learning and research content.  
-It can fetch information from various sources and provide structured results the workflow can use.  
-
-**What SerpAPI Can Do **
-
-- Finds YouTube videos related to a topic  
-- Discovers articles, blogs, and tutorials  
-- Returns actual URLs that the agent can further explore  
-
----
-
-** Current Issue **
-
-- Sometimes the n8n SerpAPI Tool node fails due to open issues in the current AI Agent version.  
-- This issue is expected to be fixed in an upcoming update.  
-
----
-
-**Workaround: Use the HTTP Request Node **
-
-Since the SerpAPI Tool node is currently unreliable, we will integrate SerpAPI using the **HTTP Request** tool.  
-
-<details><summary>**Steps to Integrating Serp API with HTTP Request Tool **</summary>
-1. Add an **HTTP Request** node as a tool to your AI Agent.  
-2. Describe what the tool does.  
-3. Import the <a href=""https://serpapi.com/search-api"" target=""_blank"">cURL</a> from SerpAPI and map it inside the HTTP Request node.
-</details>
-
-
-</details>
-
-<details>
-
-<summary> Creating Google Docs</summary>
-
-We'll use the Google Docs tool to create a new document that will store the generated learning path.
-
-**What it does:**
-
--   Creates a new, blank Google Document.
--   Assigns a title to the document (e.g., ""5-Day React Learning Path"").
--   Returns the document ID for later steps.
-
-**Configuration:**
-
-1.  Before adding the tool in n8n, you need to set up OAuth credentials in the Google Cloud Console. This involves:
-    -   Creating a new project.
-    -   Enabling the **Google Docs API** and **Google Drive API**.
-    -   Configuring the OAuth consent screen and creating OAuth 2.0 credentials (Client ID and Secret).
-2.  Add a **Google Docs** tool node for the ""Create a document"" action.
-3.  Connect it to the **AI Agent's** ""Tools"" input.
-4.  Connect it with the OAuth credentials you just created.
-
-</details>
-
-<details>
-
-<summary> Updating Document Content</summary>
-
-Once the document is created, the agent needs to fill it with the structured learning content.
-
-**What it does:**
-
--   Inserts the topics for all the days of the learning path.
--   Adds key learning points for each topic.
--   Includes the resource links (videos, articles, docs) found by SerpAPI.
-
-**Configuration:**
-
-1.  Add another **Google Docs** tool node, this time for the ""Update a document"" action.
-2.  Connect it to the **AI Agent's** ""Tools"" input.
-3.  Use the same OAuth credentials as the ""Create"" tool. The agent will use this tool to add all the content at once.
-
-</details>
-
-<details>
-
-<summary> Scheduling Calendar Events</summary>
-
-Finally, to help the user commit to their learning schedule, the agent will create events in their Google Calendar.
-
-**What it does:**
-
--   Creates a calendar event for each day of the learning path.
--   Schedules them on consecutive dates.
--   Sets a default 2-hour time block for each session.
--   Includes the day's topic, key learning points, and resource links in the event description.
-
-**Configuration:**
-
-1.  In the Google Cloud Console, ensure the **Google Calendar API** is enabled for your project.
-2.  Add a **Google Calendar** tool node for the ""Create an event"" action.
-3.  Connect it to the **AI Agent's** ""Tools"" input.
-4.  Use the same OAuth credentials. The agent will call this tool multiple times, once for each day in the learning plan.
-
-</details>
-
----
-
-### Configure System Instructions
-
-Now that all the tools are connected, we need to give the AI Agent a clear set of instructions (a system prompt) on how to use them in the correct order.
-
-Paste the following prompt into the **System Message** field of the **AI Agent** node.
-
-<details>
-<summary><strong>AI Agent System Prompt</strong></summary>
-
-```
-You are a day-wise learning path generator. When given a learning goal, create a curriculum with Google Docs and Calendar events.
-STEP 1: PLAN THE CURRICULUM
-Plan the topics based on the number of days requested. Structure from beginner to advanced.
-STEP 2: DETERMINE START DATE
-
-If user says ""starting tomorrow"" → use tomorrow's date
-If user says ""starting next Monday"" → calculate next Monday
-If user says ""starting from [date]"" → use that date
-If NO date mentioned → use TODAY's date
-Today is {{$now.format('YYYY-MM-DD')}}
-
-STEP 3: RESEARCH RESOURCES
-Use SerpAPI 2-3 times total to find:
-
-YouTube videos
-Articles
-Documentation
-Extract real URLs from results.
-
-STEP 4: CREATE GOOGLE DOCUMENT
-Call ""Create a document in Google Docs"" tool with title ""[X]-Day [Topic] Learning Path""
-Note the document ID from response.
-STEP 5: UPDATE GOOGLE DOCUMENT
-Call ""Update a document in Google Docs"" once with all days' content in this format:
-Day 1: [Topic Name]
-Description: [2-3 sentence overview]
-Key Learning Points:
-
-[Point 1]
-[Point 2]
-[Point 3]
-Reference Links:
-Video: [YouTube URL]
-Article: [Article URL]
-Duration: 2 hours
-
-Repeat for all days.
-STEP 6: CREATE CALENDAR EVENTS
-Create events one by one. For each day:
-
-Time: 11:00 AM to 1:00 PM (2 hours)
-Timezone: +05:30
-Format: YYYY-MM-DDTHH:MM:SS+05:30
-
-Date calculation:
-
-Day 1: START_DATE at 11:00 AM
-Day 2: START_DATE + 1 day at 11:00 AM
-Day 3: START_DATE + 2 days at 11:00 AM
-Continue incrementing by 1 day.
-
-Call ""Create an event in Google Calendar"" separately for each day with:
-
-Start: [DATE]T11:00:00+05:30
-End: [DATE]T13:00:00+05:30
-Summary: Day X: [Topic]
-Description: [Full day content]
-Use_Default_Reminders: true
-
-STEP 7: PROVIDE FINAL OUTPUT
-After all events are created, respond with:
-""Learning Path Complete!
-Document: [Google Docs URL]
-Calendar: I've added [X] events from [START_DATE] to [END_DATE] at 11:00 AM.
-Your [X]-day [topic] learning journey is ready!""
-Then stop immediately.
-CRITICAL RULES:
-
-Use SerpAPI only 2-3 times total
-Create Doc once
-Update Doc once with all content
-Create calendar events separately for each day
-Always use T11:00:00+05:30 for start time
-Always use T13:00:00+05:30 for end time
-Increment date by 1 for each day
-Stop after providing final output
-Never leave Summary or Description empty
-Calculate start date from user input or use today
-```
-
-</details>
-
-### Application Overview
-
-The final workflow will look like this:
-
-**Chat Trigger** → **AI Agent** which uses:
-
--   **Google Gemini Chat Model** (for thinking)
--   **Serp API** (for research)
--   **Google Docs** (to create the document)
--   **Google Docs** (to update the document)
--   **Google Calendar** (to schedule events)
-
-With this setup, you have an autonomous agent that can take a simple request and turn it into a comprehensive, actionable learning plan."
-"# Introduction
+# Introduction
 
 In the previous unit we understand the core concepts of text-to-speech, speech-to-text, and speech-to-speech technologies and built a podcast generator. In this unit, we'll go beyond the basics and explore how to add emotion and nuance to our AI-generated audio using F5-TTS.
 
 
-## Mastering AI Audio Generation using F5-TTS | Part 2
+## Mastering AI Audio Generation using F5-TTS
 
 
 ### What We’ve Explored So Far
@@ -5447,7 +5175,7 @@ F5-TTS is an AI-powered text-to-speech synthesis tool that converts text into na
 
 Running an audio generation model requires a GPU. However, free cloud GPU access is available through platforms like Kaggle.
 
-<a href=""https://learning.ccbp.in/course?c_id=b9811b34-585b-47e0-a0be-65f1081a74f2&s_id=04b5d8ae-3e91-4215-be28-63ec61554c26&t_id=4915a7b0-b8d7-4148-8914-d8d3fb086944"" target=""_blank"">Kaggle Setup</a>
+<a href="https://learning.ccbp.in/course?c_id=b9811b34-585b-47e0-a0be-65f1081a74f2&s_id=04b5d8ae-3e91-4215-be28-63ec61554c26&t_id=4915a7b0-b8d7-4148-8914-d8d3fb086944" target="_blank">Kaggle Setup</a>
 </details>
 
 <details>
@@ -5455,7 +5183,7 @@ Running an audio generation model requires a GPU. However, free cloud GPU access
 
 After the Kaggle setup, executes notebook successfully, it will generate URLs that connect directly to the F5-TTS interface.
 
-<a href=""https://www.kaggle.com/code/contentgenai/mastering-ai-audio-generation-using-f5-tts"" target=""_blank"">Master Audio Generation using F5-TTS Notebook</a>
+<a href="https://www.kaggle.com/code/contentgenai/mastering-ai-audio-generation-using-f5-tts" target="_blank">Master Audio Generation using F5-TTS Notebook</a>
 </details>
 
 <MultiLineNote>
@@ -5479,7 +5207,7 @@ The process is straightforward:
 - **How to use?**: Upload a voice sample (3-10 seconds) or record directly using the mic icon.
 - **Why it matters?**: The model learns the voice characteristics, capturing tone, pitch, and accent.
 - **Tip**: Use clear speech with minimal background noise.
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/36d060ec-f8b6-401a-a8e1-c9b9a6db5450_example.mp3"" > Sample Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/36d060ec-f8b6-401a-a8e1-c9b9a6db5450_example.mp3" > Sample Audio File </a>
 - Reference Text
 
 ```
@@ -5534,12 +5262,12 @@ Click the generate button, and F5-TTS will produce the audio output. You will ha
 
 #### Multi Speech: Reference Audio
 
-Upload multiple audio clips, each with a specific speech type name (e.g., ""neutral"", ""sad"", ""anger"", ""surprise""). Each clip should represent a different voice, accent, or emotional style.
+Upload multiple audio clips, each with a specific speech type name (e.g., "neutral", "sad", "anger", "surprise"). Each clip should represent a different voice, accent, or emotional style.
 
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/d9abe905-b7e6-4052-94d9-77bd8fe13939_neutral016%20(1).wav"" > Neutral Audio File </a>
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/768692de-1184-4174-b119-ce88377c681b_sad016%20(1).wav"" > Sad Audio File </a>
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/fa6d5d90-6027-4eca-9aa4-11f8af3cb87b_anger016%20(1).wav"" > Anger Audio File </a>
-- <a href=""https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/4c0d885e-9088-4a7d-9b89-9d4489546c4a_surprise016%20(1).wav"" > Surprise Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/d9abe905-b7e6-4052-94d9-77bd8fe13939_neutral016%20(1).wav" > Neutral Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/768692de-1184-4174-b119-ce88377c681b_sad016%20(1).wav" > Sad Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/fa6d5d90-6027-4eca-9aa4-11f8af3cb87b_anger016%20(1).wav" > Anger Audio File </a>
+- <a href="https://nkb-backend-ccbp-media-static.s3-ap-south-1.amazonaws.com/ccbp_beta/media/content_loading/uploads/4c0d885e-9088-4a7d-9b89-9d4489546c4a_surprise016%20(1).wav" > Surprise Audio File </a>
 
 </details>
 
@@ -5586,12 +5314,289 @@ F5-TTS also includes a Voice-Chat feature. You can have a conversation with an A
 - Upload an audio clip and optionally text.
 - Load the chat model.
 - Record your message through your microphone or type it.
-- The AI will respond using the reference voice."
-"In the previous unit, we understood the concept of AI Agents and built a learning path generator agent that researches, finds learning resources and creates a structured day wise learning path. In this unit, we will focus on building a practical AI-powered shopping assistant. This assistant will help users find products quickly, provide personalized styling advice, and simplify the online shopping experience-all within Telegram.
+- The AI will respond using the reference voice.
 
-> _""Have you ever felt frustrated while searching for products online? Let's explore how an AI assistant can make the process faster and more personalized.""_
+---
 
-> _""In this section, we will guide you through the steps to build an AI shopping assistant on Telegram using N8N and AI models like Google Gemini.""_
+# Building a Learning Path Generator
+
+In this session, we are going to build a Learning Path Generator AI Agent to take your learning experience to the next level.
+
+
+## What We're Building: Learning Path Generator
+
+We are moving from manual course planning to an automated learning path generator complete with calendar events!
+
+By the end of this session, we will have a working automation that:
+
+-   Takes your learning goal as input.
+-   Creates a structured day-wise learning path.
+-   Researches and finds relevant learning resources.
+-   Generates a Google Doc with the complete plan.
+-   Schedules each day as a calendar event.
+
+### Model and Tools to be Used
+
+-   **AI Model:** Google Gemini Chat Model (`gemini-2.0-flash`)
+-   **Tools:**
+    -   **Serp API:** For researching and finding learning resources.
+    -   **Google Docs:** For creating and updating the learning path document (Create and Update tools).
+    -   **Google Calendar:** For scheduling learning sessions (Create Event tool).
+
+---
+
+## Building the Learning Path Generator with n8n
+
+We will use **n8n**, a no-code/low-code automation tool, to build our AI agent.
+
+### Steps to be Followed
+
+<details>
+
+<summary> Adding a Chat Trigger</summary>
+
+The Chat Trigger provides a chat interface for users to interact with the agent and provide their learning goal.
+
+**Configuration:**
+
+1.  Place the **Chat Trigger** node at the beginning of your workflow.
+2.  This node will activate the workflow whenever a user sends a message, allowing them to input their learning goal (e.g., "create a 5-day learning plan for React").
+
+</details>
+
+<details>
+
+<summary>Setting Up the AI Agent</summary>
+
+The AI Agent is the core of our workflow. It understands the user's learning goal, plans the curriculum, and coordinates all the connected tools to create the complete learning path.
+
+**Configuration:**
+
+1.  Add an **AI Agent** node and connect it to the **Chat Trigger**.
+2.  Connect a **Google Gemini Chat Model** to the AI Agent's "Language Model" input.
+    -   Select the `gemini-2.0-flash` model.
+    -   You will need to provide an API Key from Google AI Studio.
+
+</details>
+
+<details>
+
+<summary> Adding SerpAPI for Research</summary>
+
+
+**Understanding SerpAPI **
+SerpAPI can help the agent search the web for learning and research content.  
+It can fetch information from various sources and provide structured results the workflow can use.  
+
+**What SerpAPI Can Do **
+
+- Finds YouTube videos related to a topic  
+- Discovers articles, blogs, and tutorials  
+- Returns actual URLs that the agent can further explore  
+
+---
+
+** Current Issue **
+
+- Sometimes the n8n SerpAPI Tool node fails due to open issues in the current AI Agent version.  
+- This issue is expected to be fixed in an upcoming update.  
+
+---
+
+**Workaround: Use the HTTP Request Node **
+
+Since the SerpAPI Tool node is currently unreliable, we will integrate SerpAPI using the **HTTP Request** tool.  
+
+<details><summary>**Steps to Integrating Serp API with HTTP Request Tool **</summary>
+1. Add an **HTTP Request** node as a tool to your AI Agent.  
+2. Describe what the tool does.  
+3. Import the <a href="https://serpapi.com/search-api" target="_blank">cURL</a> from SerpAPI and map it inside the HTTP Request node.
+</details>
+
+
+</details>
+
+<details>
+
+<summary> Creating Google Docs</summary>
+
+We'll use the Google Docs tool to create a new document that will store the generated learning path.
+
+**What it does:**
+
+-   Creates a new, blank Google Document.
+-   Assigns a title to the document (e.g., "5-Day React Learning Path").
+-   Returns the document ID for later steps.
+
+**Configuration:**
+
+1.  Before adding the tool in n8n, you need to set up OAuth credentials in the Google Cloud Console. This involves:
+    -   Creating a new project.
+    -   Enabling the **Google Docs API** and **Google Drive API**.
+    -   Configuring the OAuth consent screen and creating OAuth 2.0 credentials (Client ID and Secret).
+2.  Add a **Google Docs** tool node for the "Create a document" action.
+3.  Connect it to the **AI Agent's** "Tools" input.
+4.  Connect it with the OAuth credentials you just created.
+
+</details>
+
+<details>
+
+<summary> Updating Document Content</summary>
+
+Once the document is created, the agent needs to fill it with the structured learning content.
+
+**What it does:**
+
+-   Inserts the topics for all the days of the learning path.
+-   Adds key learning points for each topic.
+-   Includes the resource links (videos, articles, docs) found by SerpAPI.
+
+**Configuration:**
+
+1.  Add another **Google Docs** tool node, this time for the "Update a document" action.
+2.  Connect it to the **AI Agent's** "Tools" input.
+3.  Use the same OAuth credentials as the "Create" tool. The agent will use this tool to add all the content at once.
+
+</details>
+
+<details>
+
+<summary> Scheduling Calendar Events</summary>
+
+Finally, to help the user commit to their learning schedule, the agent will create events in their Google Calendar.
+
+**What it does:**
+
+-   Creates a calendar event for each day of the learning path.
+-   Schedules them on consecutive dates.
+-   Sets a default 2-hour time block for each session.
+-   Includes the day's topic, key learning points, and resource links in the event description.
+
+**Configuration:**
+
+1.  In the Google Cloud Console, ensure the **Google Calendar API** is enabled for your project.
+2.  Add a **Google Calendar** tool node for the "Create an event" action.
+3.  Connect it to the **AI Agent's** "Tools" input.
+4.  Use the same OAuth credentials. The agent will call this tool multiple times, once for each day in the learning plan.
+
+</details>
+
+---
+
+### Configure System Instructions
+
+Now that all the tools are connected, we need to give the AI Agent a clear set of instructions (a system prompt) on how to use them in the correct order.
+
+Paste the following prompt into the **System Message** field of the **AI Agent** node.
+
+<details>
+<summary><strong>AI Agent System Prompt</strong></summary>
+
+```
+You are a day-wise learning path generator. When given a learning goal, create a curriculum with Google Docs and Calendar events.
+STEP 1: PLAN THE CURRICULUM
+Plan the topics based on the number of days requested. Structure from beginner to advanced.
+STEP 2: DETERMINE START DATE
+
+If user says "starting tomorrow" → use tomorrow's date
+If user says "starting next Monday" → calculate next Monday
+If user says "starting from [date]" → use that date
+If NO date mentioned → use TODAY's date
+Today is {{$now.format('YYYY-MM-DD')}}
+
+STEP 3: RESEARCH RESOURCES
+Use SerpAPI 2-3 times total to find:
+
+YouTube videos
+Articles
+Documentation
+Extract real URLs from results.
+
+STEP 4: CREATE GOOGLE DOCUMENT
+Call "Create a document in Google Docs" tool with title "[X]-Day [Topic] Learning Path"
+Note the document ID from response.
+STEP 5: UPDATE GOOGLE DOCUMENT
+Call "Update a document in Google Docs" once with all days' content in this format:
+Day 1: [Topic Name]
+Description: [2-3 sentence overview]
+Key Learning Points:
+
+[Point 1]
+[Point 2]
+[Point 3]
+Reference Links:
+Video: [YouTube URL]
+Article: [Article URL]
+Duration: 2 hours
+
+Repeat for all days.
+STEP 6: CREATE CALENDAR EVENTS
+Create events one by one. For each day:
+
+Time: 11:00 AM to 1:00 PM (2 hours)
+Timezone: +05:30
+Format: YYYY-MM-DDTHH:MM:SS+05:30
+
+Date calculation:
+
+Day 1: START_DATE at 11:00 AM
+Day 2: START_DATE + 1 day at 11:00 AM
+Day 3: START_DATE + 2 days at 11:00 AM
+Continue incrementing by 1 day.
+
+Call "Create an event in Google Calendar" separately for each day with:
+
+Start: [DATE]T11:00:00+05:30
+End: [DATE]T13:00:00+05:30
+Summary: Day X: [Topic]
+Description: [Full day content]
+Use_Default_Reminders: true
+
+STEP 7: PROVIDE FINAL OUTPUT
+After all events are created, respond with:
+"Learning Path Complete!
+Document: [Google Docs URL]
+Calendar: I've added [X] events from [START_DATE] to [END_DATE] at 11:00 AM.
+Your [X]-day [topic] learning journey is ready!"
+Then stop immediately.
+CRITICAL RULES:
+
+Use SerpAPI only 2-3 times total
+Create Doc once
+Update Doc once with all content
+Create calendar events separately for each day
+Always use T11:00:00+05:30 for start time
+Always use T13:00:00+05:30 for end time
+Increment date by 1 for each day
+Stop after providing final output
+Never leave Summary or Description empty
+Calculate start date from user input or use today
+```
+
+</details>
+
+### Application Overview
+
+The final workflow will look like this:
+
+**Chat Trigger** → **AI Agent** which uses:
+
+-   **Google Gemini Chat Model** (for thinking)
+-   **Serp API** (for research)
+-   **Google Docs** (to create the document)
+-   **Google Docs** (to update the document)
+-   **Google Calendar** (to schedule events)
+
+With this setup, you have an autonomous agent that can take a simple request and turn it into a comprehensive, actionable learning plan."
+
+# Build Your Own AI Shopping Assistant | Part 1
+
+In the previous unit, we understood the concept of AI Agents and built a learning path generator agent that researches, finds learning resources and creates a structured day wise learning path. In this unit, we will focus on building a practical AI-powered shopping assistant. This assistant will help users find products quickly, provide personalized styling advice, and simplify the online shopping experience-all within Telegram.
+
+> _"Have you ever felt frustrated while searching for products online? Let's explore how an AI assistant can make the process faster and more personalized."_
+
+> _"In this section, we will guide you through the steps to build an AI shopping assistant on Telegram using N8N and AI models like Google Gemini."_
 
 ## 1. AI Shopping Assistant Overview
 
@@ -5647,11 +5652,11 @@ To create the Telegram bot, we use BotFather on Telegram
 
 ### Step 2: Adding an AI Agent
 
-- **Integrate AI Model**: Use AI models like **Google Gemini** or **Claude** to process the user’s query (e.g., ""red dress under 2000"") and return relevant product results.
+- **Integrate AI Model**: Use AI models like **Google Gemini** or **Claude** to process the user’s query (e.g., "red dress under 2000") and return relevant product results.
 
 ### Step 3: Searching for Products
 
-When users ask for products like ""red shirt under 2000"", we need to Search Amazon India in real-time, Get actual product names, prices, and ratings and Show only relevant results
+When users ask for products like "red shirt under 2000", we need to Search Amazon India in real-time, Get actual product names, prices, and ratings and Show only relevant results
 
 - **Scraper API**: The Scraper API allows you to fetch live product data from Amazon. This helps in scraping product names, prices, ratings, and other relevant details in real time.
 
@@ -5668,20 +5673,20 @@ You are Maya, a shopping and styling assistant on Telegram.
 
 ## Your Job
 
-1. **Product Search**: User asks ""shoes under 5000"" → Search Amazon → Show results
-2. **Styling Advice**: User asks ""how to style blue jeans"" or ""outfit for wedding"" → Ask questions → Give personalized styling tips
+1. **Product Search**: User asks "shoes under 5000" → Search Amazon → Show results
+2. **Styling Advice**: User asks "how to style blue jeans" or "outfit for wedding" → Ask questions → Give personalized styling tips
 
 ## When to Use Scraper API Tool
 
 ### For Product Searches Only
 
-When user requests products (e.g., ""I want sneakers under ₹3000"" or ""show me dresses""), follow these steps:
+When user requests products (e.g., "I want sneakers under ₹3000" or "show me dresses"), follow these steps:
 
 1. **Extract the search query** from user's message
 2. **Build the Amazon India search URL**:
    - Format: `https://www.amazon.in/s?k=SEARCH_QUERY`
    - Replace spaces with `+` in the query
-   - Example: ""white sneakers under 3000"" → `https://www.amazon.in/s?k=white+sneakers+under+3000`
+   - Example: "white sneakers under 3000" → `https://www.amazon.in/s?k=white+sneakers+under+3000`
 
 3. **Call the Scraper API tool** with the Amazon URL as the `url` parameter
    - The tool already has api_key configured
@@ -5696,7 +5701,7 @@ When user requests products (e.g., ""I want sneakers under ₹3000"" or ""show m
 5. **Show top 5 products** in clean format
 
 **Example Flow:**
-- User says: ""show me running shoes under 2000""
+- User says: "show me running shoes under 2000"
 - You create URL: `https://www.amazon.in/s?k=running+shoes+under+2000`
 - Call tool with this URL
 - Display top 5 results from the scraped data
@@ -5707,10 +5712,10 @@ When user asks for styling advice (without wanting to search products):
 
 **Step 1: Understand the Context**
 Ask clarifying questions:
-- ""What's the occasion? (casual/formal/party/wedding/office)""
-- ""What's your preferred style? (traditional/western/fusion)""
-- ""Any color preferences?""
-- ""What season/weather?""
+- "What's the occasion? (casual/formal/party/wedding/office)"
+- "What's your preferred style? (traditional/western/fusion)"
+- "Any color preferences?"
+- "What season/weather?"
 
 **Step 2: Give Personalized Styling Tips**
 Based on their answers, provide:
@@ -5723,13 +5728,13 @@ Based on their answers, provide:
 
 **Example:**
 
-*User: ""How to style a kurti?""*
-**You:** ""I'd love to help! Quick questions:
+*User: "How to style a kurti?"*
+**You:** "I'd love to help! Quick questions:
 - What occasion? (Office/casual/festive)
 - What color is the kurti?
-- Traditional or modern look?""
+- Traditional or modern look?"
 
-*User: ""Casual, blue kurti, modern look""*
+*User: "Casual, blue kurti, modern look"*
 **You:**
 
 - Blue Kurti - Modern Casual Look
@@ -5778,12 +5783,17 @@ Want me to search for any of these items?
 - Always offer to search products after giving styling tips
 - If scraping fails, inform user politely and suggest they try again
 ```
-</details>"
-"In the previous part, we learned how to build an AI-powered shopping assistant on Telegram. In this section, we will enhance the assistant by adding **voice input** functionality. This will allow users to speak their product requests instead of typing them, making the shopping experience more intuitive and accessible.
+</details>
 
-> _""Have you ever found it difficult to type your shopping queries? Let’s explore how voice input can improve the shopping assistant experience.""_
 
-> _""In this section, we will guide you through the steps of adding voice message support to the AI shopping assistant, enabling automatic speech-to-text conversion for better interaction.""_
+# Build Your Own AI Shopping Assistant | Part 2
+
+
+In the previous part, we learned how to build an AI-powered shopping assistant on Telegram. In this section, we will enhance the assistant by adding **voice input** functionality. This will allow users to speak their product requests instead of typing them, making the shopping experience more intuitive and accessible.
+
+> _"Have you ever found it difficult to type your shopping queries? Let’s explore how voice input can improve the shopping assistant experience."_
+
+> _"In this section, we will guide you through the steps of adding voice message support to the AI shopping assistant, enabling automatic speech-to-text conversion for better interaction."_
 
 ## 1. Enhancing the Telegram Shopping Assistant with Audio Support
 
@@ -5916,8 +5926,9 @@ Now both types of messages will be processed by the same AI agent, enabling a se
 5. Send the processed text to the AI agent.
 6. The AI agent finds relevant products and sends the response back to the user on Telegram.
 
-You now have a fully functional AI Shopping Assistant on Telegram that supports both text and voice input."
-"# Building an Agent with Memory
+You now have a fully functional AI Shopping Assistant on Telegram that supports both text and voice input.
+
+# Building an Agent with Memory
 
 In this session, we will explore agents with memory and Adding Memory to AI Shopping Assistant
 
@@ -5925,7 +5936,7 @@ In this session, we will explore agents with memory and Adding Memory to AI Shop
 
 An AI agent is a system that works autonomously to achieve a specific goal. The core components of an agent are:
 
--   **AI Model:** The ""brain"" of the agent (e.g., GPT-4, Claude).
+-   **AI Model:** The "brain" of the agent (e.g., GPT-4, Claude).
 -   **Tools:** External resources the agent can use (e.g., search engines, databases).
 -   **Memory:** The agent's ability to store and recall information.
 
@@ -5940,7 +5951,7 @@ Agents with memory are AI systems that can store and use past information to mak
 Memory allows an agent to:
 
 -   **Store information:** Keep a record of important details from previous interactions.
--   **Learn from past interactions:** Refine its responses based on what it has ""learned.""
+-   **Learn from past interactions:** Refine its responses based on what it has "learned."
 -   **Maintain context and continuity:** Turn isolated conversations into a single, continuous dialogue.
 
 Without memory, an agent treats every interaction as a new one, unable to recall previous instructions, preferences, or context.
@@ -5970,7 +5981,7 @@ Short-term memory is the agent's ability to remember information relevant to the
 
 #### Context Window
 
-Short-term memory is limited by the model's **context window**. The context window is the maximum amount of text the model can process at once to generate a response. If a conversation exceeds the context window, the model may ""forget"" earlier parts of the conversation.
+Short-term memory is limited by the model's **context window**. The context window is the maximum amount of text the model can process at once to generate a response. If a conversation exceeds the context window, the model may "forget" earlier parts of the conversation.
 
 #### Implementing Short-Term Memory in n8n
 
@@ -5996,7 +6007,7 @@ Long-term memory can be implemented using external data stores like:
 Long-term memory can be further categorized into:
 
 -   **Episodic Memory:** Stores specific events and experiences .
--   **Procedural Memory:** Stores learned skills and ""how-to"" knowledge .
+-   **Procedural Memory:** Stores learned skills and "how-to" knowledge .
 -   **Semantic Memory:** Stores general knowledge, facts, and concepts .
 
 ## Building an AI Shopping Assistant with Memory
@@ -6019,8 +6030,10 @@ To add memory to our AI Shopping Assistant, we will use the **Simple Memory** no
 4.  **Set the Context Window Length:**
     *   You can define how many recent messages the assistant remembers during the conversation. A good starting point is 10.
 
-By adding this memory node, our shopping assistant will now be able to remember the context of the conversation, leading to more personalized and relevant recommendations."
-"# Introduction to Model Context Protocol (MCP)
+By adding this memory node, our shopping assistant will now be able to remember the context of the conversation, leading to more personalized and relevant recommendations.
+
+
+# Introduction to Model Context Protocol | Part 1
 
 This session covers the Model Context Protocol (MCP) and its role in simplifying tool integration for AI agents.
 
@@ -6028,10 +6041,10 @@ This session covers the Model Context Protocol (MCP) and its role in simplifying
 
 Building AI agents with multiple tools presents several challenges:
 
--   **Multiple Tool Integrations:** Each tool requires a separate, custom integration.
--   **Hard to Manage:** As the number of tools increases, the system becomes difficult to manage and scale.
--   **No Standardization:** There is no standard format for providing tool descriptions and instructions to the agent.
--   **Maintenance Overhead:** Any change in a tool's API requires manual updates in the agent's code, which is time-consuming.
+- **Multiple Tool Integrations:** Each tool requires a separate, custom integration.
+- **Hard to Manage:** As the number of tools increases, the system becomes difficult to manage and scale.
+- **No Standardization:** There is no standard format for providing tool descriptions and instructions to the agent.
+- **Maintenance Overhead:** Any change in a tool's API requires manual updates in the agent's code, which is time-consuming.
 
 ## What is the Model Context Protocol (MCP)?
 
@@ -6045,6 +6058,13 @@ The MCP framework consists of four main components:
 2.  **MCP Server:** A wrapper around one or more tools that provides documentation on how to access and use them. Examples include servers for Google Drive, Slack, or SerpAPI.
 3.  **MCP Client:** A component within the host that connects to an MCP server to make the tools available to the agent.
 4.  **MCP Protocol:** The set of rules that the client and server use to communicate with each other.
+
+
+
+# Introduction to Model Context Protocol | Part 2
+
+This session Let's Integarte the MCP For our Learning Path Generator
+
 
 ## Integrating MCP in the Learning Path Generator
 
@@ -6077,21 +6097,21 @@ STEP 1: PLAN THE CURRICULUM
 Plan the topics based on the number of days requested. Structure from beginner to advanced.
 
 STEP 2: DETERMINE START DATE
-If user says ""starting tomorrow"" → use tomorrow's date
-If user says ""starting next Monday"" → calculate next Monday
-If user says ""starting from [date]"" → use that date
+If user says "starting tomorrow" → use tomorrow's date
+If user says "starting next Monday" → calculate next Monday
+If user says "starting from [date]" → use that date
 If NO date mentioned → use TODAY's date
 Today is {{$now.format('YYYY-MM-DD')}}
 
 STEP 3: RESEARCH RESOURCES
 Search 2-3 times and extract ACTUAL URLs for each search:
-- Search ""[Topic] beginner tutorial"" → Extract the actual https:// link
-- Search ""[Topic] official documentation"" → Extract the actual https:// link
-- Search ""[Topic] YouTube course"" → Extract the actual https:// link
+- Search "[Topic] beginner tutorial" → Extract the actual https:// link
+- Search "[Topic] official documentation" → Extract the actual https:// link
+- Search "[Topic] YouTube course" → Extract the actual https:// link
 Store the complete URLs (starting with https://)
 
 STEP 4: CREATE DOCUMENT
-Create a new document titled ""[X]-Day [Topic] Learning Path""
+Create a new document titled "[X]-Day [Topic] Learning Path"
 Store the document ID from the response.
 
 STEP 5: UPDATE DOCUMENT WITH CONTENT AND URLS
@@ -6113,7 +6133,7 @@ Repeat for all days. ALWAYS include the complete https:// link after each label.
 
 STEP 6: CREATE CALENDAR EVENTS
 For each day, create one event:
-- Title: ""Day X: [Topic Name]""
+- Title: "Day X: [Topic Name]"
 - Date: Calculate day-wise (Day 1 = START_DATE, Day 2 = START_DATE+1, etc.)
 - Start Time: 11:00:00+05:30
 - End Time: 13:00:00+05:30
@@ -6121,20 +6141,21 @@ For each day, create one event:
 
 STEP 7: FINAL OUTPUT
 Respond with:
-""Learning Path Complete!
+"Learning Path Complete!
 Document: [Google Docs URL]
 Calendar: I've added [X] events from [START_DATE] to [END_DATE] at 11:00 AM.
-Your [X]-day [topic] learning journey is ready!""
+Your [X]-day [topic] learning journey is ready!"
 
 CRITICAL:
 - Every reference link MUST be a complete URL starting with https://
 - Do NOT insert link titles - insert actual URLs only
-- Format: ""Video: https://www.youtube.com/..."" NOT ""Video: [Title Name]""
+- Format: "Video: https://www.youtube.com/..." NOT "Video: [Title Name]"
 - All calendar event descriptions must include the actual https:// URLs
 - Search results must provide complete, clickable links
 ```
 
 </details>
+
 ## Conclusion
 
-MCP standardizes tool integration for AI agents, making it easier to build, manage, and maintain complex AI applications. By decoupling the agent from the specific implementation of each tool, MCP allows for more robust and scalable AI systems."
+MCP standardizes tool integration for AI agents, making it easier to build, manage, and maintain complex AI applications. By decoupling the agent from the specific implementation of each tool, MCP allows for more robust and scalable AI systems.

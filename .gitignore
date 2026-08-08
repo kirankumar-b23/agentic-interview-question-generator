@@ -1,12 +1,22 @@
 __pycache__/
 *.pyc
 *.pyo
+# Derived embedding matrices (rebuilt from data/ on demand, keyed by corpus digest)
+.cache/
+# Pre-clean safety copies written by scripts/clean_bank.py and the bank sweeps.
+# Broadened from *.json.bak: data/reading_materials/session_outcomes.json.pre_fullrm.bak slipped
+# through that pattern because of the infix and sat tracked in the repo, read by nothing.
+*.bak
 .env
 .env.*
 credentials.json
 token.json
 memory.db
 *.db
+# Runtime-accumulated reviewer feedback (data, not source — like memory.db)
+eval/feedback_examples.json
+# Debugging screenshots dropped in the repo root
+/*.png
 *.egg-info/
 dist/
 build/
@@ -16,11 +26,28 @@ env/
 # Large data files
 data/raw/*.xlsx
 data/raw/*.csv
+# Loose spreadsheet dumps dropped in the repo root (keep large source files out of git)
+/*.xlsx
+/*.csv
 
 # Frontend build artifacts
 frontend/node_modules/
 frontend/dist/
 static/react/
+
+# Local Claude Code config — machine-specific permissions, not project source.
+.claude/settings.local.json
+
+# MCP server config. Holds a plaintext API key in a request header, so it must never be committed.
+# NOTE: it WAS committed (from 5d68742), so untracking does not undo the exposure — that key still
+# needs rotating in Composio.
+.mcp.json
+
+# Design docs for a DIFFERENT project (LangGraph + Postgres + Flask, `backend/` root, Classroom-Quiz /
+# MCQ-Practice workflows). They contradict CLAUDE.md and describe none of this codebase. Untracked
+# rather than deleted: a byte-identical copy of 25 of the 27 files exists outside the repo.
+.claude/plan/
+.claude/specs/
 
 # OS / IDE
 .DS_Store

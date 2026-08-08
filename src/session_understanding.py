@@ -4,24 +4,71 @@ Uses knowledge_graph.json first (instant, no LLM call needed).
 Falls back to LLM only when session is not in the knowledge graph.
 """
 
+import json
+
 from src.models import SessionContext, KPMatch, TopicMatch
 from src.data_loader import DataStore
 from src.llm_client import chat_completion_json
 from src import memory
+from src.config import SESSION_OUTCOMES_JSON
+
+
+def _load_outcome_overrides() -> dict:
+    """Human-curated per-session outcome/interview_topic overrides (editable JSON). {} if absent."""
+    try:
+        if SESSION_OUTCOMES_JSON.exists():
+            data = json.loads(SESSION_OUTCOMES_JSON.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+    except Exception as e:  # noqa: BLE001 — a malformed override file must never break resolution
+        print(f"[outcomes] override file unreadable ({e}); ignoring")
+    return {}
+
+
+def _overrides_signature() -> str:
+    """Short hash of the override file so edits self-invalidate the resolution cache."""
+    import hashlib
+    try:
+        raw = SESSION_OUTCOMES_JSON.read_bytes() if SESSION_OUTCOMES_JSON.exists() else b""
+    except Exception:  # noqa: BLE001
+        raw = b""
+    return hashlib.md5(raw).hexdigest()[:8]
+
+
+def _apply_override(name: str, context: SessionContext, overrides: dict) -> SessionContext:
+    """If `name` has a curated override, replace its learning_outcomes / interview_topics
+    (and scope_out if given) with the curated values. Other fields keep their derived values."""
+    ov = overrides.get(name)
+    if not isinstance(ov, dict):
+        return context
+    lo = [o for o in ov.get("learning_outcomes", []) if isinstance(o, str) and o.strip()]
+    it = [o for o in ov.get("interview_topics", []) if isinstance(o, str) and o.strip()]
+    so = [o for o in ov.get("scope_out", []) if isinstance(o, str) and o.strip()]
+    if lo:
+        context.learning_outcomes = lo
+    if it:
+        context.interview_topics = it
+    elif lo:
+        context.interview_topics = context.interview_topics or lo
+    if so:
+        context.scope_out = so
+    return context
 
 
 LLM_SYSTEM_PROMPT = """You are an expert curriculum analyst. Given a session's reading material, you must:
 
 1. Extract 3-7 core learning outcomes (what students should know/do after this session)
 2. Identify key concepts with clear scope boundaries
-3. Determine session type: "theory_heavy", "code_heavy", or "mixed"
-4. Map the session to the most relevant Knowledge Point IDs from the provided catalog
-5. Map the session to the most relevant interview CSV topic/sub_topic values
+3. Identify "interview_topics": the transferable, interview-relevant GenAI concepts a candidate who
+   completed this session would actually be asked about in a real interview
+4. Determine session type: "theory_heavy", "code_heavy", or "mixed"
+5. Map the session to the most relevant Knowledge Point IDs from the provided catalog
+6. Map the session to the most relevant interview CSV topic/sub_topic values
 
 Respond in JSON with this exact structure:
 {
     "learning_outcomes": ["outcome1", "outcome2", ...],
     "key_concepts": ["concept1", "concept2", ...],
+    "interview_topics": ["transferable interview concept", ...],
     "scope_in": ["topic in scope", ...],
     "scope_out": ["topic NOT in scope", ...],
     "session_type": "theory_heavy" | "code_heavy" | "mixed",
@@ -38,10 +85,16 @@ Rules:
 - If the session has coding projects/exercises, mark as "code_heavy"
 - If it's mostly conceptual/explanatory, mark as "theory_heavy"
 - scope_out should list related topics NOT covered in this specific session
+- interview_topics MUST be the transferable GenAI skills/concepts, NOT the specific tool/product/UI. For a
+  hands-on build session (e.g. building a news summarizer in the n8n tool with RSS/Aggregate/Gmail nodes),
+  interview_topics are things like "LLM text summarization", "prompt engineering", "LLM API integration",
+  "workflow automation with LLMs", "chaining LLM calls" — NOT "n8n Aggregate Node" or "RSS Feed Read Node".
+  For a pure-theory session, interview_topics will closely mirror the key_concepts. Give 3-8 items.
 """
 
 
-def understand_session(session_names: list[str], data_store: DataStore) -> SessionContext:
+def understand_session(session_names: list[str], data_store: DataStore,
+                       model: str | None = None) -> SessionContext:
     """Extract structured understanding of session(s).
 
     Each session is resolved from ITS OWN reading material (or the knowledge
@@ -56,30 +109,53 @@ def understand_session(session_names: list[str], data_store: DataStore) -> Sessi
     """
     combined_name = " + ".join(session_names)
 
-    # Check cache
-    cached = memory.get_cached_resolution(combined_name)
+    # Cache key includes a hash of the sessions' reading material, so an edit to the RM
+    # (or a session split/rename) self-invalidates the cache instead of serving stale
+    # outcomes forever (the old key was the bare combined name with no invalidation).
+    import hashlib
+    rm_sig = hashlib.md5(
+        " ".join((data_store.get_session_content(n) or "") for n in session_names).encode("utf-8")
+    ).hexdigest()[:10]
+    # Include the override-file signature so hand-edits to curated outcomes self-invalidate the cache.
+    cache_key = f"{combined_name}::{rm_sig}::ov{_overrides_signature()}"
+
+    cached = memory.get_cached_resolution(cache_key)
     if cached:
         return SessionContext(**cached)
 
     if len(session_names) == 1:
-        context = _resolve_single(session_names[0], data_store)
+        context = _resolve_single(session_names[0], data_store, model)
     else:
-        per_session = [_resolve_single(name, data_store) for name in session_names]
+        per_session = [_resolve_single(name, data_store, model) for name in session_names]
         context = _merge_contexts(per_session, combined_name)
 
-    memory.cache_resolution(combined_name, context.model_dump())
+    memory.cache_resolution(cache_key, context.model_dump())
     return context
 
 
-def _resolve_single(name: str, data_store: DataStore) -> SessionContext:
-    """Resolve one session to a SessionContext using its own content."""
+def _resolve_single(name: str, data_store: DataStore, model: str | None = None) -> SessionContext:
+    """Resolve one session to a SessionContext using its own content, then apply any curated override.
+
+    A failed LLM resolution falls back to the knowledge graph rather than yielding a context with
+    empty outcomes. An empty context is worse than a coarse one: outcomes ground retrieval, the
+    session-fit gate and the relevance judge, so a run with none of them silently produces nothing
+    on-topic while still reporting success.
+    """
     if data_store.get_session_content(name):
         # Reading material is primary: extract only KPs that are directly taught.
-        return _from_llm([name], name, data_store)
-    context = _from_knowledge_graph([name], name, data_store)
-    if not context:
-        context = _from_llm([name], name, data_store)
-    return context
+        try:
+            context = _from_llm([name], name, data_store, model)
+        except Exception as exc:  # noqa: BLE001 — includes JSONResponseError
+            print(f"[session] LLM resolution failed for {name!r} ({type(exc).__name__}: {exc}); "
+                  f"falling back to the knowledge graph")
+            context = _from_knowledge_graph([name], name, data_store)
+            if not context:
+                raise
+    else:
+        context = _from_knowledge_graph([name], name, data_store)
+        if not context:
+            context = _from_llm([name], name, data_store, model)
+    return _apply_override(name, context, _load_outcome_overrides())
 
 
 def _merge_contexts(contexts: list[SessionContext], combined_name: str) -> SessionContext:
@@ -87,13 +163,14 @@ def _merge_contexts(contexts: list[SessionContext], combined_name: str) -> Sessi
     def _dedup(items):
         return list(dict.fromkeys(items))
 
-    outcomes, concepts, scope_in, scope_out = [], [], [], []
+    outcomes, concepts, interview_topics, scope_in, scope_out = [], [], [], [], []
     kp_by_id: dict[str, KPMatch] = {}
     csv_topics: list[TopicMatch] = []
     types = []
     for c in contexts:
         outcomes += c.learning_outcomes
         concepts += c.key_concepts
+        interview_topics += c.interview_topics
         scope_in += c.scope_in
         scope_out += c.scope_out
         csv_topics += c.matched_csv_topics
@@ -117,6 +194,7 @@ def _merge_contexts(contexts: list[SessionContext], combined_name: str) -> Sessi
         session_name=combined_name,
         learning_outcomes=_dedup(outcomes),
         key_concepts=_dedup(concepts),
+        interview_topics=_dedup(interview_topics) or _dedup(concepts),
         scope_in=_dedup(scope_in),
         scope_out=_dedup(scope_out),
         session_type=session_type,
@@ -179,10 +257,13 @@ def _from_knowledge_graph(
     # Build scope_in from KP labels
     scope_in = list(dict.fromkeys([kp.kp_label for kp in matched_kps]))
 
+    key_concepts = all_concepts if all_concepts else [kp.kp_label for kp in matched_kps[:5]]
     return SessionContext(
         session_name=combined_name,
         learning_outcomes=all_outcomes,
-        key_concepts=all_concepts if all_concepts else [kp.kp_label for kp in matched_kps[:5]],
+        key_concepts=key_concepts,
+        # KG path has no LLM to infer transferable topics — mirror the concepts/KP labels.
+        interview_topics=list(key_concepts),
         scope_in=scope_in,
         scope_out=[],
         session_type=session_type,
@@ -209,6 +290,7 @@ def _from_llm(
     session_names: list[str],
     combined_name: str,
     data_store: DataStore,
+    model: str | None = None,
 ) -> SessionContext:
     """Fall back to LLM-based session analysis."""
     rm_parts = []
@@ -225,9 +307,13 @@ def _from_llm(
     )
 
     result = chat_completion_json(
+        model=model,          # the RUN's model; None falls back to the configured default
         system_prompt=LLM_SYSTEM_PROMPT,
-        user_prompt=f"## Session: {combined_name}\n\n## Reading Material\n{rm_content[:8000]}\n\n## KP Catalog\n{kp_list}",
-        max_tokens=2048,
+        # Feed the FULL per-session reading material (RM is pre-capped at 12k/session upstream).
+        # The old 8000-char cut truncated the lesson's tail, so deep sub-topics taught later
+        # (e.g. VAE/GAN/sampling for image-gen) never reached the outcome/interview_topic extractor.
+        user_prompt=f"## Session: {combined_name}\n\n## Reading Material\n{rm_content[:14000]}\n\n## KP Catalog\n{kp_list}",
+        max_tokens=3000,
     )
 
     matched_kps = []
@@ -248,10 +334,18 @@ def _from_llm(
     kp_ids = [kp.kp_id for kp in matched_kps]
     prereq_chain = data_store.get_kp_ancestors(kp_ids)
 
+    key_concepts = result.get("key_concepts", [])
+    interview_topics = result.get("interview_topics") or []
+    if not isinstance(interview_topics, list):
+        interview_topics = []
+    # Fallback: if the model omitted interview_topics, mirror the key_concepts (fine for theory sessions).
+    interview_topics = [t for t in interview_topics if isinstance(t, str) and t.strip()] or list(key_concepts)
+
     return SessionContext(
         session_name=combined_name,
         learning_outcomes=result.get("learning_outcomes", []),
-        key_concepts=result.get("key_concepts", []),
+        key_concepts=key_concepts,
+        interview_topics=interview_topics,
         scope_in=result.get("scope_in", []),
         scope_out=result.get("scope_out", []),
         session_type=result.get("session_type", "mixed"),

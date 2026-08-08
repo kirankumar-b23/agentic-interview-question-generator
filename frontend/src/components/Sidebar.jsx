@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { api } from '../lib/api.js'
+import Icon from './Icon.jsx'
 
 export default function Sidebar() {
   const navigate = useNavigate()
@@ -10,7 +11,9 @@ export default function Sidebar() {
   const [selectedCourse, setSelectedCourse] = useState('gen_ai')
   const [topics, setTopics] = useState({})
   const [selectedTopic, setSelectedTopic] = useState('')
-  const [maxQuestions, setMaxQuestions] = useState(7)
+  const [selectMode, setSelectMode] = useState('topic')   // 'topic' | 'session'
+  const [selectedUnit, setSelectedUnit] = useState('')
+  const [maxQuestions, setMaxQuestions] = useState(12)
   const [preview, setPreview] = useState(false)   // TESTING: preview before quality gate
   const [starting, setStarting] = useState(false)
   const [history, setHistory] = useState([])
@@ -48,7 +51,11 @@ export default function Sidebar() {
   useEffect(() => {
     api.getTopics(selectedCourse).then(d => setTopics(d.topics || {})).catch(() => {})
     setSelectedTopic('')
+    setSelectedUnit('')
   }, [selectedCourse])
+
+  // Flat, de-duplicated list of every unit/session in the current course.
+  const units = useMemo(() => [...new Set(Object.values(topics).flat())], [topics])
 
   useEffect(() => {
     api.getHistory().then(d => setHistory(d.runs || [])).catch(() => {})
@@ -57,11 +64,14 @@ export default function Sidebar() {
 
   const courseObj = courses.find(c => c.id === selectedCourse)
 
+  const canGen = selectMode === 'topic' ? !!selectedTopic : !!selectedUnit
+
   async function handleGenerate() {
-    if (!selectedTopic || starting) return
+    if (!canGen || starting) return
     setStarting(true)
     try {
-      const sessionNames = topics[selectedTopic] || []
+      const sessionNames = selectMode === 'topic' ? (topics[selectedTopic] || []) : [selectedUnit]
+      if (!sessionNames.length || !sessionNames[0]) return
       const { run_id } = await api.generate(sessionNames, maxQuestions, selectedModel || undefined, preview, courseObj)
       navigate(`/progress/${run_id}`)
     } catch {
@@ -76,19 +86,22 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div className="sidebar-logo" onClick={() => navigate('/')}>
+      <button className="sidebar-logo" onClick={() => navigate('/')} aria-label="NxtMock home">
         <span className="sidebar-logo-main">NxtMock</span>
         <span className="sidebar-logo-sub">Interview Generator</span>
-      </div>
+      </button>
 
       {/* Course + Topic pickers */}
       <div className="sidebar-picker">
         <div className="sidebar-picker-head">
-          <span className="sidebar-section-label" style={{ padding: 0 }}>Course</span>
-          <span className="sidebar-view-all" onClick={() => navigate('/add')}>＋ Add</span>
+          <label className="sidebar-section-label sidebar-label-flush" htmlFor="sb-course">Course</label>
+          <button className="sidebar-view-all" onClick={() => navigate('/add')}>
+            <Icon name="plus" size={12} /> Add
+          </button>
         </div>
         <div className="sidebar-select-wrap">
           <select
+            id="sb-course"
             className="sidebar-topic-select"
             value={selectedCourse}
             onChange={e => setSelectedCourse(e.target.value)}
@@ -99,32 +112,73 @@ export default function Sidebar() {
           </select>
         </div>
 
-        <span className="sidebar-section-label">Topic</span>
-        <div className="sidebar-select-wrap">
-          <select
-            className="sidebar-topic-select"
-            value={selectedTopic}
-            onChange={e => setSelectedTopic(e.target.value)}
-          >
-            <option value="">{Object.keys(topics).length ? 'Select a topic…' : 'No topics in this course'}</option>
-            {Object.keys(topics).map(t => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+        {/* Choose whether to generate for a whole topic or a single unit */}
+        <span className="sidebar-section-label">Select by</span>
+        <div className="sidebar-mode-radios">
+          <label>
+            <input
+              type="radio" name="selmode" checked={selectMode === 'topic'}
+              onChange={() => { setSelectMode('topic'); setSelectedUnit('') }}
+            />
+            Topic-wise
+          </label>
+          <label>
+            <input
+              type="radio" name="selmode" checked={selectMode === 'session'}
+              onChange={() => { setSelectMode('session'); setSelectedTopic('') }}
+            />
+            Session-wise
+          </label>
         </div>
 
-        {/* Sessions included in this topic — info only */}
-        {sessions.length > 0 && (
+        {selectMode === 'topic' ? (
           <>
-            <span className="sidebar-section-label" style={{ marginTop: '0.5rem' }}>
-              Sessions included ({sessions.length})
-            </span>
-            <div className="sidebar-session-list">
-              {sessions.map(s => (
-                <div key={s} className="sidebar-session-info" title={s}>
-                  · {s}
+            <label className="sidebar-section-label" htmlFor="sb-topic">Topic</label>
+            <div className="sidebar-select-wrap">
+              <select
+                id="sb-topic"
+                className="sidebar-topic-select"
+                value={selectedTopic}
+                onChange={e => setSelectedTopic(e.target.value)}
+              >
+                <option value="">{Object.keys(topics).length ? 'Select a topic…' : 'No topics in this course'}</option>
+                {Object.keys(topics).map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sessions included in this topic — info only */}
+            {sessions.length > 0 && (
+              <>
+                <span className="sidebar-section-label sidebar-label-spaced">
+                  Sessions included ({sessions.length})
+                </span>
+                <div className="sidebar-session-list">
+                  {sessions.map(s => (
+                    <div key={s} className="sidebar-session-info" title={s}>
+                      · {s}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <label className="sidebar-section-label" htmlFor="sb-unit">Unit</label>
+            <div className="sidebar-select-wrap">
+              <select
+                id="sb-unit"
+                className="sidebar-topic-select"
+                value={selectedUnit}
+                onChange={e => setSelectedUnit(e.target.value)}
+              >
+                <option value="">{units.length ? 'Select a unit…' : 'No units in this course'}</option>
+                {units.map(u => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
             </div>
           </>
         )}
@@ -133,10 +187,12 @@ export default function Sidebar() {
       {/* Generate area */}
       <div className="sidebar-generate-area">
         <div className="sidebar-maxq-label">
-          Max questions: <strong>{maxQuestions}</strong>
+          Target count <strong>{maxQuestions}</strong>
+          <span className="sidebar-maxq-hint">Every relevant question is kept — this is a ceiling.</span>
         </div>
         <input
-          type="range" min={5} max={15} value={maxQuestions}
+          id="sb-count" type="range" min={5} max={40} value={maxQuestions}
+          aria-valuetext={`${maxQuestions} questions`}
           onChange={e => setMaxQuestions(+e.target.value)}
           className="sidebar-range"
         />
@@ -147,10 +203,14 @@ export default function Sidebar() {
         </label>
         <button
           className="sidebar-gen-btn"
-          disabled={!selectedTopic || starting}
+          disabled={!canGen || starting}
           onClick={handleGenerate}
         >
-          {starting ? 'Starting…' : selectedTopic ? 'Generate Questions ▸' : 'Select a topic first'}
+          {starting
+            ? 'Starting…'
+            : canGen
+              ? 'Generate questions'
+              : selectMode === 'topic' ? 'Select a topic first' : 'Select a unit first'}
         </button>
       </div>
 
@@ -159,21 +219,21 @@ export default function Sidebar() {
         <div className="sidebar-history-header">
           <span className="sidebar-history-label">Recent Runs</span>
           {history.length > 0 && (
-            <span className="sidebar-view-all" onClick={() => navigate('/history')}>View all</span>
+            <button className="sidebar-view-all" onClick={() => navigate('/history')}>View all</button>
           )}
         </div>
         {(() => {
           const successful = history.filter(r => (r.question_count || 0) > 0)
           if (successful.length === 0) return <div className="sidebar-empty-hist">No successful runs yet</div>
           return successful.slice(0, 6).map(run => (
-            <div
+            <button
               key={run.run_id}
               className="sidebar-run-item"
               onClick={() => navigate(`/review/${run.run_id}`)}
             >
               <span className="sidebar-run-name" title={run.session_name}>{run.topic || run.session_name}</span>
               <span className="sidebar-run-meta">{run.question_count}q · {run.run_id.slice(0, 7)}</span>
-            </div>
+            </button>
           ))
         })()}
       </div>
@@ -196,14 +256,14 @@ export default function Sidebar() {
             {(selectedModel || meta?.model || '').replace(/^.*\//, '') || '—'}
           </span>
         )}
-        <div className="sidebar-model-via" style={{ marginTop: '0.3rem' }}>via OpenRouter</div>
-        <div className="sidebar-model-via" style={{ marginTop: '0.35rem' }}>
+        <div className="sidebar-model-via">via OpenRouter</div>
+        <div className="sidebar-model-via">
           {meta?.credits?.remaining != null
             ? `Credits: $${meta.credits.remaining.toFixed(2)} left${meta.credits.scope === 'key' ? ' (key)' : ''}`
             : 'Credits: —'}
         </div>
         <button className="theme-toggle" onClick={toggleTheme} title="Toggle light / dark theme">
-          <span className="tt-ico">{theme === 'dark' ? '☀️' : '🌙'}</span>
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={13} />
           {theme === 'dark' ? 'Light mode' : 'Dark mode'}
         </button>
       </div>

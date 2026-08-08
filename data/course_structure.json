@@ -2,7 +2,8 @@
   "Course Overview": [
     "Your Learning Journey"
   ],
-  "Advanced Gen AI Capabilities": [
+  "Gen AI Foundations & Capabilities": [
+    "Generative AI Foundations",
     "Exploring Gen AI Capabilities"
   ],
   "Productivity Power-Up with AI Tools & Prompt Engineering Fundamentals": [
@@ -10,12 +11,14 @@
     "Prompt Engineering Fundamentals"
   ],
   "No-Code AI Automation": [
-    "Building Social Media Content Automation Workflow",
+    "Building Social Media Content Automation Workflow | Part 1",
+    "Building Social Media Content Automation Workflow | Part 2",
     "Advanced Prompt Engineering"
   ],
   "AI Workflows for Enhanced Productivity": [
     "Build Your Own AI News Summarizer | Part 1",
     "Build Your Own AI News Summarizer | Part 2",
+    "Build Your Own AI News Summarizer | Part 3",
     "Productivity Power-Up with AI Tools | Part 2"
   ],
   "Mastering Image Generation": [
@@ -38,7 +41,8 @@
   ],
   "Agents with Memory & Introduction to MCP": [
     "Building an Agent with Memory",
-    "Introduction to Model Context Protocol"
+    "Introduction to Model Context Protocol | Part 1",
+    "Introduction to Model Context Protocol | Part 2"
   ],
   "Getting Started with Third-Party Packages": [
     "Introduction to Google Colab",

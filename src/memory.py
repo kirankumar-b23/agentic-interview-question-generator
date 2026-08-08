@@ -3,6 +3,7 @@
 import sqlite3
 import json
 import pathlib
+import re
 from src.config import MEMORY_DB
 
 _RULES_FILE = pathlib.Path(__file__).parent.parent / "data" / "learned_rules.md"
@@ -62,18 +63,13 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS question_feedback (
-            question_id TEXT NOT NULL,
-            run_id      TEXT NOT NULL,
-            feedback    TEXT NOT NULL,
-            created_at  TEXT DEFAULT (datetime('now')),
+            question_id  TEXT NOT NULL,
+            run_id       TEXT NOT NULL,
+            feedback     TEXT NOT NULL,
+            session_name TEXT,
+            content      TEXT,
+            created_at   TEXT DEFAULT (datetime('now')),
             PRIMARY KEY (question_id, run_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS suppress_boost (
-            question_id TEXT PRIMARY KEY,
-            score       REAL NOT NULL,
-            action      TEXT NOT NULL,
-            updated_at  TEXT DEFAULT (datetime('now'))
         );
 
         CREATE TABLE IF NOT EXISTS question_bank (
@@ -83,11 +79,23 @@ def init_db():
             source       TEXT,
             created_at   TEXT DEFAULT (datetime('now'))
         );
+
+        -- Human-rejected questions, keyed by NORMALIZED content (question_ids regenerate per run, so
+        -- identity must be content). Session-scoped: a rejection sticks for that session on future runs.
+        CREATE TABLE IF NOT EXISTS rejected_questions (
+            session_name TEXT NOT NULL,
+            content_norm TEXT NOT NULL,
+            content      TEXT,
+            created_at   TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (session_name, content_norm)
+        );
     """)
     conn.commit()
     # Migrate: add columns to existing databases
     for migration in [
         "ALTER TABLE run_history ADD COLUMN api_usage_json TEXT",
+        "ALTER TABLE question_feedback ADD COLUMN session_name TEXT",
+        "ALTER TABLE question_feedback ADD COLUMN content TEXT",
     ]:
         try:
             conn.execute(migration)
@@ -119,6 +127,25 @@ def cache_resolution(session_name: str, resolution: dict):
     )
     conn.commit()
     conn.close()
+
+
+def clear_session_resolution(session_name: str) -> int:
+    """Delete cached resolutions for `session_name`. Returns the number of rows removed.
+
+    Resolutions are keyed by a COMPOSITE string — `"{name}::{reading_material_hash}::ov{overrides}"`
+    (see session_understanding.cache_resolution callers) — so an exact-match DELETE on the bare name
+    matches nothing. The regenerate-after-reject path did exactly that and silently cleared 0 rows,
+    which is why rejecting a set never actually re-derived its outcomes.
+    """
+    conn = get_connection()
+    cur = conn.execute(
+        "DELETE FROM session_resolutions WHERE session_name = ? OR session_name LIKE ?",
+        (session_name, f"{session_name}::%"),
+    )
+    removed = cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+    conn.commit()
+    conn.close()
+    return removed
 
 
 # --- Run History ---
@@ -257,24 +284,11 @@ def get_run_history(limit: int = 100) -> list[dict]:
     return result
 
 
-# --- Suppress/Boost Lists ---
-
-def get_suppress_list() -> list[str]:
-    conn = get_connection()
-    rows = conn.execute(
-        "SELECT question_id FROM suppress_boost WHERE action = 'suppress'"
-    ).fetchall()
-    conn.close()
-    return [r["question_id"] for r in rows]
-
-
-def get_boost_list() -> list[str]:
-    conn = get_connection()
-    rows = conn.execute(
-        "SELECT question_id FROM suppress_boost WHERE action = 'boost'"
-    ).fetchall()
-    conn.close()
-    return [r["question_id"] for r in rows]
+# NOTE: a `suppress_boost` table with get_suppress_list()/get_boost_list() readers used to live here.
+# It had no writer and no caller anywhere in the codebase, and the table was empty after 36 runs, so
+# it was removed rather than left looking like a working feature. Suppression of rejected questions is
+# handled by `rejected_questions` (exact, below) plus the semantic penalty in tools._select_final.
+# An existing memory.db may still contain the unused table; it is harmless and simply ignored.
 
 
 # --- Learned Rules (distilled from human rejections) ---
@@ -309,11 +323,17 @@ def append_learned_rule(rule: str) -> bool:
     return True
 
 
-def distill_rule(session_name: str, reason: str) -> str:
-    """Use LLM to distil a rejection reason into a reusable validation rule."""
+def distill_rule(session_name: str, reason: str, model: str | None = None) -> str:
+    """Distil a free-text rejection reason into a reusable validation rule.
+
+    `model` is optional and defaults to the UI's current selection. Unlike the pipeline stages, this is
+    a single short call triggered by a human clicking Reject — there is no run to inherit a model from,
+    so the UI default is the correct source here.
+    """
     from src.llm_client import chat_completion_json
     try:
         result = chat_completion_json(
+            model=model,
             system_prompt="You convert interview question rejection reasons into reusable validation rules.",
             user_prompt=(
                 f'A reviewer rejected an interview question for a session on "{session_name}" '
@@ -354,5 +374,148 @@ def get_bank_questions(session_name: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+# --- Rejected-question suppression (per session, keyed by normalized content) ---
+
+def normalize_content(text: str) -> str:
+    """Normalization used for rejected-question identity (lowercase, punctuation-stripped, collapsed)."""
+    return " ".join(re.sub(r"[^\w\s]", " ", (text or "").lower()).split())
+
+
+def _split_sessions(session_name: str) -> list[str]:
+    """Explode a combined run name ("A + B + C") into its individual session names.
+
+    Rejections must be stored per INDIVIDUAL session, not against the joined string. Keyed on the
+    combination, a rejection learned while running "A + B" would not suppress anything when "A" is
+    later run with "C" — the same bad question would come back and be rejected again.
+    """
+    parts = [p.strip() for p in (session_name or "").split(" + ")]
+    return [p for p in parts if p] or ([session_name] if session_name else [])
+
+
+def record_rejections(session_name: str, contents: list[str]) -> int:
+    """Persist rejected question texts (by normalized content) so they never resurface.
+
+    Recorded once per individual session in `session_name`, so suppression follows the session
+    into any future combination. Returns the number of NEW (session, content) rows stored —
+    re-rejecting the same question does not inflate the count.
+    """
+    conn = get_connection()
+    n = 0
+    sessions = _split_sessions(session_name)
+    for c in contents:
+        norm = normalize_content(c)
+        if not norm:
+            continue
+        for sess in sessions:
+            cur = conn.execute(
+                "INSERT OR IGNORE INTO rejected_questions (session_name, content_norm, content) "
+                "VALUES (?, ?, ?)",
+                (sess, norm, c),
+            )
+            n += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+    conn.commit()
+    conn.close()
+    return n
+
+
+def get_rejected_norms(session_name: str) -> set[str]:
+    """Normalized contents previously rejected for any of these session(s).
+
+    Accepts a combined name and unions the rejections of each individual session, so a question
+    rejected in one combination stays suppressed in every other combination containing that session.
+    """
+    sessions = _split_sessions(session_name)
+    if not sessions:
+        return set()
+    # Include the combined name too: rows written before rejections were keyed per-session are
+    # stored under the joined string, and they must keep suppressing.
+    if session_name and session_name not in sessions:
+        sessions = sessions + [session_name]
+    conn = get_connection()
+    placeholders = ",".join("?" for _ in sessions)
+    rows = conn.execute(
+        f"SELECT content_norm FROM rejected_questions WHERE session_name IN ({placeholders})",
+        sessions,
+    ).fetchall()
+    conn.close()
+    return {r["content_norm"] for r in rows}
+
+
+# --- Reviewer-decision feedback → question_feedback table + eval/feedback_examples.json ---
+
+_FEEDBACK_EXAMPLES = pathlib.Path(__file__).parent.parent / "eval" / "feedback_examples.json"
+
+
+def record_feedback(run_id: str, session_name: str, question_id: str, content: str, decision: str) -> None:
+    """Persist one reviewer decision ('good' accepted / 'bad' rejected): fills the question_feedback table
+    (provenance) AND appends to eval/feedback_examples.json so the eval harness reflects real choices."""
+    if not content or decision not in ("good", "bad"):
+        return
+    try:
+        conn = get_connection()
+        conn.execute(
+            "INSERT OR REPLACE INTO question_feedback (question_id, run_id, feedback, session_name, content) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (question_id or "", run_id or "", decision, session_name or "", content or ""),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        data = []
+        if _FEEDBACK_EXAMPLES.exists():
+            data = json.loads(_FEEDBACK_EXAMPLES.read_text(encoding="utf-8")) or []
+        data.append({"session": session_name, "question": content, "decision": decision})
+        _FEEDBACK_EXAMPLES.parent.mkdir(parents=True, exist_ok=True)
+        _FEEDBACK_EXAMPLES.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def get_feedback_examples() -> list[dict]:
+    """Reviewer-decision examples ({session, question, decision}) for the eval harness. [] if none."""
+    try:
+        if _FEEDBACK_EXAMPLES.exists():
+            return json.loads(_FEEDBACK_EXAMPLES.read_text(encoding="utf-8")) or []
+    except Exception:  # noqa: BLE001
+        pass
+    return []
+
+
+def _backfill_rejections_per_session() -> int:
+    """One-time migration: re-key rejections stored under a COMBINED run name ("A + B + C") so each
+    individual session also has its own row.
+
+    Rejections used to be keyed on the joined name, so a question rejected while running "A + B" did
+    not suppress when "A" was later run with "C" — it came back and was rejected again. Splitting the
+    existing rows makes those already-recorded rejections useful in every future combination.
+
+    Idempotent (INSERT OR IGNORE) and cheap, so it is safe to run on every import. Returns the number
+    of rows added.
+    """
+    try:
+        conn = get_connection()
+        rows = conn.execute(
+            "SELECT session_name, content_norm, content FROM rejected_questions "
+            "WHERE session_name LIKE '% + %'"
+        ).fetchall()
+        added = 0
+        for row in rows:
+            for sess in _split_sessions(row["session_name"]):
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO rejected_questions (session_name, content_norm, content) "
+                    "VALUES (?, ?, ?)",
+                    (sess, row["content_norm"], row["content"]),
+                )
+                added += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+        conn.commit()
+        conn.close()
+        return added
+    except Exception:  # noqa: BLE001 — a failed migration must not stop the app from starting
+        return 0
+
+
 # Initialize on import
 init_db()
+_backfill_rejections_per_session()

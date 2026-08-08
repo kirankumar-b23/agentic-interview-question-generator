@@ -1,0 +1,1190 @@
+{
+  "Generative AI Foundations": {
+    "rm_chars": 8388,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand the role and capabilities of Large Language Models (LLMs) as the core engine of Generative AI applications",
+      "Distinguish between open-source and closed-source LLM models, including their trade-offs and use cases",
+      "Identify key organizations and platforms in the open-source AI ecosystem, particularly Hugging Face",
+      "Explain the concepts of pre-trained and fine-tuned LLM models and when to use each",
+      "Recognize multimodal LLM capabilities and their applications beyond text",
+      "Understand the resource requirements and scale of LLM development and deployment"
+    ],
+    "interview_topics": [
+      "LLM architecture and capabilities",
+      "Pre-trained vs fine-tuned models and when to use each",
+      "Open-source vs closed-source model trade-offs",
+      "Model selection criteria for different use cases",
+      "Multimodal LLM applications",
+      "LLM resource and cost considerations",
+      "Model deployment and inference strategies"
+    ],
+    "flags": []
+  },
+  "Exploring Gen AI Capabilities": {
+    "rm_chars": 8782,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand and differentiate between major Gen AI capabilities: web search, deep research, voice interaction, and screen sharing",
+      "Identify appropriate use cases for each Gen AI capability across different domains (agriculture, education, sports, finance, etc.)",
+      "Recognize different AI model types and their optimization for specific tasks (reasoning, flash, coding, general-purpose, cost-efficient)",
+      "Evaluate when to use reasoning models vs. faster models based on task complexity",
+      "Apply Gen AI capabilities to real-world scenarios like purchasing decisions, career planning, and technical debugging",
+      "Understand the limitations and daily usage constraints of advanced Gen AI features"
+    ],
+    "interview_topics": [
+      "LLM capabilities and limitations",
+      "Model selection and task-specific optimization",
+      "Prompt engineering for different use cases",
+      "Step-by-step reasoning in problem decomposition",
+      "Real-time information retrieval and web integration",
+      "Multi-step research workflows",
+      "Voice interface design and speech processing",
+      "Context understanding and visual input handling"
+    ],
+    "flags": []
+  },
+  "Productivity Power Up with AI Tools": {
+    "rm_chars": 6844,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand how AI tools (Gamma AI, DeepWiki, ChatGPT) can automate and accelerate common productivity tasks",
+      "Use Gamma AI to generate professional presentations from text prompts in minutes",
+      "Leverage DeepWiki to convert complex GitHub repositories into understandable documentation and architecture diagrams",
+      "Discover and utilize ChatGPT's Custom GPTs and Agent Mode for specialized task automation",
+      "Apply prompt engineering principles to effectively communicate with AI tools for desired outputs",
+      "Recognize the role of LLMs in automating multi-step workflows and complex tasks"
+    ],
+    "interview_topics": [
+      "Prompt engineering and crafting effective prompts for LLMs",
+      "LLM capabilities and limitations in automation",
+      "AI agent design for multi-step task execution",
+      "Autonomous workflow automation with language models",
+      "Tool integration and API usage with LLMs",
+      "Context management in LLM interactions",
+      "Practical applications of generative AI in productivity"
+    ],
+    "flags": []
+  },
+  "Prompt Engineering Fundamentals": {
+    "rm_chars": 12000,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand what prompt engineering is and why it matters for getting better LLM responses",
+      "Apply the RCATF framework (Role, Context, Action, Format, Tone) to structure effective prompts",
+      "Write clear, specific, and detailed prompts that reduce ambiguity and improve LLM output quality",
+      "Recognize how role prompting can enhance LLM performance across different task types",
+      "Distinguish between basic and well-engineered prompts and identify improvement opportunities",
+      "Design prompts that provide appropriate context, constraints, and output specifications"
+    ],
+    "interview_topics": [
+      "Prompt engineering fundamentals and best practices",
+      "Structuring prompts for clarity and specificity",
+      "Role-based prompting techniques",
+      "Context engineering and constraint management",
+      "Output format specification and control",
+      "Tone and voice manipulation in LLM responses",
+      "Iterative prompt optimization"
+    ],
+    "flags": []
+  },
+  "Building Social Media Content Automation Workflow | Part 1": {
+    "rm_chars": 6738,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand the structure and benefits of AI workflows (input-tasks-output model)",
+      "Identify where AI adds the most value in automated processes (repetitive middle steps)",
+      "Explain the difference between manual processes and AI-powered workflows with concrete examples",
+      "Recognize common applications of AI workflows (customer service, social media, e-commerce)",
+      "Understand n8n as a workflow automation platform and its core building blocks (nodes, connections)",
+      "Identify key node types and their functions in n8n workflows"
+    ],
+    "interview_topics": [
+      "Workflow automation with LLMs",
+      "Designing multi-step AI processes",
+      "LLM-powered content generation and adaptation",
+      "Prompt engineering for different platforms/contexts",
+      "Integrating LLMs into automated workflows",
+      "Human-in-the-loop AI systems",
+      "Chaining LLM calls in workflows",
+      "API integration for workflow automation"
+    ],
+    "flags": []
+  },
+  "Building Social Media Content Automation Workflow | Part 2": {
+    "rm_chars": 5783,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Configure and authenticate Google Gemini API for LLM-powered content generation",
+      "Design and implement multi-step LLM prompts for content summarization and adaptation",
+      "Build end-to-end workflow automation using n8n nodes (Google Sheets, LLM Chain, LinkedIn)",
+      "Integrate third-party APIs (Google Gemini, LinkedIn) with OAuth authentication",
+      "Test and validate AI-generated content quality across workflow stages",
+      "Schedule and automate workflow execution using time-based triggers",
+      "Adapt AI-generated content for platform-specific requirements (character limits, tone)"
+    ],
+    "interview_topics": [
+      "Prompt engineering for multi-step content generation",
+      "LLM API integration and authentication workflows",
+      "Chaining LLM calls for sequential content adaptation",
+      "Workflow automation with LLMs and external APIs",
+      "Content adaptation strategies for different platforms",
+      "Testing and validation of AI-generated outputs",
+      "Scheduling and triggering automated LLM workflows"
+    ],
+    "flags": []
+  },
+  "Advanced Prompt Engineering": {
+    "rm_chars": 12000,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Master zero-shot, one-shot, few-shot, and chain-of-thought prompting techniques",
+      "Apply appropriate prompting techniques based on task complexity and requirements",
+      "Understand and mitigate LLM limitations including knowledge cutoff and hallucination",
+      "Decompose complex problems into step-by-step reasoning prompts",
+      "Design prompts that improve consistency, reliability, and accuracy of LLM responses",
+      "Recognize when to use examples vs. example-free prompting strategies"
+    ],
+    "interview_topics": [
+      "Zero-shot, one-shot, and few-shot prompting techniques",
+      "Chain-of-thought reasoning and multi-step problem decomposition",
+      "LLM knowledge cutoff and temporal limitations",
+      "Hallucination detection and mitigation strategies",
+      "Prompt design for complex reasoning tasks",
+      "Selecting appropriate prompting techniques based on task requirements",
+      "Improving LLM reliability and consistency through prompt engineering"
+    ],
+    "flags": []
+  },
+  "Build Your Own AI News Summarizer | Part 1": {
+    "rm_chars": 10120,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Build an automated news summarization workflow using n8n with RSS feeds, LLM summarization, and email delivery",
+      "Configure RSS Feed Read Node to fetch latest articles from multiple news sources",
+      "Use Gemini AI to summarize news content with structured prompts",
+      "Implement workflow automation with Schedule Trigger for daily execution",
+      "Aggregate and process multiple data items into a single summarized output",
+      "Integrate Gmail Send Node to deliver personalized newsletters via email"
+    ],
+    "interview_topics": [
+      "LLM text summarization techniques",
+      "Prompt engineering for structured output",
+      "Workflow automation with LLMs",
+      "LLM API integration and authentication",
+      "Data aggregation and processing pipelines",
+      "Chaining multiple API calls in automation",
+      "Scheduling and triggering automated tasks"
+    ],
+    "flags": []
+  },
+  "Build Your Own AI News Summarizer | Part 2": {
+    "rm_chars": 3477,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Configure multiple RSS feed sources in n8n workflow to fetch news from different categories",
+      "Understand the difference between Merge and Aggregate nodes and apply each appropriately in data processing pipelines",
+      "Design and implement multi-category prompt engineering for LLM-based content organization and summarization",
+      "Build end-to-end automated workflows that combine multiple data sources, AI processing, and email delivery",
+      "Optimize prompt instructions to handle structured output formatting across multiple content categories"
+    ],
+    "interview_topics": [
+      "Workflow orchestration with multiple data sources",
+      "Prompt engineering for structured output and categorization",
+      "LLM text summarization and content organization",
+      "Data merging and aggregation strategies",
+      "Designing prompts with specific formatting requirements",
+      "Chaining multiple API calls in automated workflows",
+      "Handling multiple content streams in LLM applications"
+    ],
+    "flags": []
+  },
+  "Build Your Own AI News Summarizer | Part 3": {
+    "rm_chars": 7287,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Integrate third-party APIs (SERP API) into n8n workflows to fetch real-time data beyond RSS feeds",
+      "Configure HTTP Request nodes with API parameters, authentication, and cURL imports",
+      "Merge multiple data sources (RSS feeds + API responses) in n8n workflows",
+      "Design comprehensive prompts that organize and format multi-source content for LLM summarization",
+      "Build end-to-end workflows that combine data fetching, aggregation, LLM processing, and email delivery"
+    ],
+    "interview_topics": [
+      "API integration patterns and HTTP request handling",
+      "Real-time data fetching and aggregation strategies",
+      "Prompt engineering for structured multi-source content formatting",
+      "LLM-powered content summarization and organization",
+      "Workflow automation combining multiple data sources",
+      "Authentication and credential management in API calls",
+      "Error handling and data validation in API workflows"
+    ],
+    "flags": []
+  },
+  "Productivity Power-Up with AI Tools | Part 2": {
+    "rm_chars": 6985,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand how AI-powered note-taking tools like Otter AI transcribe and organize meeting/lecture content",
+      "Learn to convert text and concepts into visual diagrams and infographics using Napkin AI",
+      "Generate quizzes, flashcards, and practice tests from study materials using QuizGecko",
+      "Use Perplexity as an AI research assistant to find accurate, referenced answers with real-time web search",
+      "Identify appropriate AI productivity tools for different use cases (transcription, visualization, assessment, research)",
+      "Apply best practices for leveraging AI tools to enhance learning and information management workflows"
+    ],
+    "interview_topics": [
+      "LLM-powered transcription and summarization",
+      "Text-to-visual generation and content transformation",
+      "Prompt engineering for research queries",
+      "Real-time information retrieval with LLMs",
+      "AI tool integration for workflow automation",
+      "Source verification and fact-checking with AI",
+      "Multi-modal AI capabilities and use cases"
+    ],
+    "flags": []
+  },
+  "Mastering Image Generation": {
+    "rm_chars": 12000,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand how AI image generation works and its core applications across industries",
+      "Distinguish between text-to-image, image-to-image, and image-to-text generation paradigms",
+      "Compare closed-source and open-source image generation models and their trade-offs",
+      "Apply prompt engineering best practices to generate high-quality images",
+      "Evaluate when to use different image generation models based on use case requirements",
+      "Understand diffusion models as the foundational technology behind modern image generation"
+    ],
+    "interview_topics": [
+      "Prompt engineering for image generation",
+      "Text-to-image generation capabilities and limitations",
+      "Image-to-image transformation techniques",
+      "Closed-source vs open-source model trade-offs",
+      "Diffusion model fundamentals",
+      "Model selection and evaluation criteria",
+      "Multimodal AI capabilities (vision and language)",
+      "Practical applications of generative AI in business"
+    ],
+    "flags": []
+  },
+  "Setting Up Your Kaggle Environment": {
+    "rm_chars": 11051,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Set up a Kaggle account with phone verification to enable GPU access",
+      "Create and configure a Jupyter notebook in Kaggle with GPU acceleration enabled",
+      "Understand cloud computing fundamentals and why Kaggle is suitable for AI development",
+      "Manage Kaggle session duration and GPU quota to optimize free tier usage",
+      "Execute Python code in Kaggle notebooks and troubleshoot common setup issues",
+      "Configure notebook settings (persistence, internet, accelerator) for AI model experimentation"
+    ],
+    "interview_topics": [
+      "Understanding cloud computing infrastructure for AI",
+      "GPU resource allocation and VRAM requirements",
+      "Managing computational constraints in AI projects",
+      "Jupyter notebook workflows for experimentation",
+      "Cost-performance tradeoffs in cloud computing",
+      "Session management and resource optimization"
+    ],
+    "flags": []
+  },
+  "Mastering Image Generation with Stable Diffusion": {
+    "rm_chars": 12000,
+    "session_type": "mixed",
+    "learning_outcomes": [
+      "Understand Stable Diffusion architecture and why it's an open-source alternative to commercial image generation platforms",
+      "Set up and run Stable Diffusion locally using cloud GPU resources (Kaggle)",
+      "Install and configure Automatic1111 WebUI as a control interface for Stable Diffusion",
+      "Use Ngrok to create secure tunnels for accessing remote Stable Diffusion instances",
+      "Compare different Stable Diffusion versions (v1.5, XL, 3.5) and select appropriate versions for different use cases",
+      "Understand the advantages of self-hosted image generation over online platforms (cost, privacy, customization)"
+    ],
+    "interview_topics": [
+      "Diffusion model architecture and image generation process",
+      "Open-source vs. commercial AI model trade-offs",
+      "GPU resource requirements for generative AI",
+      "Self-hosted AI infrastructure setup and deployment",
+      "API authentication and secure token management",
+      "Model versioning and capability differences",
+      "Privacy and cost considerations in AI model deployment",
+      "Cloud computing integration for AI workloads"
+    ],
+    "flags": []
+  },
+  "Introduction to AI Agents": {
+    "rm_chars": 5429,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand the definition and purpose of AI agents as autonomous systems that can reason, plan, and execute actions",
+      "Identify and explain the three core components of AI agents: AI Model (LLM), Tools, and Memory",
+      "Understand the ReAct framework (Reasoning, Acting, Observation) and how agents operate in iterative loops",
+      "Explain how AI agents extend LLM capabilities through tool integration and real-time data access",
+      "Describe how memory systems enable agents to maintain context and learn from past interactions",
+      "Apply agent design principles to decompose complex tasks into autonomous workflows"
+    ],
+    "interview_topics": [
+      "AI agent architecture and core components",
+      "ReAct framework and agentic reasoning patterns",
+      "LLM reasoning and planning capabilities",
+      "Tool integration and function calling in agents",
+      "Memory systems in AI agents (short-term vs long-term)",
+      "Autonomous task decomposition and execution",
+      "Agent decision-making and action selection",
+      "Iterative refinement loops in agent workflows"
+    ],
+    "flags": []
+  },
+  "Mastering AI Audio Generation": {
+    "rm_chars": 12000,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand AI audio generation technology and its three main transformation types (TTS, STT, STS)",
+      "Identify real-world applications of AI audio generation across education, entertainment, content creation, and healthcare",
+      "Distinguish between traditional audio production and AI-powered audio generation approaches",
+      "Recognize popular open-source audio generation models and their capabilities",
+      "Understand the practical workflow for text-to-speech and speech-to-text conversions",
+      "Apply AI audio generation concepts to solve domain-specific problems"
+    ],
+    "interview_topics": [
+      "Text-to-speech (TTS) implementation and use cases",
+      "Speech-to-text (STT) transcription workflows",
+      "Voice cloning and speech synthesis techniques",
+      "Audio generation model selection and comparison",
+      "Real-time audio processing and streaming",
+      "Multi-language audio generation and translation",
+      "Audio quality parameters and voice customization",
+      "Accessibility applications of audio AI"
+    ],
+    "flags": []
+  },
+  "Building No-Code Applications with AI": {
+    "rm_chars": 10106,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Build a frontend interface for AI workflows using no-code application builders (Lovable, Bolt, Replit)",
+      "Understand and implement webhooks as bridges between frontend applications and n8n workflows",
+      "Configure n8n webhook nodes to receive data from external applications and trigger workflows",
+      "Connect frontend forms to n8n workflows by sending structured JSON data via HTTP POST requests",
+      "Implement response handling in n8n workflows to send results back to frontend applications",
+      "Deploy end-to-end no-code AI applications that integrate user interfaces with automated workflows",
+      "Use vibe coding and natural language prompts to generate application interfaces"
+    ],
+    "interview_topics": [
+      "Webhook architecture and HTTP request/response patterns",
+      "Integrating frontend applications with backend AI workflows",
+      "API endpoint design and data serialization (JSON)",
+      "Asynchronous workflow triggering and response handling",
+      "Building user-facing interfaces for AI systems",
+      "Error handling and user feedback in AI applications",
+      "No-code vs. code-based application development tradeoffs"
+    ],
+    "flags": []
+  },
+  "Mastering AI Audio Generation using F5-TTS": {
+    "rm_chars": 10295,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Understand F5-TTS architecture and capabilities for zero-shot voice cloning",
+      "Set up and run F5-TTS locally on GPU infrastructure (Kaggle)",
+      "Generate natural-sounding speech from text using voice reference samples",
+      "Implement emotional control in AI-generated audio using multi-speech synthesis",
+      "Create podcast content with cloned voices and emotional nuance",
+      "Compare open-source vs. closed-source audio generation models",
+      "Manage voice samples and reference text for accurate speech synthesis"
+    ],
+    "interview_topics": [
+      "Voice cloning and zero-shot speaker adaptation",
+      "Text-to-speech synthesis techniques",
+      "Emotional control in generative audio models",
+      "Prosody and acoustic feature modeling",
+      "Open-source vs. proprietary AI model tradeoffs",
+      "Audio generation pipeline design",
+      "Reference-based model conditioning"
+    ],
+    "flags": []
+  },
+  "Building a Learning Path Generator": {
+    "rm_chars": 8806,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Build an end-to-end AI agent workflow that automates learning path generation",
+      "Integrate multiple Google APIs (Docs, Calendar, Drive) with an LLM-powered agent",
+      "Design and implement system prompts that orchestrate multi-step agent reasoning",
+      "Configure Gemini API authentication and manage API credentials securely",
+      "Use tool calling and function integration to enable LLMs to interact with external services",
+      "Implement web research integration (SerpAPI) within an AI agent workflow",
+      "Deploy a no-code/low-code automation using n8n with AI agent capabilities"
+    ],
+    "interview_topics": [
+      "AI agent design and tool orchestration patterns",
+      "System prompt engineering for multi-step reasoning",
+      "Tool calling and function integration in LLM workflows",
+      "Prompt engineering for controlling agent behavior",
+      "API integration and authentication management",
+      "Workflow automation with LLMs",
+      "Chaining multiple LLM calls and tool invocations",
+      "Handling external API responses in agent workflows"
+    ],
+    "flags": []
+  },
+  "Build Your Own AI Shopping Assistant | Part 1": {
+    "rm_chars": 7187,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Build an end-to-end AI shopping assistant workflow in n8n that integrates Telegram, LLM, and web scraping",
+      "Configure Telegram bot integration to receive and process user messages in n8n",
+      "Design and implement system prompts that guide LLM behavior for product search and styling advice",
+      "Integrate external APIs (Scraper API) into LLM workflows to fetch real-time product data",
+      "Implement conditional logic in prompts to distinguish between product search and styling consultation modes",
+      "Parse and format API responses for user-friendly presentation in Telegram"
+    ],
+    "interview_topics": [
+      "Designing system prompts for multi-mode AI agents",
+      "Tool calling and function integration in LLM workflows",
+      "Prompt engineering for intent classification and routing",
+      "Building multi-step reasoning workflows with LLMs",
+      "API integration patterns in AI applications",
+      "Handling real-time data in LLM-powered systems",
+      "Conditional logic in prompt design",
+      "Context and instruction management in agent systems"
+    ],
+    "flags": []
+  },
+  "Build Your Own AI Shopping Assistant | Part 2": {
+    "rm_chars": 6123,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Implement speech-to-text conversion in AI applications using Whisper API",
+      "Design multi-modal input workflows that handle both text and audio messages",
+      "Configure message routing logic based on input type in n8n workflows",
+      "Convert audio file formats to meet API requirements using Python",
+      "Integrate third-party APIs (Whisper/Groq) for speech processing in chatbot applications",
+      "Merge multiple processing paths into unified agent workflows"
+    ],
+    "interview_topics": [
+      "Speech-to-text integration in LLM applications",
+      "Multi-modal input processing (text and audio)",
+      "Workflow automation with conditional routing",
+      "API integration and error handling",
+      "File format conversion for API compatibility",
+      "LLM agent design with multiple input channels",
+      "Prompt engineering for diverse input types"
+    ],
+    "flags": []
+  },
+  "Building an Agent with Memory": {
+    "rm_chars": 4877,
+    "session_type": "mixed",
+    "learning_outcomes": [
+      "Understand the role of memory in AI agents and why it is essential for context-aware decision making",
+      "Distinguish between short-term and long-term memory in AI agents and their respective use cases",
+      "Implement short-term memory using n8n Simple Memory node with session-based configuration",
+      "Design and configure memory systems to maintain conversation context and user preferences",
+      "Apply memory concepts to build personalized AI agents that learn from past interactions",
+      "Understand the limitations of context windows and how they affect agent memory capacity"
+    ],
+    "interview_topics": [
+      "AI agent architecture and memory component design",
+      "Short-term vs long-term memory trade-offs in agent systems",
+      "Context window management and token limitations",
+      "Session-based memory implementation strategies",
+      "Personalization through memory systems",
+      "Memory persistence patterns for multi-turn conversations",
+      "Episodic, procedural, and semantic memory types",
+      "Scaling memory systems for multiple concurrent users"
+    ],
+    "flags": []
+  },
+  "Introduction to Model Context Protocol | Part 1": {
+    "rm_chars": 1604,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand the Model Context Protocol (MCP) as a standardized framework for AI tool integration",
+      "Identify the four core components of MCP: Host, Server, Client, and Protocol",
+      "Explain how MCP solves traditional tool integration challenges in AI agents",
+      "Recognize MCP's role in simplifying multi-tool management and reducing maintenance overhead",
+      "Understand the relationship between MCP servers and tool documentation/accessibility"
+    ],
+    "interview_topics": [
+      "Tool integration patterns in AI agents",
+      "Standardized protocols for LLM-tool communication",
+      "Scalability challenges in multi-tool AI systems",
+      "Abstraction layers for external tool access",
+      "API management and maintenance in agent architectures",
+      "Protocol design for AI applications"
+    ],
+    "flags": [
+      "thin_rm"
+    ]
+  },
+  "Introduction to Model Context Protocol | Part 2": {
+    "rm_chars": 3888,
+    "session_type": "mixed",
+    "learning_outcomes": [
+      "Understand how to integrate MCP servers into n8n workflows using the MCP Client Tool node",
+      "Configure MCP server connections with proper authentication and endpoint setup",
+      "Select and expose specific MCP tools to AI agents within n8n",
+      "Apply MCP integration to build practical AI agent workflows (Learning Path Generator example)",
+      "Understand the benefits of MCP for decoupling agents from tool implementations",
+      "Work with alternative LLM models (Mistral AI) when primary models have compatibility issues"
+    ],
+    "interview_topics": [
+      "Model Context Protocol (MCP) architecture and integration patterns",
+      "Tool integration strategies for AI agents",
+      "LLM model selection and compatibility considerations",
+      "Authentication and configuration for external tool connections",
+      "AI agent workflow design with multiple tools",
+      "Decoupling agent logic from tool implementations",
+      "Handling tool availability and provider selection"
+    ],
+    "flags": []
+  },
+  "Introduction to Google Colab": {
+    "rm_chars": 1824,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Set up and access Google Colab environment without local installation",
+      "Write and execute Python code in Colab cells",
+      "Understand the notebook structure and cell execution model",
+      "Leverage free GPU/TPU resources for computationally intensive tasks",
+      "Save and share Colab notebooks via Google Drive",
+      "Work with variables and state across multiple cells in a notebook"
+    ],
+    "interview_topics": [
+      "Cloud-based development environments for AI/ML",
+      "GPU resource utilization for model training",
+      "Notebook-based development workflows",
+      "Python execution environments and dependencies",
+      "Collaborative development and sharing practices"
+    ],
+    "flags": [
+      "thin_rm"
+    ]
+  },
+  "Introduction to Third Party Packages": {
+    "rm_chars": 5235,
+    "session_type": "mixed",
+    "learning_outcomes": [
+      "Understand the purpose and benefits of third-party packages in Python development",
+      "Install and manage Python packages using pip and PyPI",
+      "Make HTTP requests to external APIs using the requests library",
+      "Parse and extract data from JSON responses",
+      "Build a functional application that integrates third-party packages (weather app example)",
+      "Identify and select appropriate third-party packages for different use cases"
+    ],
+    "interview_topics": [
+      "API integration and HTTP communication",
+      "Working with external libraries and dependencies",
+      "JSON data parsing and manipulation",
+      "HTTP request/response handling",
+      "Package management and dependency resolution",
+      "Building applications with third-party tools"
+    ],
+    "flags": []
+  },
+  "Introduction to Flask": {
+    "rm_chars": 7647,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Set up a Python development environment with VS Code and Flask",
+      "Create and run a basic Flask web application",
+      "Understand and implement Flask routing with @app.route() decorator",
+      "Map URLs to Python functions using Flask routes",
+      "Handle HTTP GET requests in Flask applications",
+      "Start and debug a Flask development server"
+    ],
+    "interview_topics": [
+      "Web framework fundamentals and routing concepts",
+      "HTTP request-response handling",
+      "URL mapping and endpoint design",
+      "RESTful API basics",
+      "Backend application architecture",
+      "Python web development patterns"
+    ],
+    "flags": []
+  },
+  "Building Rest APIs using Flask": {
+    "rm_chars": 7188,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Build REST APIs using Flask with multiple endpoints for CRUD operations",
+      "Implement GET endpoints to retrieve all resources and individual resources by ID",
+      "Implement POST endpoints to create new resources with request body parsing",
+      "Use path parameters to capture dynamic values from URLs",
+      "Handle HTTP methods (GET, POST) and route parameters in Flask",
+      "Test REST API endpoints using Postman and interpret JSON responses",
+      "Return appropriate HTTP status codes (200, 201, 404) for different scenarios"
+    ],
+    "interview_topics": [
+      "REST API design principles and HTTP methods",
+      "Building CRUD endpoints with Flask",
+      "Path parameters and query string handling",
+      "Request/response serialization with JSON",
+      "HTTP status codes and error handling",
+      "API testing and debugging strategies",
+      "Stateless API design patterns"
+    ],
+    "flags": []
+  },
+  "Integrating Flask APIs in Frontend": {
+    "rm_chars": 6123,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Integrate a Flask backend API with a frontend JavaScript application using the Fetch API",
+      "Understand and implement CORS (Cross-Origin Resource Sharing) to enable frontend-backend communication",
+      "Dynamically fetch JSON data from a REST API endpoint and render it in the DOM",
+      "Handle asynchronous API requests with error handling in JavaScript",
+      "Connect HTML/CSS/JavaScript UI components to backend data sources",
+      "Test API integration and debug CORS-related issues"
+    ],
+    "interview_topics": [
+      "Frontend-backend API integration patterns",
+      "CORS and cross-origin request handling",
+      "Asynchronous data fetching in JavaScript",
+      "Error handling in API calls",
+      "REST API consumption from frontend",
+      "Dynamic content rendering from API responses",
+      "HTTP request lifecycle and debugging"
+    ],
+    "flags": []
+  },
+  "Building LLM Applications Using Python | Part 1": {
+    "rm_chars": 7903,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Set up a Python development environment with LLM SDK packages (google-genai, groq)",
+      "Configure API authentication and securely manage API keys for LLM services",
+      "Make API calls to LLMs using official Python packages and libraries",
+      "Build a basic LLM-powered application that accepts user input and returns generated responses",
+      "Understand the three essential components of LLM applications: the LLM, API connector, and prompts",
+      "Compare when to use no-code tools (n8n) versus Python for LLM application development"
+    ],
+    "interview_topics": [
+      "LLM API integration patterns in Python",
+      "API authentication and credential management strategies",
+      "Prompt engineering fundamentals",
+      "Comparing LLM provider SDKs and their trade-offs",
+      "Error handling in LLM API calls",
+      "Response parsing and text extraction from LLM outputs",
+      "Building scalable LLM applications with Python"
+    ],
+    "flags": []
+  },
+  "Building LLM Applications Using Python | Part 2": {
+    "rm_chars": 9770,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Implement system prompts to control LLM behavior, tone, and personality in Python applications",
+      "Configure temperature and max_output_tokens parameters to control LLM output randomness and length",
+      "Design and apply multiple personas/personalities to LLM applications using dictionaries and GenerateContentConfig",
+      "Understand the System/User/Assistant role structure in conversational LLMs and how to leverage it",
+      "Build context-aware LLM applications that guide model behavior through prompt engineering",
+      "Manage token limits and costs by controlling input/output token constraints"
+    ],
+    "interview_topics": [
+      "System prompt engineering and role definition",
+      "Temperature and sampling parameter tuning for different use cases",
+      "Token management and cost optimization in LLM applications",
+      "Controlling LLM output behavior through configuration",
+      "Persona-based prompt design patterns",
+      "Context and instruction clarity in prompt engineering",
+      "LLM API configuration and parameter passing"
+    ],
+    "flags": []
+  },
+  "Building UI for LLM Applications": {
+    "rm_chars": 9965,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Build interactive web UIs for LLM applications using Gradio without HTML/CSS/JavaScript",
+      "Integrate Python LLM functions with Gradio Interface components (inputs, outputs, parameters)",
+      "Configure Gradio input types (Textbox, Radio, Dropdown) and output types for different data formats",
+      "Deploy and share Gradio applications with public links for accessibility",
+      "Design user-friendly interfaces that abstract away code complexity from end users",
+      "Connect LLM API calls to UI interactions through Gradio's data flow pipeline"
+    ],
+    "interview_topics": [
+      "Building user interfaces for LLM applications",
+      "Abstracting LLM functionality through UI layers",
+      "Connecting Python functions to interactive web components",
+      "Rapid prototyping of AI demos and chatbots",
+      "Deploying LLM applications for end-user accessibility",
+      "Handling user input and LLM output in UI contexts",
+      "Parameter configuration through UI controls (temperature, persona selection, etc.)"
+    ],
+    "flags": []
+  },
+  "Deploying LLM Applications": {
+    "rm_chars": 11238,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Understand the difference between local development and cloud deployment of LLM applications",
+      "Prepare LLM application code for production deployment by creating app.py and requirements.txt files",
+      "Configure API key management for deployed applications using environment variables",
+      "Deploy a Gradio-based LLM application to Hugging Face Spaces",
+      "Make LLM applications publicly accessible via permanent URLs",
+      "Manage dependencies and package Python applications for cloud hosting"
+    ],
+    "interview_topics": [
+      "LLM application deployment strategies",
+      "API key management and security in production",
+      "Environment variable configuration for sensitive credentials",
+      "Packaging Python applications for cloud deployment",
+      "Dependency management and requirements specification",
+      "Gradio interface development and deployment",
+      "Transitioning from development to production environments"
+    ],
+    "flags": []
+  },
+  "Understanding How LLMs Work | Part 1": {
+    "rm_chars": 7514,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand that LLMs operate fundamentally on next-word prediction at scale",
+      "Explain how Transformer architecture solves the memory fading problem of earlier RNN/LSTM models",
+      "Describe the three pre-processing steps (tokenization, embedding, positional encoding) that convert text to numerical representations",
+      "Articulate how encoder-decoder components in Transformers enable both language understanding and generation",
+      "Recognize the relationship between model parameters, training data scale, and LLM capabilities"
+    ],
+    "interview_topics": [
+      "How LLMs generate text through next-word prediction",
+      "Transformer architecture advantages over RNNs/LSTMs",
+      "Tokenization and its role in LLM preprocessing",
+      "Word embeddings and semantic relationships",
+      "Positional encoding and sequence understanding",
+      "Encoder-decoder flow in language models",
+      "Attention mechanism fundamentals"
+    ],
+    "flags": []
+  },
+  "Understanding How LLMs Work | Part 2": {
+    "rm_chars": 12000,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand the Transformer encoder architecture and how Multi-Head Attention captures diverse relationships between words",
+      "Explain the role of Add & Norm layers in preserving information and maintaining numerical stability",
+      "Describe how Feed-Forward Networks expand and transform contextual representations",
+      "Understand the Transformer decoder architecture including masked self-attention and cross-attention mechanisms",
+      "Explain the complete LLM generation flow from input processing through token prediction",
+      "Understand how context masking prevents the decoder from attending to future tokens during training"
+    ],
+    "interview_topics": [
+      "Transformer encoder-decoder architecture and component functions",
+      "Multi-head attention and self-attention mechanisms",
+      "How attention mechanisms capture contextual relationships",
+      "Masked attention and causal masking in autoregressive generation",
+      "Cross-attention between encoder and decoder",
+      "Residual connections and layer normalization in transformers",
+      "Token generation and autoregressive decoding process",
+      "Context window limitations and future scaling trends"
+    ],
+    "flags": []
+  },
+  "Tool use & Function Calling in LLMs": {
+    "rm_chars": 12000,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Understand the limitations of LLM knowledge cutoff and why tool calling is necessary for real-time data access",
+      "Define tools/functions in JSON schema format that LLMs can understand and invoke",
+      "Implement function calling workflows by sending tool definitions to LLM APIs and handling tool invocation responses",
+      "Build a real-time weather application that integrates external APIs with LLM function calling",
+      "Distinguish between LLM decision-making (which tool to call) and actual tool execution (handled by application code)",
+      "Configure LLM API calls with tool parameters and parse structured tool invocation responses"
+    ],
+    "interview_topics": [
+      "Function calling and tool use in LLMs",
+      "LLM knowledge cutoff limitations and real-time data access patterns",
+      "Tool definition and schema design for LLM integration",
+      "Workflow design for LLM-tool interaction",
+      "External API integration with language models",
+      "Structured output and tool invocation handling",
+      "Prompt engineering for tool selection and parameter passing"
+    ],
+    "flags": []
+  },
+  "Effective Prompting Techniques": {
+    "rm_chars": 8414,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Master structured prompting techniques using JSON and TOON formats to create clear, organized, and consistent LLM outputs",
+      "Apply meta-prompting to generate and improve prompts iteratively before final task execution",
+      "Implement prompt chaining to decompose complex tasks into sequential steps with output-to-input flow",
+      "Write clear, specific, and contextually aware prompts with proper output guidance",
+      "Understand token efficiency trade-offs between different prompt formatting approaches",
+      "Leverage PromptBase marketplace for discovering and sharing high-quality prompts"
+    ],
+    "interview_topics": [
+      "Structured prompt design for LLM applications",
+      "Prompt chaining and multi-step reasoning",
+      "Meta-prompting and iterative prompt optimization",
+      "Token efficiency in prompt engineering",
+      "Role assignment and contextual prompting",
+      "Output format specification and validation",
+      "Decomposing complex tasks into sequential prompts"
+    ],
+    "flags": []
+  },
+  "Introduction to Langchain": {
+    "rm_chars": 10361,
+    "session_type": "mixed",
+    "learning_outcomes": [
+      "Understand the challenges and limitations of building LLM applications without a framework",
+      "Explain why LangChain is needed and its advantages over manual LLM integration",
+      "Initialize and configure LangChain chat models with different LLM providers (Gemini, Groq)",
+      "Use LangChain's standardized interfaces to switch between different LLM providers",
+      "Structure conversations using LangChain Message objects (SystemMessage, HumanMessage, AIMessage, ToolMessage)",
+      "Make API requests to LLMs using LangChain's invoke() method with proper authentication",
+      "Understand LangChain's core components and their roles in building LLM applications"
+    ],
+    "interview_topics": [
+      "LLM framework design and abstraction patterns",
+      "Provider-agnostic LLM integration strategies",
+      "Message-based conversation structuring",
+      "System prompt engineering and role definition",
+      "LLM API authentication and credential management",
+      "Switching between different LLM providers",
+      "Standardized interfaces for LLM applications"
+    ],
+    "flags": []
+  },
+  "Introduction to Retrieval-Augmented Generation | Part 1": {
+    "rm_chars": 12000,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand the limitations of LLMs (knowledge cutoff, hallucinations, no access to private data) and why RAG is needed",
+      "Explain the three-step RAG process: Retrieve, Augment, Generate",
+      "Understand the RAG indexing pipeline: Load, Split, Embed, Store",
+      "Compare solutions to LLM limitations (context in prompt, fine-tuning, RAG) and their trade-offs",
+      "Identify real-world applications of RAG systems",
+      "Understand how document loaders and text splitters work in RAG frameworks like LangChain"
+    ],
+    "interview_topics": [
+      "Retrieval-Augmented Generation (RAG) architecture and workflow",
+      "LLM limitations and how RAG addresses them",
+      "Document indexing and chunking strategies",
+      "Embeddings and semantic search in RAG systems",
+      "Comparison of RAG vs fine-tuning vs in-context learning",
+      "Grounding LLM outputs in external knowledge bases",
+      "Reducing hallucinations through retrieval-based approaches",
+      "RAG framework selection and implementation considerations"
+    ],
+    "flags": []
+  },
+  "Introduction to Retrieval-Augmented Generation | Part 2": {
+    "rm_chars": 11217,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Understand how embeddings convert text into numerical vectors that capture semantic meaning",
+      "Create and store embeddings in vector databases (ChromaDB) using LangChain",
+      "Implement similarity search to retrieve relevant document chunks based on semantic similarity",
+      "Build a complete RAG pipeline that retrieves context and generates LLM responses",
+      "Configure LLM models (Gemini) and integrate them with retrieved context for answer generation",
+      "Design system prompts that instruct LLMs to use only retrieved context without hallucination"
+    ],
+    "interview_topics": [
+      "Embeddings and semantic search fundamentals",
+      "Vector database design and selection",
+      "Similarity scoring and ranking algorithms",
+      "RAG pipeline architecture and implementation",
+      "Context retrieval and relevance ranking",
+      "LLM integration with external knowledge sources",
+      "Prompt engineering for grounded generation",
+      "Preventing hallucinations through context constraints"
+    ],
+    "flags": []
+  },
+  "Building AI Agents using Langchain": {
+    "rm_chars": 12000,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Understand the core components and architecture of AI agents (model, tools, memory)",
+      "Build a functional AI agent using LangChain's create_agent() method",
+      "Integrate external APIs and tools (Tavily Search, JSearch) into LangChain agents",
+      "Design and implement custom tools for agent-specific use cases",
+      "Configure LLM models (Google Gemini) for agent decision-making and reasoning",
+      "Orchestrate multi-tool workflows where agents autonomously select and execute appropriate tools",
+      "Implement real-world agent applications that combine search, data retrieval, and reasoning"
+    ],
+    "interview_topics": [
+      "AI agent architecture and core components",
+      "Tool integration and function calling in LLMs",
+      "Agent decision-making and reasoning processes",
+      "Multi-step task decomposition and execution",
+      "LLM-based tool selection and orchestration",
+      "Real-time data retrieval and API integration patterns",
+      "Prompt engineering for agent behavior control",
+      "Error handling and edge cases in agent workflows"
+    ],
+    "flags": []
+  },
+  "Building Memory Agents": {
+    "rm_chars": 9003,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Understand the difference between short-term and long-term memory in AI agents",
+      "Implement short-term memory using LangGraph checkpointers (InMemorySaver)",
+      "Configure thread_id to maintain conversation state across multiple agent invocations",
+      "Build agents that can reference previous conversation context and tool results",
+      "Distinguish between LangGraph (low-level state management) and LangChain (high-level abstractions)",
+      "Apply persistence mechanisms to prevent agent memory loss in multi-turn interactions"
+    ],
+    "interview_topics": [
+      "Agent memory architecture and design patterns",
+      "Short-term vs long-term memory trade-offs in conversational AI",
+      "State persistence and checkpointing strategies",
+      "Multi-turn conversation context management",
+      "Thread-based conversation tracking",
+      "Memory storage options and their use cases",
+      "Stateful vs stateless agent design",
+      "Conversation history retrieval and relevance"
+    ],
+    "flags": []
+  },
+  "AI in the Real World": {
+    "rm_chars": 8259,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand how LLMs, RAG systems, agents, and memory are applied to solve real-world problems across healthcare, enterprise, and specialized domains",
+      "Recognize practical implementations of core GenAI concepts (pattern recognition, tool calling, autonomous decision-making) in production systems",
+      "Identify AI limitations, risks, and ethical considerations including hallucinations, deception, and safety constraints",
+      "Evaluate when and how to apply different AI architectures (RAG, agents, memory systems) to domain-specific problems",
+      "Understand the gap between AI capabilities and limitations when deploying systems in high-stakes environments"
+    ],
+    "interview_topics": [
+      "Real-world RAG system architecture and scaling",
+      "Tool calling and function integration patterns",
+      "AI agent design for autonomous task execution",
+      "Memory systems for conversational context persistence",
+      "LLM hallucinations and accuracy limitations",
+      "AI safety and constraint adherence challenges",
+      "Pattern recognition capabilities and domain transfer",
+      "Cost-performance tradeoffs in production AI systems"
+    ],
+    "flags": []
+  },
+  "Building an AI-Powered Conversational Interview Assistant | Part 1": {
+    "rm_chars": 12000,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Build a conversational AI interview assistant using Flask backend and LangChain with memory management",
+      "Implement multi-turn conversational flow with context retention using InMemorySaver",
+      "Integrate Gemini API with secure key management using environment variables",
+      "Design and structure prompts for adaptive interview question generation",
+      "Handle frontend-backend communication for interview state management",
+      "Implement voice interaction capabilities with speech-to-text integration",
+      "Generate contextual follow-up questions based on conversation history"
+    ],
+    "interview_topics": [
+      "Conversational AI and multi-turn dialogue systems",
+      "Memory management in LLM applications",
+      "Prompt engineering for contextual question generation",
+      "LLM API integration and authentication",
+      "State management in AI applications",
+      "Building adaptive AI systems that reference previous context",
+      "Designing interview-like conversational flows with LLMs"
+    ],
+    "flags": []
+  },
+  "Building an AI-Powered Conversational Interview Assistant | Part 2": {
+    "rm_chars": 12000,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Implement speech-to-text conversion in a web application using AssemblyAI API",
+      "Build a Flask backend endpoint to receive and process audio files",
+      "Integrate AI agent memory to maintain conversation context across multiple exchanges",
+      "Generate contextual follow-up questions based on user answers using LLM APIs",
+      "Implement text-to-speech streaming to deliver AI-generated responses to users",
+      "Design and execute multi-turn conversational workflows with state management",
+      "Provide structured feedback generation at the end of an interview session"
+    ],
+    "interview_topics": [
+      "Speech-to-text integration in conversational AI applications",
+      "Managing conversation context and memory in multi-turn dialogues",
+      "Prompt engineering for generating contextual follow-up questions",
+      "Audio file processing and streaming in web applications",
+      "Building conversational agents with state management",
+      "Integrating third-party AI APIs (speech recognition, LLM, TTS)",
+      "Designing feedback generation systems using LLMs",
+      "Handling asynchronous operations in conversational workflows"
+    ],
+    "flags": []
+  },
+  "Introduction to Context Engineering": {
+    "rm_chars": 9387,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand the distinction between prompt engineering and context engineering and when to apply each approach",
+      "Identify and implement core context engineering techniques: writing context, selecting context, and managing context lifecycle",
+      "Recognize and fix four common context failures: context poisoning, distraction, confusion, and clash",
+      "Design systems that intelligently manage information flow into LLM context windows for complex applications",
+      "Apply context engineering principles to build scalable AI agents and multi-step applications",
+      "Implement external storage and retrieval strategies to prevent context window overload"
+    ],
+    "interview_topics": [
+      "Context engineering vs prompt engineering trade-offs",
+      "Managing limited context windows in LLM applications",
+      "Context poisoning detection and prevention strategies",
+      "Dynamic information retrieval and relevance filtering",
+      "External memory and scratchpad patterns for complex tasks",
+      "Tool description clarity and conflict resolution in multi-tool systems",
+      "RAG integration within context engineering frameworks",
+      "Memory management across multi-turn conversations"
+    ],
+    "flags": []
+  },
+  "Integrating MCP": {
+    "rm_chars": 12000,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Configure and initialize MultiServerMCPClient to connect to multiple MCP servers",
+      "Retrieve tools from MCP servers using async methods and integrate them into LangChain agents",
+      "Combine MCP tools with custom LangChain tools in a unified agent workflow",
+      "Understand MCP architecture (Host, Client, Server) and communication protocols (HTTP, STDIO)",
+      "Execute async agent operations using ainvoke() to handle network calls to MCP servers",
+      "Discover and configure MCP servers from platforms like Composio, Smithery, and Pipedream"
+    ],
+    "interview_topics": [
+      "Tool integration patterns in LLM agents",
+      "Async programming for LLM API calls and external service integration",
+      "Agent architecture and tool composition",
+      "Protocol design for LLM-external system communication",
+      "Multi-tool orchestration in agentic workflows",
+      "Context management across distributed tool calls",
+      "Error handling in async agent execution"
+    ],
+    "flags": []
+  },
+  "Building Multi Agent Systems Using Crew AI": {
+    "rm_chars": 7676,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand the limitations of single-agent systems and when multi-agent architectures are beneficial",
+      "Design and implement multi-agent systems using CrewAI framework with specialized agent roles",
+      "Define agents with specific roles, goals, backstories, and tools in CrewAI",
+      "Create and assign tasks to agents with clear descriptions and expected outputs",
+      "Configure crew processes (sequential, hierarchical, parallel) for agent coordination",
+      "Build collaborative AI systems where agents communicate and delegate tasks to solve complex problems"
+    ],
+    "interview_topics": [
+      "Multi-agent system design and architecture",
+      "Agent specialization and role-based task decomposition",
+      "Collaborative AI systems and inter-agent communication",
+      "Task orchestration and workflow coordination",
+      "Tool integration and capability management in agents",
+      "Scalability and extensibility of multi-agent systems",
+      "Problem decomposition for complex tasks",
+      "Agent autonomy vs. coordination tradeoffs"
+    ],
+    "flags": []
+  },
+  "Building a Game Development Crew": {
+    "rm_chars": 12000,
+    "session_type": "code_heavy",
+    "learning_outcomes": [
+      "Create specialized AI agents with defined roles, goals, and backstories using CrewAI",
+      "Integrate multiple LLM providers (OpenAI, Google Gemini, etc.) into CrewAI agents",
+      "Configure and manage API authentication for LLM services",
+      "Equip agents with tools (SerperDev) to enhance their capabilities",
+      "Design and structure multi-agent crews for collaborative problem-solving",
+      "Execute a multi-agent system to transform a game idea into a design specification and code plan"
+    ],
+    "interview_topics": [
+      "Multi-agent system design and orchestration",
+      "Agent role definition and specialization",
+      "LLM model selection and integration",
+      "Tool integration in agentic systems",
+      "Prompt engineering for agent personas",
+      "API authentication and key management",
+      "Collaborative problem-solving with AI agents",
+      "Workflow automation using LLMs"
+    ],
+    "flags": []
+  },
+  "Introduction to LLM Evaluation | Part 1": {
+    "rm_chars": 12000,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand why traditional software testing fails for LLM applications and agents",
+      "Define LLM application evaluation and distinguish it from LLM model evaluation",
+      "Identify core evaluation metrics (accuracy, relevance, faithfulness, safety/ethics/bias) and their purposes",
+      "Design evaluation criteria based on application purpose, observed errors, and identified risks",
+      "Understand the scope of evaluation for simple LLM apps, agent systems, and RAG systems",
+      "Recognize common LLM failure modes (hallucination, poor context understanding, bad training data, missing guardrails)"
+    ],
+    "interview_topics": [
+      "LLM evaluation frameworks and methodologies",
+      "Hallucination detection and mitigation strategies",
+      "Designing evaluation metrics for LLM applications",
+      "Accuracy, relevance, and faithfulness assessment in LLM outputs",
+      "Safety, bias, and ethical considerations in LLM evaluation",
+      "Agent evaluation criteria and performance assessment",
+      "RAG system evaluation approaches",
+      "Risk identification and mitigation in LLM applications"
+    ],
+    "flags": []
+  },
+  "Introduction to LLM Evaluation | Part 2": {
+    "rm_chars": 12000,
+    "session_type": "mixed",
+    "learning_outcomes": [
+      "Understand why traditional metrics (BLEU, BERTScore) fall short for evaluating open-ended LLM outputs",
+      "Implement LLM-as-a-Judge evaluation by using one LLM to score another LLM's responses",
+      "Design evaluation prompts with clear criteria, scoring scales, and output formats",
+      "Apply reference-based, single-rating, and pairwise comparison evaluation approaches",
+      "Recognize limitations of manual LLM-as-a-Judge implementations (parsing, consistency, batch processing)",
+      "Identify and compare evaluation frameworks (DeepEval, LangSmith, RAGAS) as alternatives to building from scratch"
+    ],
+    "interview_topics": [
+      "LLM-as-a-Judge evaluation pattern and use cases",
+      "Designing evaluation criteria for subjective LLM outputs",
+      "Prompt engineering for evaluation tasks",
+      "Comparing evaluation approaches (reference-based, pairwise, single-rating)",
+      "Scaling LLM evaluation systems",
+      "Trade-offs between manual and framework-based evaluation",
+      "Handling hallucinations and accuracy assessment in LLM outputs"
+    ],
+    "flags": []
+  },
+  "Running Models Locally": {
+    "rm_chars": 6409,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand hardware requirements and constraints for running LLMs locally",
+      "Identify and compare popular open-source models suitable for local deployment (LLaMA, Mistral, Phi-3, CodeLlama)",
+      "Install and configure Ollama for local model management",
+      "Download, run, and manage AI models using Ollama CLI commands",
+      "Understand the tradeoffs between local and cloud-based LLM deployment",
+      "Integrate locally-run models with applications using LangChain or Python libraries"
+    ],
+    "interview_topics": [
+      "Local LLM deployment strategies and constraints",
+      "Model selection based on hardware capabilities",
+      "Privacy-preserving LLM architectures",
+      "Open-source vs. closed-source model tradeoffs",
+      "LLM resource optimization and efficiency",
+      "Offline LLM inference and edge deployment",
+      "Model integration with application frameworks"
+    ],
+    "flags": []
+  },
+  "Fine-Tuning LLMs | Part 1": {
+    "rm_chars": 12000,
+    "session_type": "theory_heavy",
+    "learning_outcomes": [
+      "Understand the differences between prompt engineering, RAG, and fine-tuning and when to apply each technique",
+      "Explain the concept of fine-tuning and how it adapts pre-trained LLMs to specialized domains and tasks",
+      "Compare full fine-tuning vs. parameter-efficient fine-tuning (PEFT) methods in terms of cost, performance, and resource requirements",
+      "Understand LoRA and QLoRA as PEFT methods and their advantages over full fine-tuning",
+      "Identify use cases for fine-tuning across domain adaptation, task specialization, language customization, and personalization",
+      "Describe the high-level fine-tuning workflow: model selection, method choice, dataset preparation, training, and evaluation"
+    ],
+    "interview_topics": [
+      "Fine-tuning fundamentals and when to use it",
+      "Full fine-tuning vs. PEFT trade-offs",
+      "LoRA and parameter-efficient adaptation techniques",
+      "Domain adaptation and model specialization",
+      "Catastrophic forgetting and knowledge preservation",
+      "Fine-tuning vs. prompt engineering vs. RAG decision framework",
+      "Cost-performance considerations in fine-tuning approaches"
+    ],
+    "flags": []
+  }
+}

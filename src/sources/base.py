@@ -7,6 +7,7 @@ requirements) instead of httpx.
 from __future__ import annotations
 
 import ipaddress
+import re
 import socket
 import time
 from dataclasses import dataclass
@@ -67,15 +68,61 @@ _Q_STARTS = ("what", "why", "how", "when", "where", "explain", "describe", "comp
              "build", "solve", "find", "return", "create", "derive", "sort", "reverse",
              "prove", "outline")
 
+# The openers above must match as WHOLE WORDS. A bare `startswith` matched any longer word sharing
+# the prefix, which let two families of non-question through the form gate entirely:
+#
+#   * GERUNDS read as imperatives — "design" matched "Designing", so job-description bullets and
+#     article titles passed: "Designing or writing prompts to support specific AI outcomes"
+#     (an indeed.com/hire JD bullet) and "Designing ML Systems by Chip Huyen" (a book) both shipped
+#     in a real run. A genuine task prompt is "Design a prompt playground", never "Designing …".
+#   * Prefix collisions — "what" matched "Whatever", "how" matched "Howto".
+#
+# A question ending in "?" is accepted before this is consulted, so a legitimate question that opens
+# with a gerund ("Building a RAG pipeline needs which components?") is unaffected. Entries carrying a
+# trailing space ("list ", "name ", "given ") relied on that space for the same word-boundary effect;
+# `\b` subsumes it, and still keeps "listen"/"names" out.
+_Q_START_RE = re.compile(
+    r"^(?:" + "|".join(re.escape(s.strip()) for s in _Q_STARTS) + r")\b",
+    re.IGNORECASE,
+)
+
 
 def looks_like_question(t: str) -> bool:
     """True if the string is a plausible interview question or task prompt."""
     t = (t or "").strip()
-    if not (15 <= len(t) <= 320):
+    # Floor is 10 (not 15) so short but valid acronym questions survive ("What is RAG?" = 12,
+    # "What is ML?" = 11). The ≥2-word guard keeps single-word scraps ("Seriously?", "OK?") out on
+    # the standalone paths (github/tavily line-split) that don't run the word-gated is_quality_question.
+    if not (10 <= len(t) <= 320):
+        return False
+    if len(t.split()) < 2:
         return False
     if t.endswith("?"):
         return True
-    return t.lower().startswith(_Q_STARTS)
+    return bool(_Q_START_RE.match(t))
+
+
+# New-question stems: words that, right after a coordinating "and", start a genuinely SEPARATE ask
+# ("… and difference between …", "… and how does …", "… and explain …"). Used to split a compound only
+# at a real second-question boundary — NOT inside enumerations/comparisons ("Compare X and Y",
+# "pros and cons", "advantages and disadvantages", "read and write") where "and" isn't followed by one.
+_QUESTION_STEM = (r"(?:the\s+)?(?:difference|differences|what|whats|how|why|when|explain|describe|"
+                  r"compare|list|define|discuss|name|give)\b")
+
+# Connectives that join two separate asks into one harvested line.
+_CLAUSE_SPLIT = re.compile(
+    r"(?<=[.?!])\s+"                                    # sentence boundary
+    r"|\s*,?\s*(?:and then|then|after that|followed by|"
+    r"as well as|and also|also,|;)\s+"                 # multi-word conjunction boundary
+    r"|\s*,?\s+and\s+(?=" + _QUESTION_STEM + r")",     # bare "and" only before a new-question stem
+    re.IGNORECASE,
+)
+
+
+def split_into_clauses(text: str) -> List[str]:
+    """Break a compound question into its component asks (sentence + connective boundaries)."""
+    parts = [p.strip(" ,;") for p in _CLAUSE_SPLIT.split(text or "")]
+    return [p for p in parts if p]
 
 
 def polite_get(url: str, *, headers: Optional[dict] = None,
