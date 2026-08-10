@@ -191,6 +191,17 @@ class QuestionDetail(BaseModel):
     # LLMs?" / "best practices for LLM fine-tuning?"). Flagged rather than removed when the set is at
     # `MIN_QUESTIONS`, because dropping one there would push the set under the floor.
     duplicate_of: str | None = None
+    # Carried over from this topic's accumulated set rather than found by THIS run. A re-run keeps what
+    # already exists and adds only what is new, so the reviewer triages the new ones and does not
+    # re-litigate settled questions. `retained_status` is 'approved' (a reviewer accepted it) or
+    # 'backfilled' (imported from run history by scripts/consolidate_topic_sets.py, never approved) —
+    # they ship together but a one-off import of unreviewed questions must not read as blessed.
+    retained: bool = False
+    retained_status: str | None = None
+    # Set when a RETAINED question would be rejected by today's gates (form, hands-on, assessment item).
+    # Flagged, never dropped: a reviewer approved it, so a silent removal is a surprise. The improvements
+    # in this pipeline post-date some of what is in the set.
+    stale_reason: str | None = None
 
     @field_validator("expected_answer", mode="before")
     @classmethod

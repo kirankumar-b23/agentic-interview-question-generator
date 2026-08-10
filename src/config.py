@@ -218,7 +218,19 @@ SESSION_FIT_HIGH = float(os.getenv("SESSION_FIT_HIGH", "0.35"))
 # How much of the session profile is reading material (vs curated outcomes). The reading material is
 # long and dilutes short outcome statements, so outcomes are embedded separately and we take the MAX
 # similarity over profile texts; this cap just bounds how many RM chunks join the profile.
-SESSION_PROFILE_RM_CHUNKS = int(os.getenv("SESSION_PROFILE_RM_CHUNKS", "12"))
+# Reading-material chunking for the grounding profile (`pipeline._session_profile`).
+#
+# SESSION_PROFILE_RM_CHUNKS is a RUNAWAY GUARD, not a sampling budget. It used to be 12 AND the code
+# stride-sampled down to it, so only ~36% of a session's material reached the profile and the bullet
+# defining the HTTP Request node (85 chars) was dropped entirely — a question about something the
+# session literally teaches scored 0.275. Treating this cap as a budget is what caused that; raise it
+# rather than sampling.
+SESSION_PROFILE_RM_CHUNKS = int(os.getenv("SESSION_PROFILE_RM_CHUNKS", "400"))
+# Keep short paragraphs: in this curriculum the bullets ARE the tool/node definitions, which is exactly
+# what grounding needs to match. Only true noise (a bare heading, a stray token) is below this.
+RM_CHUNK_MIN_CHARS = int(os.getenv("RM_CHUNK_MIN_CHARS", "40"))
+# Long paragraphs are sub-split at a word boundary instead of truncated, so their tail stays searchable.
+RM_CHUNK_MAX_CHARS = int(os.getenv("RM_CHUNK_MAX_CHARS", "600"))
 # Reading-material chunks are instructional prose, not statements of interview intent — a setup
 # walkthrough about copying an auth token matches generic auth questions. Discount them so an
 # RM-only match has to be distinctly stronger than a curated-outcome match to keep a candidate.
@@ -250,6 +262,72 @@ DEDUP_SEMANTIC_THRESHOLD = float(os.getenv("DEDUP_SEMANTIC_THRESHOLD", "0.82"))
 # form gate feeds `scripts/clean_bank.py`, so putting it there would permanently delete 217 real
 # company-attributed coding questions the LMS coding tabs exist for. Set to 0 to ship them again.
 CONVERSATIONAL_ONLY = os.getenv("CONVERSATIONAL_ONLY", "1") == "1"
+
+# Questions per interview topic in `outcome_balance.balance_by_outcome` — used ONLY by its opt-in
+# `strict=True` quota mode, NOT by the default path. Kept because the quota is occasionally the right
+# blunt instrument, but it is not what balances a set: a question is normally dropped only when the LLM
+# judge says another question already covers that outcome.
+#
+# Why the quota is not the default, measured: a cap of 2 is about right on No-Code AI Automation (22
+# interview topics for 38 questions) and destroys Gen AI Foundations (15 topics for 54), where one coarse
+# topic holds 14 questions and the quota deletes 12 — including three genuinely distinct "what is the
+# difference between…" questions. The number was measuring how finely the curriculum enumerates
+# `interview_topics`, not whether the questions repeat.
+#
+# The problem the balance exists for is real regardless: `coverage_efficiency` asks "did each question
+# earn its place against a DISTINCT topic" but only within a single run's selected set, and
+# `tool_submit_question_set` runs `_same_thing_pass` BEFORE `_add_retained`, so the ACCUMULATED set was
+# never judged against itself. That is how hallucination came to be asked six times in 38 questions.
+OUTCOME_CAP = int(os.getenv("OUTCOME_CAP", "2"))
+# Below this, a question's best-matching interview topic is not a real match, so the question is an ORPHAN
+# and is KEPT rather than counted against any cap. Not a tuning knob — it is what stops the cap deleting
+# on-topic questions the outcome list fails to describe: "What is the Split In Batches node used for?"
+# matches its best outcome at 0.173 and "What are nodes in N8N" at 0.132, because `interview_topics`
+# under-describes n8n. Those are the n8n gap showing up again, not duplicates.
+OUTCOME_ORPHAN_FLOOR = float(os.getenv("OUTCOME_ORPHAN_FLOOR", "0.35"))
+# Similarity floor for the CROSS-OUTCOME duplicate stage, deliberately BELOW `tools._SAME_THING_LOW`
+# (0.62). Within one outcome the grouping itself bounds the pair count, so no floor is needed there; across
+# outcomes a floor is the only thing keeping the pair count sane, and 0.62 was measured to be too high.
+#
+# The pair a real quality gate objected to — "What is prompt engineering?" (outcome "Prompt engineering
+# fundamentals") and "How do you approach designing an effective prompt?" (outcome "Structuring prompts for
+# clarity") — scores **0.573**, so a 0.62 floor would never have offered it to the judge. Cost across the
+# nine shipped topics: 108 pairs at 0.62, **210 at 0.55** — about 23 per topic, 3 batches of `JUDGE_BATCH`.
+# Precision does not depend on this number: nothing is dropped without a judge verdict, so the floor only
+# decides what gets LOOKED at.
+CROSS_OUTCOME_FLOOR = float(os.getenv("CROSS_OUTCOME_FLOOR", "0.55"))
+# A question belongs to the EARLIEST topic whose reading material covers it about as well as any — this is
+# how close to the best fit "about as well" means. See `src/curriculum_order.py`.
+#
+# RELATIVE, not an absolute bar: the question is only which of a handful of topics covers ONE question
+# best, and absolute similarity bars have repeatedly failed to separate overlapping populations here
+# (DEDUP_SEMANTIC_THRESHOLD, _outcome_coverage's proximity threshold, the dedup band).
+#
+# 0.9 was measured against the 16 real cross-topic duplicates and moves questions in BOTH directions:
+# "How do you approach designing an effective prompt?" stays at Prompt Engineering (0.729) rather than
+# going to the higher-fitting AI Workflows (0.742), while "What is the HTTP Request node?" correctly moves
+# LATER to AI Workflows (0.703) because No-Code does not cover it (0.540). A rule that only ever picked the
+# earliest, or only the best fit, gets one of those wrong.
+CROSS_TOPIC_COVER_RATIO = float(os.getenv("CROSS_TOPIC_COVER_RATIO", "0.9"))
+
+# Stop a run outright when the Tavily pre-flight fails, instead of continuing bank-only. ON by default.
+#
+# Retrieval is the run. With the web tier dead, every downstream stage — the Evaluation agent, the
+# relevance judge, the syllabus audit, the same-thing pass, the outcome balance, up to three gate
+# critiques — still executes against a pool the failure already decided, and buys nothing.
+#
+# THE COST OF THIS IS MEASURED AND ACCEPTED, not assumed. Across 62 persisted runs the bank supplies
+# **75%** of all shipped questions (459 of 615), and on a 17-run sample **12 would have shipped >= 5
+# questions bank-only** while 5 would genuinely have been too thin. So this guard refuses runs that would
+# have worked. That is the chosen policy — guaranteed no wasted spend over best-effort output.
+#
+# Set to 0 for exactly the previous behaviour: a failed pre-flight disables web search and the run
+# continues bank-only, with the failure surfaced in the report banner.
+REQUIRE_WEB_SEARCH = os.getenv("REQUIRE_WEB_SEARCH", "1") == "1"
+# Tavily statuses worth a second probe. `no_key`, `auth` and `quota` are terminal — nothing will work
+# today, so re-probing is pure latency. A rate limit or a network blip is not the same thing, and one 429
+# should not be able to kill an 8-topic batch.
+WEB_PREFLIGHT_RETRY_STATUSES = ("rate", "error")
 
 # Live question harvesting (tools 12 & 13 — search_github_questions / search_web_questions)
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")

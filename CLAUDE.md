@@ -38,6 +38,7 @@ frontend/                           # React SPA (Vite). Pages: SessionSelector, 
   src/pages/Review.jsx              # Per-question review, keyboard-first triage
   src/pages/Progress.jsx            # Live agent transcript
   src/pages/AddCourse.jsx           # Add/import a course (new sessions/topics)
+  src/pages/Batch.jsx               # Multi-topic batch: one row per topic, links into each review
 scripts/
   prepare_data.py                   # One-time: CSV→JSON, build knowledge graph, eval sets
   build_session_reading_material.py # Build data/reading_materials/session_map.json (per-session content)
@@ -423,10 +424,18 @@ Fibonacci series"* is not a hard question, it is an impossible one. Two real run
 each burning a slot in a set of 9. `interview_format.is_hands_on_task` decides; `pipeline._drop_hands_on`
 filters the pool; `config.CONVERSATIONAL_ONLY=0` turns it off.
 
-- **"Design" is deliberately NOT hands-on.** It is the one do-verb answerable in conversation — *"Design a
-  news aggregator system"* means "talk me through the architecture". Measured, treating it as hands-on
-  pushed **2 of the last 6 runs UNDER the 5-question minimum** (6→4, 5→4) and dropped *"Design an RSS News
-  Feed Service"*, one of only three tool-specific questions the n8n work recovered. The compound
+- **"Design"/"draw" ARE hands-on — this was REVERSED, and the reversal is the interesting part.** They
+  were excluded for one round on the argument that *"Design a news aggregator system"* means "talk me
+  through the architecture". Reversed on the reviewer's call: an imperative *"Design an end-to-end image
+  generation system. Cover the following: …"* is a whiteboard exercise, and a candidate with no board
+  cannot do it any more than they can type code.
+  **The wh-opener exemption is the only reason this is safe** and not a keyword ban on "design" —
+  measured on the 236 live questions, **21 are skipped** (*"Design an LLM API pipeline"*) while
+  **17 are kept** (*"How would you design an agentic workflow?"*, *"How do you approach designing an
+  effective prompt?"*). Adding the verbs without the exemption removes both halves.
+  When design was first excluded, the measured cost of including it was that **2 of 6 runs fell under the
+  5-question minimum**; that risk is now absorbed because a topic's accumulated set is carried into every
+  run (`tools._add_retained`). Cost at ingest: 75 of 2,828 bank rows (2.7%). The compound
   **`"design and implement"` IS caught** — it reads like discussion and demands an artifact.
 - **A wh-opener is never hands-on**, and that single exemption carries the whole distinction:
   *"How did you implement JWT authentication in your project?"* is a strong question about a candidate's
@@ -504,6 +513,82 @@ from the ones it kept. `coverage_efficiency` was replayed too and holds at 1.0 a
 sets do not cost the gate. **The FLOOR stays absolute**: a thin on-topic pool returns FEWER questions, never
 loosely-related filler.
 
+## A re-run ADDS to a topic's set — it does not make another version
+
+`tools._add_retained` unions the topic's accumulated set into the shipped output, so re-running after a
+pipeline improvement keeps what exists and adds only what is new.
+
+- **The accumulation already existed and pointed the wrong way.** Approved questions have always banked on
+  approve, and cross-run dedup already removed candidates duplicating them — so a re-run computed the
+  delta correctly and then shipped ONLY the delta, looking like a fresh, smaller set. The missing piece
+  was putting the set back into the output.
+- **`_add_retained` runs after `_same_thing_pass` and before `_syllabus_audit`**: the same-thing pass
+  should judge only this run's own picks against each other, not re-litigate settled questions, and the
+  audit should flag retained questions like everything else.
+- **A retained question today's gates reject is FLAGGED (`stale_reason`), never dropped.** A reviewer
+  approved it and the improvements post-date parts of the set; a silent removal is a surprise.
+- **`_score_unscored_fits` gives retained questions a `session_fit`, and drops NOTHING.** It deliberately
+  does not reuse `_score_session_fit(only_ids=…)`, which applies the relative floor and removes what falls
+  below. Leaving them unscored is the open-web trap: `grounding_score` averages non-None fits only, so
+  `session_grounding` would describe just the freshly-found subset, and `_rank_key` reads None as 0.0.
+- **The report names the retained/new split, reported never gated** — a re-run that finds nothing new
+  would otherwise read as a healthy 40-question run. Gating on new-questions-found would fail every mature
+  topic that is simply finished, the same reason `topic_coverage` is not gated.
+- **`retained_status` keeps 'approved' distinct from 'backfilled'** (76 vs 175 after consolidation), so a
+  one-off import of unreviewed questions does not silently acquire reviewer blessing.
+- **Tests that call these helpers directly prove nothing about wiring.** A mutation check showed that
+  unwiring both `_add_retained` and `_score_unscored_fits` left every unit test green — they call the
+  functions directly. `TestItIsActuallyWiredIn` goes through `tool_submit_question_set` and
+  `TestRetainedQuestionsThroughTheWholePipeline` through `AgentPipeline.run`. Third time this class of
+  vacuous test appeared in this codebase; assert through the caller.
+- **Trim assertions must count NEWLY-FOUND questions.** Four tests asserted the shipped total was <= the
+  requested count; retained questions legitimately break that, and the invariant they protect is that the
+  raw pool was trimmed.
+
+## One spreadsheet per topic
+
+`write_to_sheets` reuses the topic's sheet instead of creating one per approve.
+
+- It used to `client.create(...)` unconditionally and never persist the URL, so every approve minted
+  another spreadsheet and no topic had a single reference. `topic_sheets` now stores the id.
+- **`org_id`/`interview_id` are persisted and reused.** They were fresh `uuid4()`s per call, so a
+  re-export would look like a brand-new interview to the LMS import rather than an update.
+- **Title is `"<Topic> - NxtMock"`** — no session names. Including them was misleading once the sheet
+  became per-topic, since a differently-grouped re-run updates that same sheet; real titles also ran past
+  100 characters.
+- **Tab 1 is cleared before writing.** The write starts at A1 on a REUSED sheet, so a previous, longer
+  export would leave its tail behind and silently mix removed questions into the current set.
+- A deleted or inaccessible sheet falls back to create-and-re-save: an approve must not fail because a
+  spreadsheet went away. Accepted knowingly: rewriting in place overwrites manual edits.
+
+## The grounding profile must be the WHOLE reading material, not a sample
+
+`_session_profile` used to keep **~36%** of a session's material. Three lossy steps compounded: a
+`len(c) > 120` filter, a `chunks[::step]` **stride sample** down to 12, and a `[:800]` truncation.
+Measured on the No-Code sessions: 24,521 chars → 8,728.
+
+- **The loss was biased toward exactly what identifies a session.** The line defining the node most
+  precisely is 85 characters — `- **HTTP Request Node**: Allows n8n to talk to almost any web service…` —
+  so the `>120` filter discarded it, the phrase appeared in NONE of the 12 surviving chunks, and
+  *"What is the HTTP Request node and when do you use it?"* scored **0.275** against a session that
+  literally teaches it. Now **0.540** (0.703 on the other topic that teaches it).
+- **`SESSION_PROFILE_RM_CHUNKS` is a RUNAWAY GUARD, not a sampling budget** — now 400. Conflating the two
+  is what caused the bug. Raise it rather than sampling. `RM_CHUNK_MIN_CHARS = 40` because in this
+  curriculum the bullets ARE the tool definitions; long paragraphs are sub-split at a word boundary
+  rather than truncated.
+- **Do not overclaim the effect, which was measured both ways.** The dramatic gain is on questions naming
+  something specific: a topic's median fit moves only 0.615 → 0.622, ~5 of 40 questions change materially.
+  Replayed over 7 persisted runs, the fit gate would drop **936 → 924** candidates — only 12 fewer,
+  because `SESSION_FIT_RELATIVE` makes the floor 0.5 × the best fit, so lifting every score lifts the
+  floor too. `session_grounding` gains **+0.013** mean, worth **+0.003** on the composite. So this fixes
+  per-question scoring, ranking and any filtering built on it; it is **not** a retrieval supply win, and
+  the earlier hypothesis that it explained the n8n shortage is **not supported**.
+- Cost: **4.5×** more chunks per profile (168 → 750 across six topics), local MiniLM. The suite went from
+  ~105s to ~140s because the integration tests run real pipelines.
+- `tests/test_session_profile.py` asserts against the SHIPPED material, not a fixture: any short synthetic
+  paragraph would have been dropped by the same filter, so a crafted test would have passed while
+  describing nothing. Mutation-checked — restoring either the `>120` filter or the stride fails it.
+
 ## Two different "slicing" mechanisms — do not merge them
 
 - **`_trim_to_topic` + `split_into_clauses`** cut a COMPOUND question at boundaries between separate
@@ -533,6 +618,296 @@ loosely-related filler.
 - `scope_out` is LLM-derived per run and curated for **0 of 53** sessions, so the trim must not depend
   on it. It is passed to the trim prompt as a hint only; the run that raised this did not list
   guardrails in its 26-item `scope_out`.
+
+## Multi-topic batches: ONE RUN PER TOPIC, never a merged run
+
+`POST /api/generate/batch` queues one full pipeline per selected topic; `src/pipeline.py`, the agents and
+the gate are untouched by it.
+
+- **Do not "simplify" this into one merged run.** Review, approve, rejection feedback and learned rules
+  are all keyed by `run_id`, and `sheets_writer` titles one spreadsheet per run
+  `"<Topic> - <sessions> (NxtMock)"`. Merging would give one gate verdict and one all-or-nothing approve
+  for every topic, and would push 6-12 sessions into a single `SessionContext` — the per-session
+  attribution collapse documented above showed up at **two**. (22 topics ship, 1-4 sessions each.)
+- **Runs are SEQUENTIAL, and `_start` has no lock to stop you making them parallel.** Two reasons it
+  must stay sequential: a 3-topic batch is 3 full pipelines, so parallel multiplies the LLM/Tavily burst
+  (this project has already exhausted a Tavily plan and an OpenRouter key's headroom); and `memory.db` is
+  SQLite, where concurrent pipeline writes are lock contention for no user benefit.
+  `tests/test_batch_generate.py::TestRunsAreSequential` asserts **no two runs OVERLAP**, not the call
+  count — a parallel worker still produces N calls, so counting proves nothing.
+- **A failing topic does not stop the batch** — it is recorded on that row and the worker moves on, the
+  same discipline as `state.phase_errors`. Validation is all-or-nothing though: one unknown topic rejects
+  the whole request before anything is queued, so a half-started batch cannot silently spend credit.
+- **`GET /api/batch/{id}` must never join the worker.** `/api/result` already 409s in flight because
+  polling tabs blocking on a thread starved Starlette's bounded threadpool.
+- Every `run_id` is minted and given its SSE queue up front, so `/api/stream/{run_id}` and the Progress
+  page work per topic with **no SSE changes**. `run_history.batch_id` is the durable copy, since the
+  in-memory `_batches` registry is bounded and pruned.
+- Preview mode is deliberately unavailable for a batch: it pauses mid-run for a human, which would stall
+  every queued topic behind it.
+
+## Repeated questions in an accumulated set, and what each duplicate check can actually see
+
+A review of No-Code AI Automation found hallucination asked **six times in 38 questions**, and prompt
+engineering about as often. Three separate mechanisms exist to catch that and each missed for its own
+reason, so do not "fix" one by pointing at another.
+
+- **Embedding similarity cannot group them at ANY usable threshold.** Across the six, **zero pairs reach
+  the 0.82 `DEDUP_SEMANTIC_THRESHOLD`**, and the two most obviously identical — *"What are hallucinations
+  in LLMs"* / *"What is an AI hallucination"* — score **0.486, the LOWEST of all fifteen pairs**. Short
+  definitional questions carry little signal and "LLMs" vs "AI" pushes them apart. That is why
+  `filter_topic_sets._clusters` groups by a **shared distinctive term** and uses similarity only for
+  cohesion and member order. `tests/test_topic_dupes.py` asserts the 0.486 pair directly so a future
+  "just lower the threshold" cannot look reasonable.
+- **A cluster means "same subject", not "duplicate".** On the shipped sets `hallucinat` (6) and
+  `large/language` (8) are real duplication while `workflow` (7) is seven different questions sharing a
+  word. So collapsing is per-cluster and explicit (`--collapse TERM`), never blanket. Cohesion ≥ 0.45 is
+  what keeps a merely-shared word from forming a cluster; it rejects **55 term-groups** across the nine
+  topics, and a test that does not exercise a real rejected group is vacuous (the first version used
+  hallucination-vs-Kubernetes, which share no distinctive term, and passed with the bar set to 0.0).
+- **The cluster cap is a share of the set** (`max(2, 30%)`), so a cluster is never just "the whole topic".
+  A consequence for tests: six questions are 16% of the real 38-question set but 100% of a six-item
+  fixture, which the cap correctly refuses — fixtures must be realistically sized.
+- **`_same_thing_pass` is the accurate test and never saw most of the set.** `_SAME_THING_MAX_PAIRS = 12`
+  was sized for a ~10-question selected set; the 38-question accumulated set has **41 eligible pairs, so
+  29 are never judged**, and the one hallucination pair the judge does call redundant ranks **14th** —
+  just past the cap. With the cap lifted the judge calls **17 of 41** pairs the same thing. So "0
+  redundant" from this pass can mean "not looked at". Its floor is `_SAME_THING_LOW = 0.62`, which also
+  means the 0.486 pair is never shown to it — `--dupes` and this pass are complements, neither subsumes
+  the other.
+- **`_same_thing_pass` MUTATES the list it is handed** (`questions[:] = [...]`). A caller that diffs
+  against that same list afterwards finds nothing removed; `scripts/judge_topic_sets.py` reported
+  "0 redundant" while the pass was removing five. Snapshot before the call, or read the returned counts.
+
+### Why the off-syllabus flag stayed silent on a question that IS off-syllabus
+
+*"Explain your methodology for designing and testing system prompts to prevent model hallucination"* —
+reviewer-approved. The material teaches hallucination (`hallucinat*` **3–5** occurrences) but has
+**`system prompt` 0 times** and `methodolog` **0 times**.
+
+`_syllabus_audit`'s LLM **did** claim it, as `system prompt design methodology`. `_concept_is_absent`
+**dropped the claim** — and correctly, by its own rule. `system`/`prompt` are in `_UBIQUITOUS_DOMAIN`, so
+the distinctive words are `design` and `methodology`; `methodology` is absent but **`design` appears 4
+times** in unrelated senses ("design prompts that improve consistency"), and the rule is `all(missing)`.
+One present word vetoes the claim. Across that topic the LLM proposed 9 untaught concepts and **1
+survived**.
+
+That is the documented conservative trade-off, not a bug: a majority rule instead lets "agent guardrails"
+through on 1-of-2. The consequence to remember is that **a compound concept whose words are individually
+common can never be auto-flagged**, so `--evidence` (phrase-occurrence counts, no LLM) is the tool for
+that class — it reports the asymmetry (`hallucinat* x3`, `system prompt x0`) and never cuts anything.
+
+## The judge degrades with batch size — that was the bug, not the cap
+
+The most consequential finding of the balance work, recorded because the wrong diagnosis was very
+convincing. A reviewer flagged that hallucination was still asked six times in No-Code AI Automation.
+Measured on *"What are hallucinations in LLMs"* / *"What is an AI hallucination"* — the most obviously
+identical of the six:
+
+```
+batch of  1 pair   -> SAME, 3 of 3 trials
+batch of 52 pairs  -> "different"
+```
+
+In a 4-pair batch the same judge correctly called the fine-tuning pairs DISTINCT *and* the
+prevent/mitigate hallucination pair the same. **Small batches are right in both directions; one large
+batch was wrong in both.** So `outcome_balance.JUDGE_BATCH = 10`, and 52 pairs costs 6 Haiku calls
+instead of 1. Do not raise it to "save calls" — it degrades every verdict silently rather than failing.
+
+- **`_same_thing_pass` now uses the same batched judge.** It used to send every pair in ONE call at
+  `max_tokens=1024` with a 12-pair cap — both wrong for the same reasons documented here, and the likeliest
+  explanation for its "0 redundant" verdicts. `_SAME_THING_MAX_PAIRS` is now **400**, a runaway guard rather
+  than a sampling budget, and it is only safe to lift because the pairs go out in batches of `JUDGE_BATCH`.
+- **A per-batch fail-open changes what "0 judged" means.** Since the batched judge returns `[]` instead of
+  raising, reporting `pairs_judged = len(pairs)` after a total outage would claim the set was checked when
+  every call died. `make_llm_judge(stats=…)` reports `{batches, failed}` so the caller can tell a genuine
+  "nothing is redundant" from "nothing was looked at" — the silent-success class this project keeps hitting.
+- **The first diagnosis blamed a per-outcome CAP and would have shipped real data loss.** With a hard
+  quota of 2, Gen AI Foundations lost **12 of the 14** questions under one coarse topic
+  ("Pre-trained vs fine-tuned models"), including *"What is the difference between pre-training and
+  fine-tuning?"*, *"What are the different Fine-tuning methods?"* and *"What is the difference between a
+  base model and an instruction-tuned model?"* — distinct asks that merely share a coarse outcome.
+- **The tell was that the same quota was right on one topic and destructive on another.** No-Code has 22
+  interview topics for 38 questions, Gen AI Foundations 15 for 54. The quota was measuring how finely the
+  curriculum enumerates `interview_topics`, not whether the questions repeat. Same
+  overlapping-distributions trap as `_outcome_coverage`'s proximity threshold and
+  `DEDUP_SEMANTIC_THRESHOLD`: no count separates the populations, so a judgement has to.
+
+## Per-outcome balance: `src/outcome_balance.py`
+
+`coverage_efficiency` asks "did each question earn its place against a DISTINCT interview topic" — but
+only inside a single run's selected set. Nothing applied it to the ACCUMULATED per-topic set, and
+`tool_submit_question_set` runs `_same_thing_pass` **before** `_add_retained`, so the accumulated set was
+never judged against itself or against the run's new picks. Six hallucination questions accumulated one
+run at a time, each below the 0.82 embedding bar.
+
+- **Grouping is by interview topic, and cutting is by JUDGEMENT alone** (`strict=False` default). `cap` /
+  `OUTCOME_CAP` only feeds the opt-in `strict=True` quota; nothing is dropped without a verdict.
+- **An ORPHAN is KEPT, never cut.** Best-outcome match below `OUTCOME_ORPHAN_FLOOR = 0.35` means no
+  outcome describes the question: *"What is the Split In Batches node used for?"* matches at **0.173**,
+  *"What are nodes in N8N"* at **0.132**. Those are the n8n gap showing up in the outcome list, not
+  duplicates. Counting them as redundant turns the feature into silent data loss.
+- **Ranking is approved-first, then `session_fit`** — a reviewer's decision is newer information than a
+  score, so *"What are hallucinations in LLMs"* (0.516, approved) is kept over a 0.719 backfilled one.
+- **Two call sites, deliberately different in what they destroy.** `tools._cap_by_outcome` trims only what
+  a run SHIPS and leaves `topic_question_set` whole, so it is idempotent and reversible;
+  `scripts/filter_topic_sets.py --cap 2 --apply` quarantines rows recoverably and calls
+  `memory.sync_canonical_payload`. Both call `balance_by_outcome`, so they cannot drift.
+- **`make_llm_judge(complete=…)` must receive the CALLER's `chat_completion_json`.** The first version
+  imported it from `src.llm_client` inside the judge, so every existing
+  `monkeypatch.setattr(tools, "chat_completion_json", …)` missed it and `tests/netguard.py` recorded
+  **3 real network calls per test** — swallowed by the fail-open handler, so assertions passed while a
+  working key would have spent credit.
+- **`tests/test_failure_paths.py` had NO database isolation** and was reading the live `memory.db`:
+  `_add_retained` silently pulled in 32 real questions, so its "the pool was trimmed to 5" assertion was
+  really measuring production data and moved whenever the shipped sets changed.
+- **ONE judge call PER OUTCOME, and this is what makes the pass idempotent.** A verdict depends on which
+  OTHER pairs share its batch: the same 28 pairs of "Pre-trained vs fine-tuned models" gave 3 "same"
+  verdicts batched alongside other outcomes' pairs and **0 across 3 trials** batched alone. With one flat
+  call, a second `--apply` cut **8 more** questions — including *"What is the difference between a base
+  model and an instruction-tuned model?"*, which the first pass had deliberately KEPT as distinct. Per
+  outcome, the pass converges in one step (41 → 38 → 38 → 38) and a re-run proposes **0** cuts.
+- **`majority()` (2 of 3) guards the DESTRUCTIVE path only.** `--apply` writes to the database, so one flap
+  is permanent; `_cap_by_outcome` only trims what a run ships and re-derives it every run, so paying 3×
+  there to stabilise a reversible decision is not worth it. Report mode is single-pass, so the preview can
+  differ slightly from `--apply` — in the conservative direction.
+- Applied to the 8 accumulated sets: **213 → 169**, hallucination on No-Code **6 → 2** (a definition and
+  an applied question), `memory.db` backed up, all 46 cuts in `quarantined_questions`.
+- **The quality-report note must not name `OUTCOME_CAP`.** The pipeline runs `strict=False`, so counting
+  plays no part in what was dropped; an earlier note credited "cap 2 per topic" and described the wrong
+  mechanism entirely.
+- The uncovered half is reported and never gated: **9 of 22** No-Code outcomes have no question at all
+  (*Human-in-the-loop*, *Testing and validation*, *Scheduling and triggering*…). Retrieval for those is a
+  separate decision — the same reason `topic_coverage` is reported and not scored.
+
+## Retrieval is the run — a dead web tier stops it before anything is spent
+
+`REQUIRE_WEB_SEARCH=1` (default). A failed Tavily pre-flight raises `agent.RetrievalUnavailable` and the run
+ends; it used to only set `web_search_disabled` and carry on bank-only through the relevance judge, the
+Evaluation agent, the syllabus audit, the same-thing pass, the outcome balance and up to three gate
+critiques — all judging a pool the failure had already decided.
+
+- **THE POSITION OF THE PROBE IS THE FEATURE.** It moved from `RetrievalAgent.run` to
+  `pipeline._tavily_preflight`, called FIRST in `_pick_questions`, because `RetrievalAgent` runs *after*
+  `UnderstandingAgent` and understanding costs one `chat_completion_json` per session. Checking in the old
+  place and then stopping would still have spent those calls. `RetrievalAgent` now reads the pre-probed
+  status (`state.web_probes`) instead of probing again — a second probe is a silent cost regression no
+  behavioural assertion catches, so a test pins the count at 1.
+- **The cost of this guard is measured and accepted, not assumed.** The bank supplies **75%** of all shipped
+  questions (459 of 615 across 62 runs), and on a 17-run sample **12 would have shipped ≥5 questions
+  bank-only**. So the guard refuses runs that would have worked — the chosen trade-off is guaranteed-no-waste
+  over best-effort output. `REQUIRE_WEB_SEARCH=0` restores the previous behaviour exactly and is the only
+  route back, so `TestTheEscapeHatch` guards it.
+- **Terminal vs transient is a real distinction.** `no_key`/`auth`/`quota` fail immediately — nothing will
+  work today. `rate`/`error` get ONE retry (`WEB_PREFLIGHT_RETRY_STATUSES`): a single 429 must not be able to
+  kill an 8-topic batch. The retry lives in the caller, not in `health_check`, which stays one honest probe.
+- **"Nothing is spent" needs a spy on BOTH LLM boundaries.** `chat_completion_json` (bound at import time by
+  every module that uses it, so each needs its own patch) **and** `base_agent.get_client`, because the agent
+  tool loops call `client.chat.completions.create` directly. A mutation check exposed this: with the probe
+  moved back after Understanding, the assertion still passed and only `tests/netguard.py` saw the 3 real
+  connections.
+- **A failed run now reaches History.** `main._persist_result` returned early on any error, so a Tavily
+  outage was indistinguishable from never having pressed Generate. It now writes a `run_history` row with
+  `error` and `question_count = 0` and NO `run_results` payload, so Review has nothing to open — History
+  renders it as `Failed`, non-clickable. The aborted result gets `_fallback_context` or every failed row
+  would read "Unknown".
+- **`/api/result` reports the failure before the row is persisted** (`main.py:457` sets `_results`, 458
+  persists). A test that polls the endpoint and then reads History races — wait for the row.
+- **`tests/test_pipeline_integration.py` reports Tavily HEALTHY and stubs the web calls instead.** It used to
+  stub `health_check` as `no_key` to force bank-only, which now aborted all 18 pipeline runs in that file
+  before they reached the behaviour under test.
+
+## Why two runs failed the gate with every number passing
+
+Both had `coverage_efficiency`, `question count` and `composite` **over their bars** and still read `fail`,
+because `passed = all(c["ok"] …)` and the fourth condition is the LLM critique: `12 / 15 unresolved`. Read
+`report["gate_checks"]` (the payload key is `report`, not `quality_report`) before theorising — and note the
+dict key is `ok`, not `pass`.
+
+- **`too-many` was a FALSE objection that no mature topic could survive.** `_critique_question_set` compared
+  `len(state.questions)` against the UI slider, so `_add_retained`'s carried-over set tripped it: 36 + 3 vs
+  15, reported as *"the set was never trimmed. Re-run submit_question_set."* It now counts **newly-found**
+  questions. That keeps the check's real purpose — it is still the only upper-bound check, and an
+  `_enforce_submission` failure ships ~263 candidates that are all newly found, so it still fires. Exactly
+  the lesson the trim TESTS already had to learn. `too-few` still counts the TOTAL.
+- **The remaining objections were REAL duplicates that neither dedup stage could see.** `_same_thing_pass`
+  runs BEFORE `_add_retained`, so retained questions are never judged by it; `balance_by_outcome` ran after
+  but only formed pairs WITHIN one outcome. On the shipped set **7 of 11 questions were prompt-engineering
+  spread across FOUR near-synonymous interview topics**, so *"What is prompt engineering?"* and *"How do you
+  approach designing an effective prompt?"* were never once compared.
+- **`balance_by_outcome` now has a second, CROSS-OUTCOME stage** over the stage-1 survivors, with the same
+  greedy non-transitive rule and the same batched judge. Measured on the real approved set: 11 → 9, two
+  cross-topic duplicates caught that were structurally invisible before, and a second pass proposes 0.
+- **`CROSS_OUTCOME_FLOOR = 0.55`, deliberately below `_SAME_THING_LOW` (0.62).** Within an outcome the
+  grouping bounds the pair count; across outcomes only a floor does. The pair the gate objected to scores
+  **0.573**, so 0.62 would never have offered it. Cost across the nine topics: 108 pairs at 0.62 → **210 at
+  0.55**, about 23 per topic. Precision does not depend on the floor — nothing is dropped without a verdict,
+  so it only decides what gets LOOKED at.
+- **Stage 2 has its own greedy loop and needed its own test.** A mutation making it compare against every
+  survivor instead of only the KEPT ones left all 59 tests green, because the non-transitivity test routed
+  through a single outcome (i.e. stage 1). The regression case is a real triple spanning three outcomes with
+  (A,B) at 0.553 and (B,C) at 0.587.
+- **A fail-open helper that omits a key does not fail open.** Adding `cross_topic_duplicates` to the happy
+  path only made `tool_submit_question_set` raise `KeyError` on every early return, turning a survivable API
+  outage into `result.error`. `TestApiOutage` caught it; `TestEveryFailOpenPathReturnsTheFullShape` pins the
+  shape of all four paths.
+- **`report` describing 39 questions while `output` holds 11 is NOT a bug.** The report is from generation;
+  `output` is the subset approved in Review, which then became the topic's canonical run (`main.py` calls
+  `set_canonical_run` on approve). Chasing that consumed real effort — check `topic_runs` first.
+
+## One question, one topic
+
+**16 of 149 distinct questions (11%) sat in more than one topic**, five in three. Not shared content — **no
+session belongs to two topics** (0 of 56) — every de-dup mechanism was simply scoped to one topic
+(`_add_retained`, `_drop_rejected`, the outcome balance are keyed by `topic_key`; cross-run dedup matched
+`get_bank_questions(session_name)` on the exact string).
+
+- **A question's home is the EARLIEST topic whose material COVERS it** (`src/curriculum_order.py`), not the
+  best-fitting topic and not the latest. Both alternatives were measured on the real 16 and both are wrong:
+  *latest* sends *"What is a prompt?"* to No-Code; *best fit* sends *"How do you approach designing an
+  effective prompt?"* to AI Workflows (0.742) instead of Prompt Engineering (0.729), where prompts are
+  TAUGHT. The rule must move questions BOTH ways — *"What is the HTTP Request node?"* correctly moves LATER
+  (No-Code 0.540 → AI Workflows 0.703) because the earlier topic does not cover it.
+- **`CROSS_TOPIC_COVER_RATIO = 0.9` is relative on purpose.** Absolute similarity bars have repeatedly failed
+  to separate overlapping populations here; the question is only which of a handful of topics covers ONE
+  question about as well as any.
+- **Order comes from `knowledge_graph.json`'s `session_order_edges`, not dict order.** A single-root DAG,
+  topologically ordered, covering 52 of 52 sessions. `course_structure.json`'s key order agrees today —
+  that is the corroboration, not the source, since `AddCourse` can change it. A topic's position is the
+  **max** over its sessions, and sessions ABSENT from the graph are ignored: a sentinel poisons the whole
+  topic through the max, which scored four topics at 999 in the first attempt.
+- **`pipeline._drop_used_by_other_topics` runs right after `_drop_rejected`** — before session-fit embeddings
+  and the LLM judge, same reasoning as `_drop_hands_on`. It only ever sees freshly-retrieved candidates
+  (`_add_retained` runs later, inside submit), so this topic's own set is never at risk.
+- **The report NAMES what was withheld and how to re-home it.** A question silently missing because another
+  topic owns it is indistinguishable from one never found, and the accepted risk of this rule is a shared
+  fundamental locked to one topic.
+- **`get_bank_questions` matches by TOPIC, not the literal name.** Every stored key is a joined name and two
+  are different groupings of the same sessions, so an exact-string match meant a differently-grouped run saw
+  none of its own topic's banked questions. Resolved in Python — 48 rows, and unlike a new column it works
+  for rows already stored.
+- Applied: **170 → 149**, 21 rows quarantined recoverably, re-running proposes 0.
+
+## A rejected question was coming back every run
+
+**67 of the 149 questions in the topic sets had been REJECTED by the reviewer** (30 of 39 in Gen AI
+Foundations, 23 of 33 in Productivity Power-Up) and were re-added to every run.
+
+- **`_drop_rejected` filters the RETRIEVED pool** in `_pick_questions`; **`_add_retained` unions the
+  accumulated set in LATER**, inside `tool_submit_question_set`. So retained questions never passed through
+  the rejection filter at all. `_add_retained`'s own docstring asserted the opposite —
+  *"`_drop_rejected` already keeps anything the reviewer rejected from coming back"* — which was simply false
+  for the set it adds.
+- **A rejection is SKIPPED OUTRIGHT, never flagged.** Everything else `_add_retained` disapproves of gets a
+  `stale_reason` and still ships, because a reviewer approved it once. A rejection is the opposite: an
+  explicit no.
+- **The lookup spans the TOPIC's sessions, not the run's.** Rejections are banked per session name, so a
+  question rejected while reviewing one grouping must stay rejected for every other grouping of that topic.
+- Reported in the run report (`rejected_suppressed`), because the count was 45% of the sets and a reviewer
+  needs to see their rejections being honoured. It also explains a report reading *"23 question(s) closely
+  repeat something already rejected"* and a low `predicted_accept`.
+- **The 67 rows are still in `topic_question_set`** — inert now, since retention skips them. Cleaning them
+  out of the sets themselves is a separate, destructive step and has not been done.
 
 ## Web/UI notes
 
@@ -609,7 +984,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 573 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 766 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

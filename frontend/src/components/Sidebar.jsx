@@ -11,8 +11,10 @@ export default function Sidebar() {
   const [selectedCourse, setSelectedCourse] = useState('gen_ai')
   const [topics, setTopics] = useState({})
   const [selectedTopic, setSelectedTopic] = useState('')
-  const [selectMode, setSelectMode] = useState('topic')   // 'topic' | 'session'
+  const [selectMode, setSelectMode] = useState('topic')   // 'topic' | 'topics' | 'session'
   const [selectedUnit, setSelectedUnit] = useState('')
+  // Multi-topic selection: each becomes its OWN run (see api.generateBatch).
+  const [selectedTopics, setSelectedTopics] = useState([])
   const [maxQuestions, setMaxQuestions] = useState(12)
   const [preview, setPreview] = useState(false)   // TESTING: preview before quality gate
   const [starting, setStarting] = useState(false)
@@ -64,12 +66,31 @@ export default function Sidebar() {
 
   const courseObj = courses.find(c => c.id === selectedCourse)
 
-  const canGen = selectMode === 'topic' ? !!selectedTopic : !!selectedUnit
+  const canGen = selectMode === 'topic' ? !!selectedTopic
+    : selectMode === 'topics' ? selectedTopics.length > 0
+    : !!selectedUnit
+
+  // Sessions the multi-select would run, for the "N topics · M sessions" line.
+  const batchSessionCount = useMemo(
+    () => selectedTopics.reduce((n, t) => n + (topics[t] || []).length, 0),
+    [selectedTopics, topics])
+
+  function toggleTopic(t) {
+    setSelectedTopics(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+  }
 
   async function handleGenerate() {
     if (!canGen || starting) return
     setStarting(true)
     try {
+      // Multi-topic queues one run PER TOPIC and lands on the batch page; the single-topic and
+      // single-unit paths below are unchanged.
+      if (selectMode === 'topics') {
+        const { batch_id } = await api.generateBatch(
+          selectedTopics, maxQuestions, selectedModel || undefined, courseObj)
+        navigate(`/batch/${batch_id}`)
+        return
+      }
       const sessionNames = selectMode === 'topic' ? (topics[selectedTopic] || []) : [selectedUnit]
       if (!sessionNames.length || !sessionNames[0]) return
       const { run_id } = await api.generate(sessionNames, maxQuestions, selectedModel || undefined, preview, courseObj)
@@ -118,20 +139,64 @@ export default function Sidebar() {
           <label>
             <input
               type="radio" name="selmode" checked={selectMode === 'topic'}
-              onChange={() => { setSelectMode('topic'); setSelectedUnit('') }}
+              onChange={() => { setSelectMode('topic'); setSelectedUnit(''); setSelectedTopics([]) }}
             />
             Topic-wise
           </label>
           <label>
             <input
+              type="radio" name="selmode" checked={selectMode === 'topics'}
+              onChange={() => { setSelectMode('topics'); setSelectedUnit(''); setSelectedTopic('') }}
+            />
+            Multi-topic
+          </label>
+          <label>
+            <input
               type="radio" name="selmode" checked={selectMode === 'session'}
-              onChange={() => { setSelectMode('session'); setSelectedTopic('') }}
+              onChange={() => { setSelectMode('session'); setSelectedTopic(''); setSelectedTopics([]) }}
             />
             Session-wise
           </label>
         </div>
 
-        {selectMode === 'topic' ? (
+        {selectMode === 'topics' ? (
+          <>
+            <div className="sidebar-picker-head">
+              <span className="sidebar-section-label sidebar-label-flush">
+                Topics ({selectedTopics.length} selected)
+              </span>
+              <button
+                className="sidebar-view-all"
+                onClick={() => setSelectedTopics(
+                  selectedTopics.length === Object.keys(topics).length ? [] : Object.keys(topics))}
+              >
+                {selectedTopics.length === Object.keys(topics).length ? 'Clear' : 'All'}
+              </button>
+            </div>
+            <div className="sidebar-topic-checklist">
+              {Object.keys(topics).length === 0 && (
+                <div className="sidebar-session-info">No topics in this course</div>
+              )}
+              {Object.keys(topics).map(t => (
+                <label key={t} className="sidebar-topic-check" title={t}>
+                  <input
+                    type="checkbox"
+                    checked={selectedTopics.includes(t)}
+                    onChange={() => toggleTopic(t)}
+                  />
+                  <span className="sidebar-topic-check-name">{t}</span>
+                  <span className="sidebar-topic-check-count">{(topics[t] || []).length}</span>
+                </label>
+              ))}
+            </div>
+            {selectedTopics.length > 0 && (
+              <span className="sidebar-section-label sidebar-label-spaced">
+                {selectedTopics.length} run{selectedTopics.length === 1 ? '' : 's'} ·{' '}
+                {batchSessionCount} session{batchSessionCount === 1 ? '' : 's'} · one set each
+              </span>
+            )}
+          </>
+        ) : selectMode === 'topic' ? (
           <>
             <label className="sidebar-section-label" htmlFor="sb-topic">Topic</label>
             <div className="sidebar-select-wrap">
@@ -196,11 +261,14 @@ export default function Sidebar() {
           onChange={e => setMaxQuestions(+e.target.value)}
           className="sidebar-range"
         />
-        {/* TESTING: preview before quality gate */}
-        <label className="sidebar-preview-toggle">
-          <input type="checkbox" checked={preview} onChange={e => setPreview(e.target.checked)} />
-          Preview picks before quality gate
-        </label>
+        {/* TESTING: preview before quality gate. Not offered for a batch — it pauses mid-run for a
+            human, which would stall every queued topic behind it. */}
+        {selectMode !== 'topics' && (
+          <label className="sidebar-preview-toggle">
+            <input type="checkbox" checked={preview} onChange={e => setPreview(e.target.checked)} />
+            Preview picks before quality gate
+          </label>
+        )}
         <button
           className="sidebar-gen-btn"
           disabled={!canGen || starting}
@@ -208,9 +276,13 @@ export default function Sidebar() {
         >
           {starting
             ? 'Starting…'
-            : canGen
-              ? 'Generate questions'
-              : selectMode === 'topic' ? 'Select a topic first' : 'Select a unit first'}
+            : !canGen
+              ? (selectMode === 'topic' ? 'Select a topic first'
+                : selectMode === 'topics' ? 'Select at least one topic'
+                : 'Select a unit first')
+              : selectMode === 'topics'
+                ? `Generate ${selectedTopics.length} set${selectedTopics.length === 1 ? '' : 's'}`
+                : 'Generate questions'}
         </button>
       </div>
 

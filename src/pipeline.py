@@ -19,6 +19,7 @@ from src.agent import AgentState, PipelineResult, _critique_question_set
 from src.data_loader import get_data_store
 from src.models import GenerationConfig, SessionContext, CurationMetadata, CuratedOutput, QualityReport
 from src.config import MIN_QUESTIONS, MAX_QUESTIONS
+from src.agent import RetrievalUnavailable
 from src.agents import UnderstandingAgent, RetrievalAgent, ValidationAgent, EvaluationAgent
 
 MAX_REVISION_ROUNDS = 2
@@ -79,7 +80,8 @@ def _session_profile(session_names, ctx) -> tuple[list[str], list[str]]:
     reading material cannot dilute a short, precise outcome statement.
     """
     import json
-    from src.config import DATA_DIR, SESSION_PROFILE_RM_CHUNKS
+    from src.config import (DATA_DIR, RM_CHUNK_MAX_CHARS, RM_CHUNK_MIN_CHARS,
+                            SESSION_PROFILE_RM_CHUNKS)
 
     texts: list[str] = []
     rm_texts: list[str] = []
@@ -103,7 +105,30 @@ def _session_profile(session_names, ctx) -> tuple[list[str], list[str]]:
                               + list(getattr(ctx, "key_concepts", None) or []))
                   if isinstance(t, str) and t.strip()]
 
-    # 3. Reading-material chunks — paragraph-ish slices of THIS session's content only.
+    # 3. Reading-material chunks — EVERY substantive paragraph of THIS session's content.
+    #
+    # This used to keep only ~36% of the material, and it discarded exactly the passages that identify
+    # what a session teaches. Three lossy steps compounded:
+    #
+    #   chunks = [c for c in content.split("\n\n") if len(c.strip()) > 120]   # drops short paragraphs
+    #   step   = max(1, len(chunks) // 12)                                     # then STRIDE-SAMPLES
+    #   rm_texts += [c[:800] for c in chunks[::step][:12]]                     # then truncates
+    #
+    # Measured on the No-Code sessions: 24,521 chars of material -> 8,728 in the profile. The bullet that
+    # defines the node most precisely is 85 characters —
+    #     '- **HTTP Request Node**: Allows n8n to talk to almost any web service that has an API.'
+    # — so the >120 filter threw it away, the phrase appeared in NONE of the 12 chunks, and
+    # "What is the HTTP Request node and when do you use it?" scored 0.275 against a session that
+    # literally teaches it. After this change it scores 0.540 (0.703 on the other topic that teaches it),
+    # while the topic's median moves 0.615 -> 0.622: the fix reaches the questions naming something
+    # specific and leaves the rest alone.
+    #
+    # This is not a display bug. `_score_session_fit` DROPS candidates below a floor derived from these
+    # scores (107-169 per run, the largest cut in the funnel), `session_grounding` is 20% of the
+    # composite, `_rank_key` uses it as the tiebreak, and `_attribute_sessions` reuses this profile.
+    # Same class as the 4,000-char truncation already documented for `_attribute_sessions`.
+    #
+    # Bullets are the most information-dense lines in this material, so the floor is low on purpose.
     try:
         from src.data_loader import get_data_store
         store = get_data_store()
@@ -111,9 +136,25 @@ def _session_profile(session_names, ctx) -> tuple[list[str], list[str]]:
             content = store.get_session_content(name)
             if not content:
                 continue
-            chunks = [c.strip() for c in content.split("\n\n") if len(c.strip()) > 120]
-            step = max(1, len(chunks) // SESSION_PROFILE_RM_CHUNKS) if chunks else 1
-            rm_texts += [c[:800] for c in chunks[::step][:SESSION_PROFILE_RM_CHUNKS]]
+            for para in content.split("\n\n"):
+                p = para.strip()
+                if len(p) < RM_CHUNK_MIN_CHARS:
+                    continue                      # true noise only — a bare heading or stray token
+                # Sub-split a long paragraph at a word boundary rather than truncating it, so its tail
+                # is still searchable instead of silently discarded.
+                while len(p) > RM_CHUNK_MAX_CHARS:
+                    cut = p.rfind(" ", 0, RM_CHUNK_MAX_CHARS)
+                    if cut <= 0:
+                        cut = RM_CHUNK_MAX_CHARS
+                    rm_texts.append(p[:cut].strip())
+                    p = p[cut:].strip()
+                if p:
+                    rm_texts.append(p)
+            if len(rm_texts) >= SESSION_PROFILE_RM_CHUNKS:
+                # Runaway guard only. Reaching it means the material is unexpectedly large, not that a
+                # sample was wanted — treating this cap as a sampling budget is what caused the bug.
+                rm_texts = rm_texts[:SESSION_PROFILE_RM_CHUNKS]
+                break
     except Exception:  # noqa: BLE001
         pass
 
@@ -198,17 +239,79 @@ def _open_web_shortfall(surviving: int, requested: int, missing_tools=None):
     return None
 
 
+def _retrieval_stopped_message(exc) -> str:
+    """One sentence a reviewer can act on, in History and on the Progress stream.
+
+    Names the tier, the status and the escape hatch. Without the last part this looks like a bug rather
+    than the configured policy it is.
+    """
+    detail = f" — {exc.detail}" if getattr(exc, "detail", "") else ""
+    return (f"Stopped before spending: Tavily unavailable ({exc.status}){detail}. "
+            f"Retrieval is the run, and the question bank alone is not a substitute. "
+            f"Set REQUIRE_WEB_SEARCH=0 to allow a bank-only run.")
+
+
 class AgentPipeline:
 
     # ── Reusable stages ───────────────────────────────────────────────────
+    def _tavily_preflight(self, state, emit) -> None:
+        """Probe the web tier BEFORE anything is spent. Raises `RetrievalUnavailable` when it is down.
+
+        THE POSITION OF THIS CALL IS THE POINT. The same probe used to live in `RetrievalAgent.run`,
+        which executes AFTER `UnderstandingAgent` — and understanding costs one `chat_completion_json`
+        per session (`session_understanding.py`). Checking there and then stopping would still have spent
+        those calls, so "stopped before spending anything" would have been false.
+
+        One probe per run: the result is left on `state` and `RetrievalAgent` reads it instead of
+        re-probing. Two probes would double the latency and the API call for no information.
+
+        Retried ONCE for `WEB_PREFLIGHT_RETRY_STATUSES` only. The retry lives here rather than inside
+        `health_check` so that stays a single honest probe, which is what its docstring promises.
+        """
+        # `REQUIRE_WEB_SEARCH` is read HERE, not at import time, so a test or an operator can flip the
+        # module attribute and have it take effect — the same pattern `_drop_hands_on` uses for
+        # `CONVERSATIONAL_ONLY`.
+        from src.config import REQUIRE_WEB_SEARCH, WEB_PREFLIGHT_RETRY_STATUSES
+        from src.sources.tavily_search import TavilyConnector
+
+        connector = TavilyConnector()
+        ok, status, detail = connector.health_check()
+        state.web_probes = getattr(state, "web_probes", 0) + 1
+        if not ok and status in WEB_PREFLIGHT_RETRY_STATUSES:
+            emit("tavily_health", "running", f"Tavily check failed ({status}) — retrying once...")
+            ok, status, detail = connector.health_check()
+            state.web_probes += 1
+
+        state.web_status = status
+        if ok:
+            emit("tavily_health", "done", f"Tavily API check: OK — {detail}")
+            return
+
+        state.web_error = detail
+        if REQUIRE_WEB_SEARCH:
+            emit("tavily_health", "error",
+                 f"Tavily API check FAILED ({status}): {detail} — stopping before any spend.")
+            raise RetrievalUnavailable(status, detail)
+        # Guard off: exactly the previous behaviour — skip web calls that would fail, run bank-only,
+        # and let the report banner say so.
+        state.web_search_disabled = True
+        emit("tavily_health", "error",
+             f"Tavily API check FAILED ({status}): {detail} — running bank-only "
+             f"(REQUIRE_WEB_SEARCH=0).")
+
     def _pick_questions(self, state, emit):
         """Stages 1–3: Understanding → Retrieval → Validation (the 'picked' set)."""
+        # FIRST, before the Understanding agent spends a token — see `_tavily_preflight`.
+        self._tavily_preflight(state, emit)
         UnderstandingAgent().run(state, emit)
         RetrievalAgent().run(state, emit)
         # Suppress previously-rejected questions (per session) BEFORE validation/selection — so a
         # rejected question never resurfaces on re-generation and doesn't take a slot. Matched by
         # normalized content (question_ids regenerate each run).
         self._drop_rejected(state, emit)
+        # One question, one topic. Immediately after the rejection filter and before any embedding or LLM
+        # stage, so nothing is spent on a candidate that belongs to a different topic.
+        self._drop_used_by_other_topics(state, emit)
         # Drop questions that cannot be ANSWERED in a conversational interview ("Write a Python program
         # to…"). Here, before session-fit embeddings and long before the LLM relevance judge, so no spend
         # goes on candidates that can never ship. Any shortfall this creates reaches
@@ -370,6 +473,51 @@ class AgentPipeline:
                 })
         if drop:
             emit("suppress_rejected", "done", f"Suppressed {len(drop)} previously-rejected question(s).")
+
+    def _drop_used_by_other_topics(self, state, emit):
+        """Drop freshly-retrieved candidates that already belong to ANOTHER topic's set.
+
+        16 of 149 distinct questions sat in more than one topic (five in three) because every de-dup
+        mechanism is scoped to one topic. No session belongs to two topics, so that was pure repetition:
+        a student sitting several of these mock interviews would be asked "What is a prompt?" three times.
+
+        Placed immediately after `_drop_rejected` and BEFORE `_score_session_fit` / the LLM relevance
+        judge, for the same reason as `_drop_hands_on`: nothing should be spent on candidates that cannot
+        ship.
+
+        SAFE FOR THIS TOPIC'S OWN SET. It only ever sees freshly-retrieved candidates — `_add_retained`
+        runs later, inside `tool_submit_question_set` — so a question this topic already owns is never at
+        risk here even though 8 of No-Code's 27 currently also sit elsewhere.
+
+        A candidate whose home SHOULD be this topic (because this topic covers it better) is still dropped,
+        but recorded as a relocation candidate: re-homing is `filter_topic_sets.py --cross-topic`'s job,
+        offline and backed up, not something to do mid-run.
+        """
+        ctx = state.session_context
+        if not ctx or not state.questions:
+            return
+        from src import memory
+        topic_key = memory.topic_key_for(getattr(ctx, "session_name", "") or "")
+        elsewhere = memory.content_norms_in_other_topics(topic_key)
+        if not elsewhere:
+            return
+        drop = [(qid, elsewhere[memory.normalize_content(q.content)])
+                for qid, q in state.questions.items()
+                if memory.normalize_content(q.content) in elsewhere]
+        for qid, owner in drop:
+            q = state.questions.pop(qid, None)
+            if q is not None:
+                state.excluded.add(qid)
+                state.removed.append({
+                    "content": q.content,
+                    "reason": f"Already used in another topic: {owner}",
+                    "stage": "other_topic", "difficulty": q.difficulty, "company": q.attribution,
+                })
+        if drop:
+            owners = sorted({o for _, o in drop})
+            emit("suppress_other_topic", "done",
+                 f"Suppressed {len(drop)} question(s) already used in "
+                 f"{len(owners)} other topic(s).", dropped=len(drop))
 
     def _score_session_fit(self, state, emit, only_ids=None):
         """SESSION-grounded scoring + gate.
@@ -559,6 +707,40 @@ class AgentPipeline:
              f"candidate(s) directly so the set is ranked and trimmed.")
         return True
 
+    def _score_unscored_fits(self, state, emit):
+        """Give every shipped question a `session_fit`, dropping nothing.
+
+        Retained questions come from the topic's accumulated set, not from this run's pool, so they have
+        no fit. Left unscored they would repeat the exact defect the open-web tier hit: `grounding_score`
+        averages only non-None fits, so `session_grounding` would silently describe just the freshly-found
+        subset, and `_rank_key` reads None as 0.0, sinking settled questions to the bottom of Review.
+
+        This deliberately does NOT reuse `_score_session_fit(only_ids=…)`: that applies the relative floor
+        and DROPS what falls below it. A retained question is already settled — it gets flagged
+        (`stale_reason`), never removed, so the reviewer decides.
+        """
+        unscored = [q for q in state.questions.values() if q.session_fit is None]
+        if not unscored or not state.session_context:
+            return
+        from src import embeddings
+        from src.config import SESSION_PROFILE_RM_WEIGHT
+
+        curated, rm_chunks = _session_profile(state.config.session_names, state.session_context)
+        if not curated and not rm_chunks:
+            return
+        contents = [q.content for q in unscored]
+        cur_sim = embeddings.cosine_matrix(contents, curated) if curated else None
+        rm_sim = embeddings.cosine_matrix(contents, rm_chunks) if rm_chunks else None
+        if cur_sim is None and rm_sim is None:
+            return
+        for i, q in enumerate(unscored):
+            best_curated = float(max(cur_sim[i])) if cur_sim is not None else 0.0
+            best_rm = float(max(rm_sim[i])) * SESSION_PROFILE_RM_WEIGHT if rm_sim is not None else 0.0
+            q.session_fit = round(max(best_curated, best_rm), 4)
+        emit("session_fit", "done",
+             f"Scored {len(unscored)} carried-over question(s) so grounding covers the whole set.",
+             kept=len(unscored), dropped=0)
+
     def _evaluate_and_gate(self, state, emit) -> int:
         """Stage 4 + quality-gate loop. Returns revision rounds used."""
         eval_agent = EvaluationAgent()
@@ -569,6 +751,9 @@ class AgentPipeline:
             # Do this BEFORE the critique so the gate judges the set the reviewer will actually see.
             if self._enforce_submission(state, emit):
                 state.submit_forced = True
+            # Retained questions arrive from the topic set with no `session_fit`. Score them here, and
+            # drop NOTHING — see `_score_unscored_fits`.
+            self._score_unscored_fits(state, emit)
 
             emit("critique", "running", "Quality gate — critiquing final set...")
             critique = _critique_question_set(state)
@@ -629,6 +814,15 @@ class AgentPipeline:
                  revisions=revision_round, usage=dict(state.api_usage),
                  score=result.quality_report.composite_score if result.quality_report else None,
                  verdict=result.quality_report.pass_fail if result.quality_report else None)
+        except RetrievalUnavailable as exc:
+            # A POLICY stop, caught AHEAD of the generic handler: no traceback for an expected outcome,
+            # and the reason reaches History verbatim so this reads as a retrieval outage rather than a
+            # bad topic or a crash.
+            result.error = _retrieval_stopped_message(exc)
+            # The stop precedes UnderstandingAgent, so `state.session_context` is None — without this
+            # History cannot even name the topic that failed, and every failed row would read "Unknown".
+            result.context = _fallback_context(config, state)
+            emit("error", "error", result.error)
         except Exception as exc:
             import traceback
             traceback.print_exc()
@@ -659,6 +853,15 @@ class AgentPipeline:
             result.awaiting_gate = True
             emit("complete", "done",
                  f"Preview ready — {state.total_questions} picked question(s) to verify.")
+        except RetrievalUnavailable as exc:
+            # A POLICY stop, caught AHEAD of the generic handler: no traceback for an expected outcome,
+            # and the reason reaches History verbatim so this reads as a retrieval outage rather than a
+            # bad topic or a crash.
+            result.error = _retrieval_stopped_message(exc)
+            # The stop precedes UnderstandingAgent, so `state.session_context` is None — without this
+            # History cannot even name the topic that failed, and every failed row would read "Unknown".
+            result.context = _fallback_context(config, state)
+            emit("error", "error", result.error)
         except Exception as exc:
             import traceback
             traceback.print_exc()
@@ -999,6 +1202,72 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
             f"off-syllabus clause was removed); they are marked 'adapted' in review and keep their "
             f"original text for comparison."
         )
+    # Name the retained/new split. With the topic's accumulated set carried in, a re-run that finds
+    # NOTHING new would otherwise read as a healthy 40-question run. Reported, never gated — gating on
+    # new-questions-found would fail every mature topic that is simply finished, the same reason
+    # `topic_coverage` is reported and not gated.
+    _retained = [q for q in state.questions.values() if getattr(q, "retained", False)]
+    if _retained:
+        _fresh = len(state.questions) - len(_retained)
+        _stale = [q for q in _retained if getattr(q, "stale_reason", None)]
+        _unrev = [q for q in _retained if getattr(q, "retained_status", None) != "approved"]
+        notes.append(
+            f"{len(state.questions)} question(s): {len(_retained)} carried over from this topic's "
+            f"existing set, {_fresh} newly found this run."
+            + (f" {len(_unrev)} of the carried-over ones were never reviewer-approved (imported from run "
+               f"history)." if _unrev else "")
+            + (f" {len(_stale)} would be rejected by today's gates and are flagged for you rather than "
+               f"removed." if _stale else ""))
+        if _fresh == 0:
+            notes.append("No NEW questions were found for this topic — the set is unchanged. That is a "
+                         "supply result, not a quality failure.")
+    # Per-outcome balance. Both halves are reported because they are different problems with the same
+    # cause: a topic that supplies several questions is repetition the candidate hears, and a topic that
+    # supplies none is a gap no count of questions reveals. On No-Code AI Automation three topics held 47%
+    # of a 38-question set while 9 of 22 had nothing.
+    # Rejected questions that the accumulated set tried to resurrect. Reported because the count was 67 of
+    # 149 before this was fixed, and a reviewer needs to see that their rejections are being honoured.
+    _resurrect = int(getattr(state, "rejected_suppressed", 0) or 0)
+    if _resurrect:
+        notes.append(
+            f"{_resurrect} previously-rejected question(s) in this topic's accumulated set were NOT "
+            f"carried over. Clean them out with scripts/filter_topic_sets.py --rejected if you want them "
+            f"out of the set itself.")
+    # Say what cross-topic suppression withheld. A question silently missing because another topic owns it
+    # is indistinguishable from one that was never found, and the accepted risk of this rule is that a
+    # genuinely shared fundamental stays locked to whichever topic holds it — so it has to be visible.
+    _other = [r for r in (state.removed or []) if r.get("stage") == "other_topic"]
+    if _other:
+        _owners = sorted({(r.get("reason") or "").split(": ", 1)[-1] for r in _other})
+        notes.append(
+            f"{len(_other)} question(s) were withheld because another topic already uses them "
+            f"({', '.join(_owners[:3])}{'; …' if len(_owners) > 3 else ''}). Re-home them with "
+            f"scripts/filter_topic_sets.py --cross-topic if this topic is the better fit.")
+    # Cross-topic duplicates are counted separately because they are a different finding: a per-outcome
+    # cap structurally cannot see them, and they are what a real gate objected to when 7 of 11 shipped
+    # questions were prompt-engineering filed under four near-synonymous interview topics.
+    _cross = sum(1 for r in (state.removed or [])
+                 if r.get("stage") == "duplicate"
+                 and "across interview topics" in (r.get("reason") or ""))
+    if _cross:
+        notes.append(
+            f"{_cross} question(s) were dropped as testing the same thing as another question in a "
+            f"DIFFERENT interview topic — the per-topic balance cannot see those.")
+    _capped = sum(1 for r in (state.removed or []) if r.get("stage") == "outcome_cap")
+    if _capped:
+        # Say WHY they went, and do not name `OUTCOME_CAP`: the pipeline runs
+        # `balance_by_outcome` with strict=False, so the cap plays no part in this — a question is
+        # dropped only when the LLM judge says a kept one already covers that outcome. An earlier
+        # version of this line credited "cap 2 per topic" and was simply describing the wrong mechanism.
+        notes.append(
+            f"{_capped} question(s) were dropped because another question already covers the same "
+            f"interview topic (judged, not counted). Questions matching no topic are never dropped.")
+    if state.uncovered_outcomes:
+        _u = "; ".join(f"“{o}”" for o in state.uncovered_outcomes[:6])
+        notes.append(
+            f"{len(state.uncovered_outcomes)} interview topic(s) have NO question in this set: {_u}"
+            + ("; …" if len(state.uncovered_outcomes) > 6 else "")
+            + " — reported, not gated; retrieval for these is a separate decision.")
     # Say what the conversational filter cost. A pool filter that silently shrinks the supply reads as
     # "this session has few questions", which is the misdiagnosis the yield harness exists to prevent.
     _hands_on = sum(1 for r in (state.removed or []) if r.get("stage") == "hands_on")

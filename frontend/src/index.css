@@ -924,6 +924,15 @@ kbd { display: inline-block; min-width: 1.15rem; padding: 0.05rem 0.3rem; backgr
 .hist-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .hist-approved { color: var(--ok); }
 .hist-pending { color: var(--text-3); }
+/* A run that produced nothing. It reaches History now (a failed run used to be persisted nowhere, so a
+   Tavily outage looked identical to never pressing Generate) and must not read as a thin-but-real set. */
+.hist-failed { color: var(--danger); }
+/* No `run_results` payload exists behind a failed row, so it is not a link — drop the affordances that
+   promise it is. `default` rather than `not-allowed`: the row is inert, not forbidden. */
+.hist-row-failed { cursor: default; }
+.hist-row-failed:hover { background: var(--danger-soft); }
+.hist-run-error { display: block; font-size: var(--fs-2xs); color: var(--danger); margin-top: 0.15rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist-go { text-align: right; white-space: nowrap; }
 .hist-go .hist-status { margin-right: var(--s-3); }
 .hist-open { color: var(--text-3); padding: var(--s-1); border-radius: var(--r-sm); vertical-align: middle; transition: color var(--t), transform var(--t); }
@@ -1022,4 +1031,131 @@ kbd { display: inline-block; min-width: 1.15rem; padding: 0.05rem 0.3rem; backgr
 /* Firefox ignores ::-webkit-scrollbar; give it the standard properties too. */
 @supports (scrollbar-width: thin) {
   .tr-body, .sidebar, .q-set-body { scrollbar-width: thin; scrollbar-color: var(--border-2) transparent; }
+}
+
+/* ── Multi-topic batch ──────────────────────────────────────────────────────────────────────────
+   A batch is N independent runs queued back-to-back, so this reads as a launcher into N reviews
+   rather than a combined result. Every interactive element declares its own background/border/font:
+   the `button` reset earlier in this file is what stops these rendering as native UA chrome, and
+   anything relying on inheritance here would come out as Arial on #efefef with an outset border. */
+
+.sidebar-topic-checklist {
+  display: flex; flex-direction: column;
+  max-height: 15rem; overflow-y: auto;
+  margin: 0 var(--s-3) var(--s-2);
+  border: 1px solid var(--border-soft); border-radius: 5px; background: var(--surface-2);
+}
+.sidebar-topic-check {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) var(--s-3); cursor: pointer;
+  font-size: var(--fs-xs); color: var(--text-2);
+  border-bottom: 1px solid var(--border-soft);
+}
+.sidebar-topic-check:last-child { border-bottom: 0; }
+.sidebar-topic-check:hover { background: var(--surface); color: var(--text); }
+.sidebar-topic-check input { accent-color: var(--accent); flex: none; }
+.sidebar-topic-check-name {
+  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar-topic-check-count {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-3);
+  background: var(--bg); border: 1px solid var(--border-soft); border-radius: 3px;
+  padding: 0 var(--s-1); flex: none;
+}
+
+.batch-summary {
+  display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
+  font-size: var(--fs-sm); color: var(--text-2); margin-bottom: var(--s-4);
+}
+.batch-summary-failed { color: var(--danger); }
+.batch-error {
+  margin: var(--s-4); padding: var(--s-3); border: 1px solid var(--danger);
+  background: var(--danger-soft); color: var(--danger); font-size: var(--fs-sm); border-radius: 5px;
+}
+
+.batch-list { display: flex; flex-direction: column; gap: var(--s-2); }
+.batch-row {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: 6px;
+  border-left: 3px solid var(--border-2);
+}
+.batch-row-running { border-left-color: var(--accent); }
+.batch-row-done    { border-left-color: var(--ok); }
+.batch-row-failed  { border-left-color: var(--danger); }
+.batch-index {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-3);
+  width: 1.5rem; flex: none;
+}
+.batch-main { flex: 1; min-width: 0; }
+.batch-topic {
+  font-size: var(--fs-sm); color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.batch-meta {
+  display: flex; gap: var(--s-3); flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-3); margin-top: 2px;
+}
+.batch-verdict-pass { color: var(--ok); }
+.batch-verdict-fail { color: var(--warn); }
+.batch-row-error {
+  font-size: var(--fs-2xs); color: var(--danger); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.batch-pill {
+  display: inline-flex; align-items: center; gap: var(--s-1);
+  font-family: var(--font-mono); font-size: var(--fs-2xs); white-space: nowrap;
+  padding: 2px var(--s-2); border-radius: 4px; flex: none;
+  border: 1px solid var(--border-soft); background: var(--bg); color: var(--text-3);
+}
+.batch-pill-running { color: var(--accent-bright); border-color: var(--accent); }
+.batch-pill-done    { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+.batch-pill-failed  { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
+.batch-spinner {
+  width: 8px; height: 8px; border-radius: 50%;
+  border: 1px solid var(--accent); border-top-color: transparent;
+  animation: batch-spin .7s linear infinite;
+}
+@keyframes batch-spin { to { transform: rotate(360deg); } }
+
+.batch-actions { flex: none; }
+.batch-btn {
+  display: inline-flex; align-items: center; gap: var(--s-1);
+  font-family: var(--font-mono); font-size: var(--fs-2xs);
+  padding: var(--s-1) var(--s-2); border-radius: 4px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--border-2); color: var(--text-2);
+  transition: background var(--t), color var(--t), border-color var(--t);
+}
+.batch-btn:hover { background: var(--bg); color: var(--text); border-color: var(--accent); }
+.batch-btn-primary { border-color: var(--accent); color: var(--accent-bright); }
+
+/* Batched runs are identifiable in History without opening them. */
+.hist-batch-tag {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-3);
+  border: 1px solid var(--border-soft); border-radius: 3px; padding: 0 4px; margin-left: var(--s-2);
+}
+
+/* ── Carried-over questions ─────────────────────────────────────────────────────────────────────
+   A re-run adds to a topic's existing set rather than producing another version, so most of a mature
+   set is carried over. These tags exist so triage is obviously only over the NEW questions.
+   Quieter than the danger tags: a kept question is normal, not a problem. Each declares its own
+   background/border/font — the `button`/element reset above means inheritance would give UA chrome. */
+.cq-retained {
+  font-size: var(--fs-2xs); font-family: var(--font-mono);
+  color: var(--text-3); background: var(--surface-2);
+  border: 1px solid var(--border-soft); border-radius: 4px;
+  padding: 1px var(--s-1); white-space: nowrap; cursor: help;
+}
+/* Reviewer-blessed reads a shade stronger than an unreviewed import, because the distinction is the
+   whole point of tracking status: 175 of the consolidated 251 were never explicitly approved. */
+.cq-retained-approved { color: var(--ok); border-color: var(--ok-soft); }
+
+/* A carried-over question today's gates would reject. Flagged, never removed — it was approved once,
+   so the reviewer decides. Warning weight, not danger: it is not wrong, it is dated. */
+.cq-stale {
+  font-size: var(--fs-2xs); font-family: var(--font-mono);
+  color: var(--warn); background: var(--warn-soft);
+  border: 1px dashed var(--warn); border-radius: 4px;
+  padding: 1px var(--s-1); white-space: nowrap; cursor: help;
 }

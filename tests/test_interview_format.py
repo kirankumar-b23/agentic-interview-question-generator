@@ -7,9 +7,12 @@ applications." each took a slot in a set of 9.
 The tests here pin the DISCRIMINATOR, not a verb list, because the two failure modes are opposite and a
 naive rule hits one or the other:
 
-  * too broad — treating "design" as hands-on. Measured, that pushed 2 of the last 6 runs UNDER the
-    5-question minimum and dropped "Design an RSS News Feed Service", one of only three tool-specific
-    questions the n8n retrieval work recovered.
+  * too broad — a keyword ban on "design" would also remove "How would you design an agentic workflow?",
+    which is exactly the conversational system-design discussion the format is FOR. `design` IS now
+    treated as hands-on (an imperative design task needs a board), and the wh-opener exemption is the
+    only reason that is safe. When design was first excluded, the measured cost of including it was that
+    2 of 6 runs fell under the 5-question minimum; that risk is now absorbed because a topic's
+    accumulated set is carried into every run (`tools._add_retained`).
   * too narrow — matching only a bare sentence-initial verb, which misses "Can you create a DataFrame…?"
     and "Design and implement an API".
 
@@ -40,14 +43,19 @@ class TestTheDiscriminator:
         ("Write a function to check if a given string is a palindrome.", "classic coding exercise"),
         ("Write a simple endpoint using Flask/FastAPI that updates a resource in MongoDB.",
          "backend deliverable"),
+        # REVERSED DECISION, recorded rather than quietly edited. These three were asserted as KEEP for
+        # one round, on the argument that "Design X" means "talk me through the architecture". They are
+        # now skipped: an imperative design task is a whiteboard exercise, and a candidate with no board
+        # cannot do it either. `TestDesignIsHandsOnButTalkingAboutDesignIsNot` below is what keeps the
+        # reversal from becoming a blunt keyword ban.
+        ("Design a news aggregator system", "imperative whiteboard exercise"),
+        ("Design a system prompt for a Gemini-powered assistant that must summarize long financial "
+         "documents into a precise three-bullet format.", "imperative, produces an artifact"),
+        ("Design an RSS News Feed Service", "imperative system-design task"),
+        ("Draw the architecture of a RAG pipeline.", "needs a board"),
     ]
 
     KEEP = [
-        ("Design a news aggregator system", "verbal architecture discussion — the whole point of the ask"),
-        ("Design a system prompt for a Gemini-powered assistant that must summarize long financial "
-         "documents into a precise three-bullet format.", "prompt design is spoken, and it is syllabus"),
-        ("Design an RSS News Feed Service",
-         "one of three tool-specific questions the n8n work recovered"),
         ("How would you design a scalable backend system for a high-traffic application?",
          "wh-opener — asks ABOUT designing"),
         ("How do you implement and handle authentication in a web application?",
@@ -68,10 +76,12 @@ class TestTheDiscriminator:
     def test_conversational_questions_survive(self, text, why):
         assert not is_hands_on_task(text), f"should keep ({why})"
 
-    def test_design_versus_design_and_implement(self):
-        """The pair that a verb list gets wrong in both directions."""
-        assert not is_hands_on_task("Design a data pipeline for streaming events")
+    def test_both_design_and_design_and_implement_are_caught(self):
+        """Both are artifacts now. The distinction that still matters is imperative vs wh-framed —
+        see `TestDesignIsHandsOnButTalkingAboutDesignIsNot`."""
+        assert is_hands_on_task("Design a data pipeline for streaming events")
         assert is_hands_on_task("Design and implement a data pipeline for streaming events")
+        assert not is_hands_on_task("How would you design a data pipeline for streaming events?")
 
     def test_asking_about_implementing_versus_being_told_to_implement(self):
         """Same verb, opposite verdicts — the wh-opener exemption is what separates them."""
@@ -105,7 +115,7 @@ class TestThePoolFilter:
     QS = [_q("Write a Python program to reverse a string.", qid="code"),
           _q("Build and integrate LLM applications.", qid="build"),
           _q("What is the Merge node and what merge modes does it support?", qid="keep1"),
-          _q("Design a news aggregator system", qid="keep2"),
+          _q("Design a news aggregator system", qid="design"),        # now hands-on: needs a board
           _q("How did you implement JWT authentication in your project?", qid="keep3")]
 
     def _run(self, monkeypatch, enabled=True):
@@ -121,14 +131,14 @@ class TestThePoolFilter:
 
     def test_it_drops_the_hands_on_prompts_and_keeps_the_rest(self, monkeypatch):
         st = self._run(monkeypatch)
-        assert set(st.questions) == {"keep1", "keep2", "keep3"}
+        assert set(st.questions) == {"keep1", "keep3"}
 
     def test_each_drop_is_recorded_with_its_own_stage(self, monkeypatch):
         """`scripts/yield_report.py` counts this stage — a filter that shrinks the pool silently reads
         as 'this session has few questions', which is the misdiagnosis the harness exists to prevent."""
         st = self._run(monkeypatch)
         stages = [r["stage"] for r in st.removed]
-        assert stages == ["hands_on", "hands_on"]
+        assert stages == ["hands_on", "hands_on", "hands_on"]   # code, build, and now design
         assert all("conversational" in r["reason"] for r in st.removed)
 
     def test_the_flag_really_turns_it_off(self, monkeypatch):
@@ -175,3 +185,33 @@ class TestTheBackfillCannotReintroduceThem:
         monkeypatch.setattr(tools, "_topic_keywords", lambda ctx: set())
 
         assert tools.add_open_web_records(st, self._records()) == 2
+
+
+class TestDesignIsHandsOnButTalkingAboutDesignIsNot:
+    """The pair that makes the design reversal safe rather than a keyword ban.
+
+    Adding `design`/`draw` to the PRODUCE verbs without the wh-opener exemption would have removed both
+    halves of this — including "How would you design…?", which is exactly the conversational
+    system-design discussion the format is FOR. Measured on the 236 live questions: 21 skipped, 17 kept.
+    """
+
+    SKIP = ["Design an LLM API pipeline",
+            "Design an end-to-end image generation system. Cover the following:",
+            "Design a real-time smart translation system for live video meetings.",
+            "Draw the sequence diagram for an agent tool call.",
+            "Sketch the components of a retrieval pipeline."]
+
+    KEEP = ["How would you design an agentic workflow to handle a multi-step user task?",
+            "How do you approach designing an effective prompt?",
+            "Explain your methodology for designing and testing system prompts.",
+            "What are some of the design patterns you frequently use, and why?",
+            "Why did you design it that way?"]
+
+    @pytest.mark.parametrize("text", SKIP)
+    def test_an_imperative_design_task_is_skipped(self, text):
+        assert is_hands_on_task(text)
+
+    @pytest.mark.parametrize("text", KEEP)
+    def test_talking_about_design_survives(self, text):
+        assert not is_hands_on_task(text), (
+            "the wh-opener exemption is what stops this becoming a keyword ban on 'design'")

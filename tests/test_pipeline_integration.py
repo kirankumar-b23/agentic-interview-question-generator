@@ -96,10 +96,15 @@ def stub_llm(monkeypatch):
         import src.session_understanding as su
         monkeypatch.setattr(su, "chat_completion_json", lambda **kw: _fake_session_context())
 
-        # No web calls: report Tavily as unavailable so the run goes bank-only.
+        # Report Tavily HEALTHY, and stub every actual web call below. It used to report `no_key` to
+        # force a bank-only run, but `pipeline._tavily_preflight` now STOPS the run when the probe fails
+        # (REQUIRE_WEB_SEARCH, on by default) — so that stub aborted all 18 pipeline runs in this file
+        # before they reached the behaviour under test. Reporting healthy keeps the run on its real path
+        # AND costs nothing, because `tool_search_web_questions` and `fetch_open_web` are both stubbed.
+        # `tests/test_retrieval_preflight.py` is where the failing-probe path is exercised.
         import src.sources.tavily_search as tav
         monkeypatch.setattr(tav.TavilyConnector, "health_check",
-                            lambda self: (False, "no_key", "stubbed out for tests"))
+                            lambda self: (True, "ok", "stubbed out for tests"))
         # Tavily has a SECOND path: the last-resort open-web tier, which `_top_up_from_open_web` imports
         # from this module at call time. Stubbing `tool_search_web_questions` below does not cover it.
         # It went live once the zero-tool-representation trigger began firing at any count — 21 pipeline
@@ -154,7 +159,10 @@ class TestHappyPath:
         result, events = _run(max_questions=8)
         assert result.error is None
         assert result.curated_output is not None
-        assert 0 < len(result.curated_output.question_details) <= 8
+        # Newly-found only: a re-run also carries the topic's accumulated set in
+        # (`tools._add_retained`), so the shipped total legitimately exceeds the requested count.
+        fresh = [q for q in result.curated_output.question_details if not q.retained]
+        assert 0 < len(fresh) <= 8
 
     def test_completion_event_carries_structured_totals(self, stub_llm):
         """The UI reads these fields; it used to regex them out of the prose `detail`."""
@@ -186,8 +194,11 @@ class TestEvaluationAgentNeverSubmits:
         fake = stub_llm()
         fake.evaluation_text_only = True
         result, events = _run(max_questions=6)
-        details = result.curated_output.question_details
-        assert len(details) <= 6, f"pool was shipped untrimmed: {len(details)} questions"
+        details = [q for q in result.curated_output.question_details if not q.retained]
+        # Count only NEWLY-FOUND questions: a re-run also carries this topic's accumulated set in
+        # (`tools._add_retained`), so the shipped total legitimately exceeds the requested count. The
+        # trim this test protects governs what THIS run selected from the pool.
+        assert len(details) <= 6, f"pool was shipped untrimmed: {len(details)} newly-found questions"
         assert any(e["step"] == "submit_question_set" and e["status"] == "warning" for e in events)
 
     def test_the_report_says_the_agent_did_not_submit(self, stub_llm):
@@ -201,7 +212,8 @@ class TestEvaluationAgentNeverSubmits:
         fake = stub_llm()
         fake.evaluation_submits = False
         result, _ = _run(max_questions=4)
-        assert len(result.curated_output.question_details) <= 4
+        # Newly-found only — retained questions are carried in on top of the trim.
+        assert len([q for q in result.curated_output.question_details if not q.retained]) <= 4
 
 
 class TestGateFailureSurfaces:
@@ -313,8 +325,11 @@ class TestConcurrentRuns:
         a, _ = _run(max_questions=4)
         b, _ = _run(max_questions=8)
 
-        assert len(a.curated_output.question_details) <= 4
-        assert len(b.curated_output.question_details) <= 8
+        # Count only NEWLY-FOUND questions: a re-run also carries this topic's accumulated set in
+        # (`tools._add_retained`), so the shipped total legitimately exceeds the requested count. The
+        # trim this test protects governs what THIS run selected from the pool.
+        assert len([q for q in a.curated_output.question_details if not q.retained]) <= 4
+        assert len([q for q in b.curated_output.question_details if not q.retained]) <= 8
         assert a.quality_report is not b.quality_report
         # Usage is accumulated per run, so neither total includes the other's calls.
         assert a.quality_report.api_usage["llm_calls"] > 0
@@ -398,3 +413,46 @@ class TestConversationalOnlyRunsInTheRealPipeline:
 
         result, events = _run(max_questions=8)
         assert not any(r.get("stage") == "hands_on" for r in (result.removed or []))
+
+
+class TestRetainedQuestionsThroughTheWholePipeline:
+    """Proves the retain-and-add path is WIRED, which unit tests calling the helpers cannot.
+
+    A mutation check showed that unwiring `_add_retained` from submit, and `_score_unscored_fits` from
+    the gate loop, left every unit test green — they call the helpers directly. These go through
+    `AgentPipeline.run`.
+    """
+
+    def test_a_run_ships_the_topic_set_and_scores_every_question(self, stub_llm, monkeypatch, tmp_path):
+        from src import memory
+
+        monkeypatch.setattr(memory, "MEMORY_DB", tmp_path / "iso.db")
+        memory.init_db()
+        tk = memory.topic_key_for(SESSION)
+        memory.upsert_topic_questions(tk, [
+            {"content": "What is agent memory, carried over?", "status": "approved"},
+            {"content": "How does agent planning work, carried over?", "status": "backfilled"}])
+
+        stub_llm()
+        result, _ = _run(max_questions=6)
+        assert result.error is None
+        shipped = result.curated_output.question_details
+        carried = [q for q in shipped if q.retained]
+
+        assert len(carried) == 2, "the topic's set must reach the shipped output"
+        assert {q.retained_status for q in carried} == {"approved", "backfilled"}
+        # The open-web trap: an unscored question falls out of `session_grounding` (it averages non-None
+        # only) and sinks in Review because `_rank_key` reads None as 0.0.
+        assert all(q.session_fit is not None for q in shipped), \
+            "every shipped question needs a session_fit, retained ones included"
+
+    def test_the_report_names_the_carried_over_split(self, stub_llm, monkeypatch, tmp_path):
+        from src import memory
+
+        monkeypatch.setattr(memory, "MEMORY_DB", tmp_path / "iso2.db")
+        memory.init_db()
+        memory.upsert_topic_questions(memory.topic_key_for(SESSION),
+                                      [{"content": "What is agent memory, carried over?"}])
+        stub_llm()
+        result, _ = _run(max_questions=6)
+        assert any("carried over" in n for n in result.quality_report.critique)

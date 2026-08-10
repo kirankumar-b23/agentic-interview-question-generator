@@ -1791,7 +1791,16 @@ def _shares_head_noun(kept: list[str], cut: list[str]) -> bool:
 # one call over the 5-60 SELECTED questions, never over the corpus. Moving it to retrieval time is the
 # mistake `_scope_trim` documents at length.
 _SAME_THING_LOW = 0.62          # below this a pair is not plausibly the same ask; do not spend a call
-_SAME_THING_MAX_PAIRS = 12      # bound the prompt; pairs are considered closest-first
+# A RUNAWAY GUARD, not a sampling budget — and it used to be 12, which is a very different thing.
+#
+# At 12 the pass was sized for a ~10-question selected set. On a 38-question accumulated set there are 41
+# eligible pairs, so 29 were silently never judged, and the one hallucination pair the judge does call
+# redundant ranked 14th — just past the cut. "0 redundant" therefore meant "not looked at". With the cap
+# lifted the judge called 17 of those 41 the same thing.
+#
+# Lifting it is only safe because the pairs are now sent in SMALL BATCHES (`outcome_balance.JUDGE_BATCH`):
+# a single call carrying 52 pairs produced measurably worse verdicts than the same pairs in batches of 10.
+_SAME_THING_MAX_PAIRS = 400
 
 
 def _near_duplicate_pairs(questions: list) -> list[tuple]:
@@ -1855,29 +1864,33 @@ def _same_thing_pass(state: AgentState, questions: list) -> dict:
     if not pairs:
         return {"pairs_judged": 0, "removed": 0, "flagged": 0}
 
-    numbered = [{"n": k + 1, "a": questions[i].content[:400], "b": questions[j].content[:400]}
-                for k, (i, j, _) in enumerate(pairs)]
+    # SMALL BATCHES, via the shared judge. This used to be one `chat_completion_json` carrying every pair
+    # at `max_tokens=1024`, which had two measured problems: verdict quality degrades with batch size (a
+    # pair called SAME 3 times out of 3 on its own was called "different" inside a batch of 52), and a
+    # 1024-token ceiling truncates the reply once there are many pairs. `make_llm_judge` batches at
+    # `JUDGE_BATCH`, fails open PER BATCH so one bad chunk cannot discard the verdicts already collected,
+    # and applies the same verify-by-index rule this function used to do inline.
+    from src.outcome_balance import make_llm_judge
+
+    sims = {(min(i, j), max(i, j)): s for i, j, s in pairs}
+    stats: dict = {}
+    judge = make_llm_judge([q.content for q in questions], model=run_model(state),
+                           complete=chat_completion_json, on_usage=_usage_cb(state),
+                           max_pairs=_SAME_THING_MAX_PAIRS, stats=stats)
     try:
-        result = chat_completion_json(
-            model=run_model(state),           # the run's model, never the UI global
-            system_prompt=_SAME_THING_SYSTEM,
-            user_prompt=f"PAIRS:\n{json.dumps(numbered)}",
-            max_tokens=1024,
-            on_usage=_usage_cb(state),
-        )
+        verdicts = judge([(i, j) for i, j, _ in pairs]) or []
     except Exception as exc:  # noqa: BLE001 — a failed pass must never lose the question set
         print(f"[same_thing] skipped ({type(exc).__name__}: {exc})")
         return {"pairs_judged": 0, "removed": 0, "flagged": 0}
+    # Batching fails open PER BATCH, so a total outage returns [] rather than raising. Reporting
+    # `pairs_judged = len(pairs)` there would claim the set was checked when every call died.
+    if stats.get("batches") and stats["failed"] >= stats["batches"]:
+        print("[same_thing] every batch failed — the set was NOT checked for duplicates")
+        return {"pairs_judged": 0, "removed": 0, "flagged": 0}
 
-    # VERIFY IN CODE: only a pair we actually asked about, by its own index, can be acted on.
-    confirmed = []
-    for row in (result.get("pairs") or []):
-        try:
-            k = int(row["n"]) - 1
-        except (KeyError, TypeError, ValueError):
-            continue
-        if 0 <= k < len(pairs) and bool(row.get("same")):
-            confirmed.append(pairs[k])
+    # Closest-first, so the strongest signal is acted on before the MIN_QUESTIONS budget runs out.
+    confirmed = sorted(((i, j, sims.get((min(i, j), max(i, j)), 0.0)) for i, j in verdicts),
+                       key=lambda t: -t[2])
 
     removed = flagged = 0
     dropped_ids: set = set()
@@ -1902,6 +1915,190 @@ def _same_thing_pass(state: AgentState, questions: list) -> dict:
     if dropped_ids:
         questions[:] = [q for q in questions if q.question_id not in dropped_ids]
     return {"pairs_judged": len(pairs), "removed": removed, "flagged": flagged}
+
+
+def _cap_by_outcome(state: AgentState, questions: list) -> dict:
+    """Cap each interview topic's contribution to the SHIPPED set. Mutates `questions` in place.
+
+    Called after `_add_retained`, which is the whole reason it exists: `_same_thing_pass` judges only this
+    run's own picks, so the accumulated set was never examined as a whole. Measured on No-Code AI
+    Automation — 38 questions, 22 interview topics — three topics held 7, 6 and 5 questions while 8 had
+    none, and hallucination was asked six times.
+
+    NON-DESTRUCTIVE, and deliberately so. This trims what ships and leaves `topic_question_set` intact, so
+    the cap is idempotent (a re-run re-derives it), a cap change costs nothing, and a judge misfire is
+    reversible. The destructive counterpart is `scripts/filter_topic_sets.py --cap N --apply`, which
+    quarantines rows recoverably; both call `outcome_balance.balance_by_outcome`, so they cannot drift.
+
+    Fail-open at every level: no session context, no interview topics, or a dead judge all leave the set
+    untouched or fall back to cap-by-rank. One LLM call per run.
+    """
+    from src.outcome_balance import balance_by_outcome, make_llm_judge
+
+    ctx = state.session_context
+    if not ctx or len(questions) < 2:
+        return {"removed": 0, "orphans": 0, "cross_topic_duplicates": 0, "uncovered": []}
+    from src.pipeline import coverage_targets
+    outcomes = coverage_targets(ctx)
+    if not outcomes:
+        return {"removed": 0, "orphans": 0, "cross_topic_duplicates": 0, "uncovered": []}
+
+    texts = [q.content for q in questions]
+    # `session_fit` is the grounding score already computed for this run; retained questions get one from
+    # `_score_unscored_fits`. None reads as 0.0, which only affects ORDER within an outcome.
+    fits = [float(getattr(q, "session_fit", None) or 0.0) for q in questions]
+    approved = [bool(getattr(q, "retained_status", None) == "approved") for q in questions]
+    try:
+        res = balance_by_outcome(
+            texts, outcomes, fits=fits, approved=approved,
+            # `complete` is THIS module's symbol on purpose: it is what the suite stubs, and importing
+            # it inside the judge instead leaked real network calls past every existing stub.
+            judge=make_llm_judge(texts, model=run_model(state), complete=chat_completion_json,
+                                 on_usage=_usage_cb(state)))
+    except Exception as exc:  # noqa: BLE001 — balancing must never lose the question set
+        print(f"[outcome_cap] skipped ({type(exc).__name__}: {exc})")
+        return {"removed": 0, "orphans": 0, "cross_topic_duplicates": 0, "uncovered": []}
+
+    dropped_for = res.dropped_for
+    for i in res.drop:
+        q = questions[i]
+        t = dropped_for.get(i)
+        cross = i in res.cross_outcome
+        # Two different findings, labelled differently. "Another outcome already asks this" is precisely
+        # what a per-outcome cap cannot see, and it is what a real gate objected to: 7 of 11 shipped
+        # questions were prompt-engineering, filed under FOUR near-synonymous interview topics.
+        state.removed.append({
+            "content": q.content,
+            "reason": ("Another question already tests the same thing (across interview topics)"
+                       if cross else
+                       ("Interview topic already covered by another question"
+                        + (f': "{outcomes[t][:70]}"' if t is not None else ""))),
+            "stage": "duplicate" if cross else "outcome_cap",
+            "difficulty": q.difficulty, "company": q.attribution,
+        })
+    if res.drop:
+        keep = set(res.keep)
+        # In place: the caller rebuilds `state.questions` from this list immediately after.
+        questions[:] = [q for i, q in enumerate(questions) if i in keep]
+    state.uncovered_outcomes = [outcomes[t] for t in res.uncovered]
+    n_cross = len(res.cross_outcome)
+    if res.drop or res.uncovered:
+        print(f"[outcome_cap] {len(res.drop) - n_cross} capped within an outcome, {n_cross} cross-topic "
+              f"duplicate(s), {len(res.orphans)} orphan(s) kept, {len(res.uncovered)} outcome(s) "
+              f"uncovered ({res.same_verdicts}/{res.pairs_judged} pairs judged same)")
+    return {"removed": len(res.drop), "orphans": len(res.orphans),
+            "cross_topic_duplicates": n_cross, "uncovered": state.uncovered_outcomes}
+
+
+def _add_retained(state: AgentState, selected: list) -> dict:
+    """Union this topic's accumulated set into the shipped set. Returns the retained/new split.
+
+    This is what makes a re-run ADD rather than produce another version. The accumulated set already
+    existed — `memory.save_question_to_bank` has banked approved questions on every approve, and
+    `scripts/consolidate_topic_sets.py` merged the historical runs in — but nothing put it back into a
+    run's output, so a re-run shipped only the delta and looked like a fresh, smaller set.
+
+    Order matters: this runs AFTER `_same_thing_pass` (which should judge only this run's own picks
+    against each other, not re-litigate settled questions) and BEFORE `_syllabus_audit` (so retained
+    questions are audited and flagged like everything else).
+
+    A retained question that today's gates would reject is FLAGGED, never dropped — a reviewer approved
+    it, and the pipeline improvements post-date some of the set.
+
+    A REJECTED question is the exception: it is skipped outright, never flagged. `_drop_rejected` filters the
+    RETRIEVED pool in `_pick_questions`, long before this, so the accumulated set bypassed it — 67 of the 149
+    questions in the topic sets had been rejected by the reviewer and were re-added every run.
+    """
+    ctx = state.session_context
+    if not ctx or not getattr(ctx, "session_name", None):
+        return {"retained": 0, "newly_found": len(selected), "stale": 0}
+    from src import memory as _memory
+    from src.assessment_items import is_assessment_item
+    from src.interview_format import is_hands_on_task
+    from src.quality import is_quality_question
+
+    newly_found = len(selected)
+    try:
+        topic_key = _memory.topic_key_for(ctx.session_name)
+        rows = _memory.get_topic_questions(topic_key)
+    except Exception as exc:  # noqa: BLE001 — a missing set must not lose this run's questions
+        print(f"[retained] skipped ({type(exc).__name__}: {exc})")
+        return {"retained": 0, "newly_found": newly_found, "stale": 0}
+    if not rows:
+        return {"retained": 0, "newly_found": newly_found, "stale": 0}
+
+    # A REJECTED question must never come back, and this is where it was coming back.
+    #
+    # `_drop_rejected` runs in `_pick_questions`, long before this — it filters the RETRIEVED pool. The
+    # accumulated set is unioned in here, afterwards, so it bypassed the rejection filter entirely. This
+    # function's own docstring used to claim "`_drop_rejected` already keeps anything the reviewer rejected
+    # from coming back"; that was simply false for retained questions.
+    #
+    # Measured before the fix: **67 of the 149 questions in the topic sets had been REJECTED by the
+    # reviewer** (30 of 39 in Gen AI Foundations, 23 of 33 in Productivity Power-Up) and were re-added to
+    # every run. It is also the obvious explanation for a report reading "23 question(s) closely repeat
+    # something already rejected" and for a low `predicted_accept`.
+    #
+    # Scoped to the TOPIC's sessions, not the run's: a question rejected while reviewing one grouping must
+    # stay rejected for every other grouping of the same topic.
+    rejected: set = set()
+    try:
+        from src.curriculum_order import _course_structure
+        sessions = [s["name"] if isinstance(s, dict) else s
+                    for s in (_course_structure().get(topic_key) or [])]
+        rejected = _memory.get_rejected_norms(" + ".join(sessions) if sessions else ctx.session_name)
+    except Exception as exc:  # noqa: BLE001 — a lookup failure must not lose the set
+        print(f"[retained] rejection lookup skipped ({type(exc).__name__}: {exc})")
+
+    have = {_memory.normalize_content(q.content) for q in selected}
+    added = stale = suppressed = 0
+    for row in rows:
+        norm = row.get("content_norm") or _memory.normalize_content(row["content"])
+        if norm in have:
+            continue                      # this run found it too; keep the freshly-scored copy
+        if norm in rejected:
+            suppressed += 1
+            continue                      # the reviewer said no — do not resurrect it
+        content = row["content"]
+        reason = None
+        if not is_quality_question(content):
+            reason = "would fail today's form gate"
+        elif is_hands_on_task(content):
+            reason = "hands-on task — not answerable in a conversational interview"
+        elif is_assessment_item(content):
+            reason = "multiple-choice assessment item"
+        detail = {}
+        if row.get("detail_json"):
+            try:
+                detail = json.loads(row["detail_json"])
+            except Exception:  # noqa: BLE001 — fall back to the plain columns
+                detail = {}
+        q = QuestionDetail(
+            question_id=str(uuid.uuid4()),
+            category=detail.get("category") or getattr(state.config, "category", "GEN_AI"),
+            content=content,
+            topic=detail.get("topic") or "Gen AI",
+            sub_topic=detail.get("sub_topic"),
+            difficulty=row.get("difficulty") or detail.get("difficulty") or "Medium",
+            role=detail.get("role"),
+            source=row.get("source") or detail.get("source") or "interview_db",
+            asked_in_company=row.get("company") or detail.get("asked_in_company"),
+            source_url=detail.get("source_url") or "",
+            kp_label=row.get("kp_label") or detail.get("kp_label"),
+            relevance_score=detail.get("relevance_score"),
+            retained=True,
+            retained_status=row.get("status") or "backfilled",
+            stale_reason=reason,
+        )
+        selected.append(q)
+        state.questions[q.question_id] = q
+        have.add(norm)
+        added += 1
+        stale += 1 if reason else 0
+    if suppressed:
+        print(f"[retained] {suppressed} rejected question(s) were NOT carried over")
+    return {"retained": added, "newly_found": newly_found, "stale": stale,
+            "rejected_suppressed": suppressed}
 
 
 _TRIM_SYSTEM = """You remove OFF-SYLLABUS sub-clauses from real interview questions.
@@ -2427,6 +2624,15 @@ def tool_submit_question_set(state: AgentState) -> dict:
     # AFTER the trim, because trimming can pull two questions onto the same core ask, and the pass
     # should judge the text that will actually ship. Mutates `selected` and `state.questions` together.
     same = _same_thing_pass(state, selected)
+    # Carry this topic's existing set in, so a re-run ADDS to it instead of shipping a new version.
+    # After the same-thing pass (so it judges only this run's picks against each other) and before the
+    # syllabus audit (so retained questions are audited and flagged like everything else).
+    retained = _add_retained(state, selected)
+    state.rejected_suppressed = retained.get("rejected_suppressed", 0)
+    # AFTER `_add_retained`, and that is the entire point of this call. `_same_thing_pass` above judges
+    # only this run's own picks, so nothing had ever looked at the ACCUMULATED set as a whole — which is
+    # how hallucination came to be asked six times in one 38-question topic.
+    capped = _cap_by_outcome(state, selected)
     state.questions = {q.question_id: q for q in selected}
     audit = _syllabus_audit(state, selected)
     state.off_syllabus = audit["off_syllabus"]
@@ -2439,6 +2645,12 @@ def tool_submit_question_set(state: AgentState) -> dict:
             "reserve": len(state.reserve), "kp_tagged": kp_tagged,
             "scope_trimmed": len(trims), "off_syllabus": len(state.off_syllabus),
             "same_thing_removed": same["removed"], "same_thing_flagged": same["flagged"],
+            "retained": retained["retained"], "newly_found": retained["newly_found"],
+            "retained_stale": retained["stale"],
+            "rejected_suppressed": retained.get("rejected_suppressed", 0),
+            "outcome_capped": capped["removed"], "outcome_orphans": capped["orphans"],
+            "cross_topic_duplicates": capped.get("cross_topic_duplicates", 0),
+            "outcomes_uncovered": capped["uncovered"],
             "per_session": session_rep.get("per_session") or {},
             "sessions_without_candidates": session_rep.get("no_candidates") or []}
 

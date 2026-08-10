@@ -23,6 +23,26 @@ from src.tools import TOOL_SCHEMAS, TOOL_DISPATCH
 # sit here, unused, where it could silently diverge from the one that actually applies.
 
 
+class RetrievalUnavailable(Exception):
+    """A retrieval tier the run depends on is down, so the run stops before spending anything.
+
+    A POLICY stop, not a crash — `AgentPipeline.run` catches it ahead of the generic handler so no
+    traceback is printed and the reason reaches the report verbatim.
+
+    Retrieval is not a preliminary to the "real" work, it IS the work: with the web tier dead, the
+    Evaluation agent, the syllabus audit, the same-thing pass, the outcome balance and up to three
+    quality-gate critiques would all still run, judging a pool the failure already decided.
+
+    Lives here rather than in `pipeline` so the agents can raise it without importing `pipeline`
+    (which imports them).
+    """
+
+    def __init__(self, status: str, detail: str = ""):
+        self.status = status
+        self.detail = detail
+        super().__init__(f"Tavily unavailable ({status})" + (f" — {detail}" if detail else ""))
+
+
 # ── Agent State ─────────────────────────────────────────────────────────────
 
 @dataclass
@@ -64,6 +84,14 @@ class AgentState:
     # Selected questions testing a concept absent from their session's material, and the LLM-judged
     # outcome coverage that replaces the proximity measure. See `tools._syllabus_audit`.
     off_syllabus: list[dict] = field(default_factory=list)
+    # Interview topics the FINAL set leaves with no question at all (`tools._cap_by_outcome`). Reported,
+    # never gated — a mature topic can legitimately have thin outcomes, the same reason `topic_coverage`
+    # is reported only. It is the more useful half of the balance diagnosis: on No-Code AI Automation 9 of
+    # 22 outcomes had nothing while three others held 47% of the set.
+    uncovered_outcomes: list[str] = field(default_factory=list)
+    # Rejected questions the accumulated set tried to carry back in (`tools._add_retained`). 67 of 149
+    # before that filter existed, so it is reported rather than left silent.
+    rejected_suppressed: int = 0
     # Did the last-resort open-web tier run, and how many questions did it contribute.
     open_web_used: bool = False
     open_web_added: int = 0
@@ -90,6 +118,10 @@ class AgentState:
     web_status: str = "not_run"
     web_error: str | None = None   # human-readable Tavily failure detail, if any
     web_search_disabled: bool = False   # set when the pre-flight Tavily health check fails (skip web calls)
+    # How many times the Tavily health probe ran this run. Must be 1 (2 if a transient status was
+    # retried): the probe moved to `pipeline._tavily_preflight`, and a `RetrievalAgent` that also probed
+    # would double the latency and the API call silently. Asserted in tests.
+    web_probes: int = 0
     # Pipeline-level state (set by UnderstandingAgent, read by RetrievalAgent)
     suggested_queries: list[str] = field(default_factory=list)
     # Quality gate revision instructions (set by pipeline, read by EvaluationAgent)
@@ -181,15 +213,29 @@ def _deterministic_gate_issues(state: AgentState) -> list[dict]:
     min_q = getattr(state.config, "min_questions", MIN_QUESTIONS) or MIN_QUESTIONS
     max_q = min(getattr(state.config, "max_questions", None) or FINAL_SET_CAP, FINAL_SET_CAP)
 
+    # `too-few` is judged on the TOTAL: a 39-question set carried over from the topic is not thin.
     if total < min_q:
         issues.append({"id": None, "issue": "too-few",
                        "suggestion": f"Only {total} question(s); this run asked for at least {min_q}. "
                                      f"The on-topic pool was too thin — do NOT remove more."})
-    # Nothing else checks the upper bound. If selection didn't run, this is what catches it.
-    if total > max_q:
+    # `too-many` is judged on NEWLY-FOUND questions only, and that distinction is the whole check.
+    #
+    # It is still the only upper-bound check anywhere, and its real purpose is to catch a run where
+    # `_enforce_submission` failed and the raw candidate pool shipped unranked — those are all newly
+    # found, so it still fires (263 of them on one measured run).
+    #
+    # Counting the TOTAL made it fire on every mature topic instead. `_add_retained` deliberately carries
+    # the topic's accumulated set in, and the final set is NOT capped, so 36 retained + 3 new tripped a
+    # bar of 15 and the objection read "the set was never trimmed. Re-run submit_question_set." Two real
+    # runs then failed the gate on that alone — with every numeric condition passing — and burned both
+    # revision rounds instructing the agent to trim a set it must not trim. Same lesson the trim TESTS
+    # already had to learn: count NEWLY-FOUND questions.
+    fresh = sum(1 for q in questions if not getattr(q, "retained", False)) + len(state.coding_questions)
+    if fresh > max_q:
         issues.append({"id": None, "issue": "too-many",
-                       "suggestion": f"{total} questions exceeds the requested {max_q} — the set was "
-                                     f"never trimmed. Re-run submit_question_set."})
+                       "suggestion": f"{fresh} newly-found question(s) exceeds the requested {max_q} — "
+                                     f"selection did not run. Re-run submit_question_set. "
+                                     f"(Carried-over questions are excluded and are not a problem.)"})
     # A total relevance-judge failure leaves every candidate at the neutral default score, which
     # otherwise looks like a clean pass.
     if not state.relevance_scored:

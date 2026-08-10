@@ -7,6 +7,7 @@ import AddCourse from './pages/AddCourse.jsx'
 import History from './pages/History.jsx'
 import Progress from './pages/Progress.jsx'
 import Review from './pages/Review.jsx'
+import Batch from './pages/Batch.jsx'
 import SessionSelector from './pages/SessionSelector.jsx'
 
 /**
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="/" element={<SessionSelector />} />
           <Route path="/progress/:runId" element={<Progress />} />
           <Route path="/review/:runId" element={<Review />} />
+          <Route path="/batch/:batchId" element={<Batch />} />
           <Route path="/history" element={<History />} />
           <Route path="/add" element={<AddCourse />} />
           <Route path="*" element={<Navigate to="/" replace />} />

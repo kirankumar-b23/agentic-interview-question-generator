@@ -89,6 +89,67 @@ def init_db():
             created_at   TEXT DEFAULT (datetime('now')),
             PRIMARY KEY (session_name, content_norm)
         );
+
+        -- The ACCUMULATING question set for a topic: the single reference that grows across runs.
+        --
+        -- Keyed on (topic_key, content_norm), NOT on question_id. `question_bank` keys on question_id,
+        -- which regenerates every run, so its INSERT OR IGNORE never collides and the same content banks
+        -- repeatedly. Same lesson `rejected_questions` above already encodes.
+        --
+        -- `status`: 'approved' (a reviewer accepted it) vs 'backfilled' (imported from run history by
+        -- scripts/consolidate_topic_sets.py, never explicitly approved). Both ship; the distinction keeps
+        -- "reviewer-blessed" meaningful instead of silently promoting 250 unreviewed questions.
+        CREATE TABLE IF NOT EXISTS topic_question_set (
+            topic_key    TEXT NOT NULL,
+            content_norm TEXT NOT NULL,
+            content      TEXT NOT NULL,
+            difficulty   TEXT,
+            company      TEXT,
+            source       TEXT,
+            kp_label     TEXT,
+            session_name TEXT,
+            first_run_id TEXT,
+            status       TEXT DEFAULT 'backfilled',
+            stale_reason TEXT,
+            -- The FULL original QuestionDetail dict. Reconstructing one from the columns above would
+            -- silently drop role, source_url, session_fit, relevance_score and the rest, so the question
+            -- that ships is the question that was found.
+            detail_json  TEXT,
+            created_at   TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (topic_key, content_norm)
+        );
+
+        -- Which run is the CANONICAL holder for a topic. Its run_results payload is rendered from
+        -- topic_question_set, so /review/<id>, approve and the Sheets export all work unchanged — that is
+        -- why there is no separate topic page.
+        CREATE TABLE IF NOT EXISTS topic_runs (
+            topic_key  TEXT PRIMARY KEY,
+            run_id     TEXT NOT NULL,
+            updated_at TEXT DEFAULT (datetime('now'))
+        );
+
+        -- One spreadsheet per topic. org_id/interview_id are persisted because sheets_writer mints fresh
+        -- uuid4()s per call, and a re-export with new ids looks like a brand-new interview to the LMS.
+        CREATE TABLE IF NOT EXISTS topic_sheets (
+            topic_key      TEXT PRIMARY KEY,
+            spreadsheet_id TEXT,
+            url            TEXT,
+            org_id         TEXT,
+            interview_id   TEXT,
+            updated_at     TEXT DEFAULT (datetime('now'))
+        );
+
+        -- Questions from history that today's gates reject. Kept, never shipped: "without losing the
+        -- data" without re-admitting what the pipeline improvements removed.
+        CREATE TABLE IF NOT EXISTS quarantined_questions (
+            topic_key    TEXT NOT NULL,
+            content_norm TEXT NOT NULL,
+            content      TEXT NOT NULL,
+            reason       TEXT,
+            run_id       TEXT,
+            created_at   TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (topic_key, content_norm)
+        );
     """)
     conn.commit()
     # Migrate: add columns to existing databases
@@ -96,6 +157,20 @@ def init_db():
         "ALTER TABLE run_history ADD COLUMN api_usage_json TEXT",
         "ALTER TABLE question_feedback ADD COLUMN session_name TEXT",
         "ALTER TABLE question_feedback ADD COLUMN content TEXT",
+        # Which multi-topic batch a run belonged to, or NULL for a single run. Persisted so the batch
+        # view survives a server restart instead of living only in main.py's in-memory registry.
+        "ALTER TABLE run_history ADD COLUMN batch_id TEXT",
+        # Set when a run's questions have been merged into its topic's canonical run. The row and its
+        # run_results payload are KEPT — every replay-based decision in this project (the coverage gate,
+        # the relevance back-fill target, the de-stack verdict) was measured from those payloads.
+        "ALTER TABLE run_history ADD COLUMN superseded_by TEXT",
+        # `topic_question_set` shipped without this for one commit, and CREATE TABLE IF NOT EXISTS does
+        # not alter an existing table — so a database created in between has the table without the column.
+        "ALTER TABLE topic_question_set ADD COLUMN detail_json TEXT",
+        # Why a run produced nothing. Failed runs were not persisted at all, so a Tavily outage looked
+        # identical to never having pressed Generate — the reviewer had no way to tell a retrieval
+        # problem from a bad topic. NULL for a successful run.
+        "ALTER TABLE run_history ADD COLUMN error TEXT",
     ]:
         try:
             conn.execute(migration)
@@ -152,17 +227,39 @@ def clear_session_resolution(session_name: str) -> int:
 
 def save_run(run_id: str, session_name: str, question_count: int,
              composite_score: float, loops_used: int, approved: bool = False,
-             api_usage: dict | None = None):
+             api_usage: dict | None = None, batch_id: str | None = None,
+             error: str | None = None):
+    """Record a run in History. `error` is set for a run that produced nothing and says WHY.
+
+    A failed run used to be persisted nowhere (`main._persist_result` returned early on `result.error`),
+    so a Tavily outage was indistinguishable from never having pressed Generate — and a reviewer had no
+    way to tell a retrieval problem from a bad topic.
+    """
     conn = get_connection()
     conn.execute(
         """INSERT OR REPLACE INTO run_history
-           (run_id, session_name, question_count, composite_score, loops_used, approved, api_usage_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+           (run_id, session_name, question_count, composite_score, loops_used, approved,
+            api_usage_json, batch_id, error)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (run_id, session_name, question_count, composite_score, loops_used, int(approved),
-         json.dumps(api_usage) if api_usage else None)
+         json.dumps(api_usage) if api_usage else None, batch_id, error)
     )
     conn.commit()
     conn.close()
+
+
+def get_batch_runs(batch_id: str) -> list[dict]:
+    """Runs recorded for a multi-topic batch, oldest first.
+
+    Read from SQLite rather than main.py's in-memory registry so the batch view still works after a
+    restart — the registry is bounded and pruned, this is not.
+    """
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT run_id, session_name, question_count, composite_score, approved, created_at
+           FROM run_history WHERE batch_id = ? ORDER BY created_at""", (batch_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def save_run_result(run_id: str, payload: dict):
@@ -268,11 +365,20 @@ def delete_course(course_id: str):
     conn.close()
 
 
-def get_run_history(limit: int = 100) -> list[dict]:
+def get_run_history(limit: int = 100, include_superseded: bool = False) -> list[dict]:
+    """Completed runs, newest first.
+
+    Superseded runs are HIDDEN by default: after `scripts/consolidate_topic_sets.py` each topic has one
+    canonical run holding the merged set, and showing the 53 originals alongside it would make History
+    longer than before consolidating rather than shorter. The rows and their payloads are still there —
+    pass `include_superseded=True` to see them.
+    """
     conn = get_connection()
     rows = conn.execute(
         "SELECT run_id, session_name, question_count, composite_score, loops_used, approved, "
-        "created_at, api_usage_json FROM run_history ORDER BY created_at DESC LIMIT ?",
+        "created_at, api_usage_json, batch_id, superseded_by, error FROM run_history "
+        + ("" if include_superseded else "WHERE superseded_by IS NULL ")
+        + "ORDER BY created_at DESC LIMIT ?",
         (limit,)
     ).fetchall()
     conn.close()
@@ -364,14 +470,237 @@ def save_question_to_bank(question_id: str, session_name: str, content: str, sou
 
 
 def get_bank_questions(session_name: str) -> list[dict]:
-    """Return all banked questions for the given session (for cross-run dedup)."""
+    """Banked questions for the session's TOPIC (for cross-run dedup).
+
+    Matched by topic, not by the literal name. Every stored key is a JOINED name ("A + B") and two of them
+    are different groupings of the same sessions, so an exact-string match meant a run grouped differently
+    could not see its own topic's banked questions — the mechanism silently did nothing for those runs.
+
+    Resolved in Python rather than with a new indexed column: `question_bank` is ~48 rows, so this is free
+    and — unlike a column — it works for the rows already stored under joined names. Add a `topic_key`
+    column if it ever reaches thousands.
+    """
+    want = topic_key_for(session_name or "")
     conn = get_connection()
     rows = conn.execute(
-        "SELECT question_id, content FROM question_bank WHERE session_name = ? ORDER BY created_at DESC",
-        (session_name,)
-    ).fetchall()
+        "SELECT question_id, content, session_name FROM question_bank ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return [{"question_id": r["question_id"], "content": r["content"]} for r in rows
+            if topic_key_for(r["session_name"] or "") == want]
+
+
+# --- The accumulating per-topic question set (the "single reference") ---
+
+def topic_key_for(session_name: str) -> str:
+    """The topic a run's questions accumulate under.
+
+    Uses `data_loader.get_topic_for_session`, which already resolves a joined "A + B + C" name to the
+    topic containing any of those sessions — so differently-grouped runs of one topic share a set.
+
+    NEVER returns None. A custom session absent from course_structure gets its own `session:` key: a
+    None key would pool every custom run into one bucket, silently merging unrelated question sets.
+    """
+    from src.data_loader import get_topic_for_session
+    topic = None
+    try:
+        topic = get_topic_for_session(session_name or "")
+    except Exception:  # noqa: BLE001 — a missing course structure must not break accumulation
+        topic = None
+    return topic if topic else f"session:{normalize_content(session_name)}"
+
+
+def upsert_topic_questions(topic_key: str, rows: list[dict]) -> int:
+    """Add questions to a topic's set, keyed by normalized content. Returns how many were NEW.
+
+    An existing row is left alone except that `status` is upgraded 'backfilled' -> 'approved' — a
+    reviewer accepting a question that was backfilled is new information; the reverse is not.
+    """
+    if not topic_key or not rows:
+        return 0
+    conn = get_connection()
+    added = 0
+    for r in rows:
+        content = (r.get("content") or "").strip()
+        if not content:
+            continue
+        norm = normalize_content(content)
+        existing = conn.execute(
+            "SELECT status FROM topic_question_set WHERE topic_key=? AND content_norm=?",
+            (topic_key, norm)).fetchone()
+        if existing:
+            if r.get("status") == "approved" and existing["status"] != "approved":
+                conn.execute("UPDATE topic_question_set SET status='approved' "
+                             "WHERE topic_key=? AND content_norm=?", (topic_key, norm))
+            continue
+        conn.execute(
+            """INSERT INTO topic_question_set
+               (topic_key, content_norm, content, difficulty, company, source, kp_label,
+                session_name, first_run_id, status, stale_reason, detail_json)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (topic_key, norm, content, r.get("difficulty"), r.get("company"), r.get("source"),
+             r.get("kp_label"), r.get("session_name"), r.get("first_run_id"),
+             r.get("status") or "backfilled", r.get("stale_reason"),
+             json.dumps(r["detail"]) if r.get("detail") else None))
+        added += 1
+    conn.commit()
+    conn.close()
+    return added
+
+
+def get_topic_questions(topic_key: str) -> list[dict]:
+    """A topic's accumulated set: approved first, then newest — the order it should ship in."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT content, content_norm, difficulty, company, source, kp_label, session_name,
+                  first_run_id, status, stale_reason, detail_json, created_at
+           FROM topic_question_set WHERE topic_key = ?
+           ORDER BY CASE status WHEN 'approved' THEN 0 ELSE 1 END, created_at""",
+        (topic_key,)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def content_norms_in_other_topics(topic_key: str) -> dict[str, str]:
+    """`content_norm` -> the topic holding it, for every topic EXCEPT `topic_key`.
+
+    Backs the cross-topic suppression: a question homed to another topic must not be asked here too. 16 of
+    149 distinct questions sat in more than one topic before this existed, five of them in three, and no
+    session belongs to two topics — so it was pure duplication, not shared content.
+
+    Returns the topic name so the removal reason can NAME it. "already used in another topic" with no
+    name leaves a reviewer unable to tell a correct suppression from a mis-homed question.
+    """
+    if not topic_key:
+        return {}
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT content_norm, topic_key FROM topic_question_set WHERE topic_key != ?",
+        (topic_key,)).fetchall()
+    conn.close()
+    return {r["content_norm"]: r["topic_key"] for r in rows}
+
+
+def remove_topic_question(topic_key: str, content: str) -> bool:
+    """Drop a question from a topic's set. Returns whether a row went.
+
+    The caller also records a rejection so it cannot be re-added by a later run — removing it here
+    alone would let the next run rediscover it as "new".
+    """
+    conn = get_connection()
+    cur = conn.execute("DELETE FROM topic_question_set WHERE topic_key=? AND content_norm=?",
+                       (topic_key, normalize_content(content)))
+    conn.commit()
+    gone = cur.rowcount > 0
+    conn.close()
+    return gone
+
+
+def quarantine_question(topic_key: str, content: str, reason: str, run_id: str = None) -> None:
+    """Park a question today's gates reject: kept and recoverable, never shipped."""
+    conn = get_connection()
+    conn.execute(
+        """INSERT OR IGNORE INTO quarantined_questions
+           (topic_key, content_norm, content, reason, run_id) VALUES (?,?,?,?,?)""",
+        (topic_key, normalize_content(content), content, reason, run_id))
+    conn.commit()
+    conn.close()
+
+
+def get_quarantined(topic_key: str = None) -> list[dict]:
+    conn = get_connection()
+    if topic_key:
+        rows = conn.execute("SELECT * FROM quarantined_questions WHERE topic_key=? ORDER BY created_at",
+                            (topic_key,)).fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM quarantined_questions ORDER BY topic_key, created_at").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# --- Canonical run + sheet per topic ---
+
+def set_canonical_run(topic_key: str, run_id: str) -> None:
+    conn = get_connection()
+    conn.execute("INSERT OR REPLACE INTO topic_runs (topic_key, run_id, updated_at) "
+                 "VALUES (?,?,datetime('now'))", (topic_key, run_id))
+    conn.commit()
+    conn.close()
+
+
+def get_canonical_run(topic_key: str) -> str | None:
+    conn = get_connection()
+    row = conn.execute("SELECT run_id FROM topic_runs WHERE topic_key=?", (topic_key,)).fetchone()
+    conn.close()
+    return row["run_id"] if row else None
+
+
+def mark_superseded(run_id: str, canonical_run_id: str) -> None:
+    """Flag a run as merged into its topic's canonical run. Deletes nothing."""
+    conn = get_connection()
+    conn.execute("UPDATE run_history SET superseded_by=? WHERE run_id=?", (canonical_run_id, run_id))
+    conn.commit()
+    conn.close()
+
+
+def sync_canonical_payload(topic_key: str) -> int | None:
+    """Re-render the topic's canonical run payload from `topic_question_set`. Returns the new count.
+
+    The canonical run's payload is what `/review/<id>` and the Sheets export read, so a change to the set
+    is INVISIBLE until this runs. Quarantining 15 questions left four payloads still showing the old
+    counts (67 vs 56, 37 vs 35…) — the cut had happened in the database and not in the product.
+
+    Lives here so `scripts/consolidate_topic_sets.py` and `scripts/filter_topic_sets.py` cannot drift on
+    how a canonical payload is built. Returns None when the topic has no canonical run or no payload.
+    """
+    run_id = get_canonical_run(topic_key)
+    if not run_id:
+        return None
+    payload = get_run_result(run_id)
+    if not payload:
+        return None
+    details = []
+    for row in get_topic_questions(topic_key):
+        if row.get("detail_json"):
+            try:
+                details.append(json.loads(row["detail_json"]))
+                continue
+            except Exception:  # noqa: BLE001 — fall back to the plain columns
+                pass
+        details.append({"content": row["content"], "question_id": row["content_norm"][:36],
+                        "category": "GEN_AI", "topic": "Gen AI",
+                        "difficulty": row.get("difficulty") or "Medium",
+                        "source": row.get("source") or "interview_db"})
+    out = dict(payload.get("output") or {})
+    out["question_details"] = details
+    payload["output"] = out
+    save_run_result(run_id, payload)
+    conn = get_connection()
+    conn.execute("UPDATE run_history SET question_count=? WHERE run_id=?", (len(details), run_id))
+    conn.commit()
+    conn.close()
+    return len(details)
+
+
+def get_topic_sheet(topic_key: str) -> dict | None:
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM topic_sheets WHERE topic_key=?", (topic_key,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def save_topic_sheet(topic_key: str, spreadsheet_id: str, url: str,
+                     org_id: str = None, interview_id: str = None) -> None:
+    """Remember a topic's spreadsheet AND its LMS identifiers, so re-exports update one interview."""
+    prev = get_topic_sheet(topic_key) or {}
+    conn = get_connection()
+    conn.execute(
+        """INSERT OR REPLACE INTO topic_sheets
+           (topic_key, spreadsheet_id, url, org_id, interview_id, updated_at)
+           VALUES (?,?,?,?,?,datetime('now'))""",
+        (topic_key, spreadsheet_id, url,
+         org_id or prev.get("org_id"), interview_id or prev.get("interview_id")))
+    conn.commit()
+    conn.close()
 
 
 # --- Rejected-question suppression (per session, keyed by normalized content) ---
