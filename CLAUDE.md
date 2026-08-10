@@ -812,6 +812,44 @@ critiques — all judging a pool the failure had already decided.
   stub `health_check` as `no_key` to force bank-only, which now aborted all 18 pipeline runs in that file
   before they reached the behaviour under test.
 
+## Why two runs failed the gate with every number passing
+
+Both had `coverage_efficiency`, `question count` and `composite` **over their bars** and still read `fail`,
+because `passed = all(c["ok"] …)` and the fourth condition is the LLM critique: `12 / 15 unresolved`. Read
+`report["gate_checks"]` (the payload key is `report`, not `quality_report`) before theorising — and note the
+dict key is `ok`, not `pass`.
+
+- **`too-many` was a FALSE objection that no mature topic could survive.** `_critique_question_set` compared
+  `len(state.questions)` against the UI slider, so `_add_retained`'s carried-over set tripped it: 36 + 3 vs
+  15, reported as *"the set was never trimmed. Re-run submit_question_set."* It now counts **newly-found**
+  questions. That keeps the check's real purpose — it is still the only upper-bound check, and an
+  `_enforce_submission` failure ships ~263 candidates that are all newly found, so it still fires. Exactly
+  the lesson the trim TESTS already had to learn. `too-few` still counts the TOTAL.
+- **The remaining objections were REAL duplicates that neither dedup stage could see.** `_same_thing_pass`
+  runs BEFORE `_add_retained`, so retained questions are never judged by it; `balance_by_outcome` ran after
+  but only formed pairs WITHIN one outcome. On the shipped set **7 of 11 questions were prompt-engineering
+  spread across FOUR near-synonymous interview topics**, so *"What is prompt engineering?"* and *"How do you
+  approach designing an effective prompt?"* were never once compared.
+- **`balance_by_outcome` now has a second, CROSS-OUTCOME stage** over the stage-1 survivors, with the same
+  greedy non-transitive rule and the same batched judge. Measured on the real approved set: 11 → 9, two
+  cross-topic duplicates caught that were structurally invisible before, and a second pass proposes 0.
+- **`CROSS_OUTCOME_FLOOR = 0.55`, deliberately below `_SAME_THING_LOW` (0.62).** Within an outcome the
+  grouping bounds the pair count; across outcomes only a floor does. The pair the gate objected to scores
+  **0.573**, so 0.62 would never have offered it. Cost across the nine topics: 108 pairs at 0.62 → **210 at
+  0.55**, about 23 per topic. Precision does not depend on the floor — nothing is dropped without a verdict,
+  so it only decides what gets LOOKED at.
+- **Stage 2 has its own greedy loop and needed its own test.** A mutation making it compare against every
+  survivor instead of only the KEPT ones left all 59 tests green, because the non-transitivity test routed
+  through a single outcome (i.e. stage 1). The regression case is a real triple spanning three outcomes with
+  (A,B) at 0.553 and (B,C) at 0.587.
+- **A fail-open helper that omits a key does not fail open.** Adding `cross_topic_duplicates` to the happy
+  path only made `tool_submit_question_set` raise `KeyError` on every early return, turning a survivable API
+  outage into `result.error`. `TestApiOutage` caught it; `TestEveryFailOpenPathReturnsTheFullShape` pins the
+  shape of all four paths.
+- **`report` describing 39 questions while `output` holds 11 is NOT a bug.** The report is from generation;
+  `output` is the subset approved in Review, which then became the topic's canonical run (`main.py` calls
+  `set_canonical_run` on approve). Chasing that consumed real effort — check `topic_runs` first.
+
 ## Web/UI notes
 
 - `main.py` errors use `{"error": ...}`, not FastAPI's `{"detail": ...}` — the React client reads
@@ -887,7 +925,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 711 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 733 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

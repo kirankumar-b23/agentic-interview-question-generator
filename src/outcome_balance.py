@@ -86,6 +86,10 @@ class BalanceResult:
     # outcome index -> indices assigned to it (orphans excluded)
     assigned: dict[int, list[int]] = field(default_factory=dict)
     uncovered: list[int] = field(default_factory=list)
+    # Dropped by the CROSS-OUTCOME stage rather than within one outcome. The caller labels these
+    # differently because they are a different finding: "another outcome already asks this" is what a
+    # per-outcome cap structurally cannot see.
+    cross_outcome: set[int] = field(default_factory=set)
     pairs_judged: int = 0
     same_verdicts: int = 0
     judge_failed: bool = False
@@ -185,10 +189,12 @@ def balance_by_outcome(texts: list[str], outcomes: list[str], *, fits: list[floa
     # outcome's own members and nothing else.
     same: set[tuple[int, int]] = set()
     total_pairs = 0
-    for t, members in ordered.items():
-        group = [(a, b) for x, a in enumerate(members) for b in members[x + 1:]]
+
+    def _ask(group: list, label: str) -> None:
+        """Judge one group and record its confirmed same-pairs. Fail-open per group."""
+        nonlocal total_pairs
         if not group or judge is None:
-            continue
+            return
         total_pairs += len(group)
         asked = {(min(a, b), max(a, b)) for a, b in group}
         try:
@@ -197,13 +203,15 @@ def balance_by_outcome(texts: list[str], outcomes: list[str], *, fits: list[floa
                 if key in asked:                      # verified: only a pair we actually asked about
                     same.add(key)
         except Exception as exc:  # noqa: BLE001 — a dead judge must not lose the set
-            # Per-outcome fail-open: one bad outcome keeps its questions, the rest are still balanced.
-            print(f"[outcome_balance] outcome {t} skipped ({type(exc).__name__}: {exc})")
+            # Per-group fail-open: one bad group keeps its questions, the rest are still balanced.
+            print(f"[outcome_balance] {label} skipped ({type(exc).__name__}: {exc})")
             res.judge_failed = True
-    res.pairs_judged = total_pairs
-    res.same_verdicts = len(same)
+
+    for t, members in ordered.items():
+        _ask([(a, b) for x, a in enumerate(members) for b in members[x + 1:]], f"outcome {t}")
     is_same = lambda a, b: (min(a, b), max(a, b)) in same  # noqa: E731
 
+    # ── Stage 1: within an outcome ────────────────────────────────────────────────────────────────
     keep: list[int] = list(res.orphans)
     dropped: list[int] = []
     for t, members in ordered.items():
@@ -217,11 +225,60 @@ def balance_by_outcome(texts: list[str], outcomes: list[str], *, fits: list[floa
                 sel.append(i)
         keep += sel
 
+    # ── Stage 2: ACROSS outcomes, over the survivors ──────────────────────────────────────────────
+    #
+    # Stage 1 can only ever compare questions filed under the SAME outcome, and the duplicates a real
+    # quality gate objects to routinely are not. Measured on a shipped set: **7 of 11 questions were
+    # prompt-engineering, spread across FOUR near-synonymous interview topics** ("Prompt engineering
+    # fundamentals", "Structuring prompts for clarity", "Prompt engineering and crafting effective
+    # prompts", "Iterative prompt optimization"). So *"What is prompt engineering?"* and *"How can prompt
+    # engineering be used to improve LLM outputs?"* were never once compared, and the gate failed the run
+    # naming exactly those pairs.
+    #
+    # Candidates come from [CROSS_OUTCOME_FLOOR, DEDUP_SEMANTIC_THRESHOLD): above the bar
+    # `tool_deduplicate_questions` already removed them, and the floor is the only thing bounding the
+    # pair count once the outcome grouping is gone.
+    #
+    # That floor is 0.55, NOT `_SAME_THING_LOW` (0.62), and the difference was measured rather than
+    # assumed: the pair the gate actually objected to — "What is prompt engineering?" vs "How do you
+    # approach designing an effective prompt?", filed under two different outcomes — scores **0.573**, so
+    # a 0.62 floor never offers it to the judge. Cost across the nine shipped topics: 108 pairs at 0.62,
+    # 210 at 0.55. See `config.CROSS_OUTCOME_FLOOR`.
+    #
+    # Stage 1 remains the only thing that can catch a pair below even this floor (the 0.486 hallucination
+    # pair), so the two stages are complements, not a replacement.
+    cross: set[int] = set()
+    if judge is not None and len(keep) > 1:
+        from src.config import CROSS_OUTCOME_FLOOR, DEDUP_SEMANTIC_THRESHOLD
+
+        from src import embeddings
+        survivors = sorted(keep, key=rank)
+        sim = embeddings.cosine_matrix([texts[i] for i in survivors])
+        if sim is not None:
+            band = [(survivors[x], survivors[y])
+                    for x in range(len(survivors)) for y in range(x + 1, len(survivors))
+                    if CROSS_OUTCOME_FLOOR <= float(sim[x][y]) < DEDUP_SEMANTIC_THRESHOLD]
+            _ask(band, "cross-outcome band")
+            # Same greedy, NON-TRANSITIVE rule as stage 1: A≈B and B≈C never implies A≈C. Union-find over
+            # pairwise verdicts once collapsed 17 unrelated questions into a single group.
+            sel2: list[int] = []
+            for i in survivors:
+                if any(is_same(i, k) for k in sel2):
+                    dropped.append(i)
+                    cross.add(i)
+                else:
+                    sel2.append(i)
+            keep = sel2
+    res.pairs_judged = total_pairs
+    res.same_verdicts = len(same)
+
     # Floor: restore the best-ranked drops rather than ship an unrunnable set.
     if len(keep) < min_keep and dropped:
         for i in sorted(dropped, key=rank)[:min_keep - len(keep)]:
             keep.append(i)
         dropped = [i for i in dropped if i not in set(keep)]
+    # Count AFTER the floor restore, or a restored question is still reported as dropped.
+    res.cross_outcome = cross & set(dropped)
 
     res.keep = sorted(keep)
     res.drop = sorted(dropped)

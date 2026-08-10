@@ -285,6 +285,17 @@ OUTCOME_CAP = int(os.getenv("OUTCOME_CAP", "2"))
 # matches its best outcome at 0.173 and "What are nodes in N8N" at 0.132, because `interview_topics`
 # under-describes n8n. Those are the n8n gap showing up again, not duplicates.
 OUTCOME_ORPHAN_FLOOR = float(os.getenv("OUTCOME_ORPHAN_FLOOR", "0.35"))
+# Similarity floor for the CROSS-OUTCOME duplicate stage, deliberately BELOW `tools._SAME_THING_LOW`
+# (0.62). Within one outcome the grouping itself bounds the pair count, so no floor is needed there; across
+# outcomes a floor is the only thing keeping the pair count sane, and 0.62 was measured to be too high.
+#
+# The pair a real quality gate objected to — "What is prompt engineering?" (outcome "Prompt engineering
+# fundamentals") and "How do you approach designing an effective prompt?" (outcome "Structuring prompts for
+# clarity") — scores **0.573**, so a 0.62 floor would never have offered it to the judge. Cost across the
+# nine shipped topics: 108 pairs at 0.62, **210 at 0.55** — about 23 per topic, 3 batches of `JUDGE_BATCH`.
+# Precision does not depend on this number: nothing is dropped without a judge verdict, so the floor only
+# decides what gets LOOKED at.
+CROSS_OUTCOME_FLOOR = float(os.getenv("CROSS_OUTCOME_FLOOR", "0.55"))
 
 # Stop a run outright when the Tavily pre-flight fails, instead of continuing bank-only. ON by default.
 #

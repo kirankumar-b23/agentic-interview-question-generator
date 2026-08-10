@@ -88,15 +88,18 @@ class TestTheHallucinationPile:
     def test_every_within_outcome_pair_is_offered_to_the_judge(self):
         """15 pairs for 6 members. The first version only generated pairs for OVER-served outcomes, so an
         outcome holding exactly `cap` members was never judged at all."""
-        seen = {}
+        calls = []
 
         def judge(pairs):
-            seen["n"] = len(pairs)
+            calls.append(list(pairs))
             return []
 
         balance_by_outcome(HALLUCINATION, OUTCOMES, fits=[0.6] * 6, approved=[True] * 6,
                            cap=2, judge=judge, min_keep=1)
-        assert seen["n"] == 15, f"expected all 6-choose-2 pairs, got {seen['n']}"
+        # The first call is this outcome's own 6-choose-2 pairs. A later call carries the cross-outcome
+        # similarity band (`TestTheCrossOutcomeStage`), which is a different question.
+        assert calls, "the judge was never asked"
+        assert len(calls[0]) == 15, f"expected all 6-choose-2 pairs, got {len(calls[0])}"
 
 
 class TestSmallBatchesAreTheWholePoint:
@@ -183,29 +186,241 @@ class TestOneJudgeCallPerOutcome:
         balance_by_outcome(texts, OUTCOMES, fits=[0.6] * len(texts),
                            approved=[True] * len(texts), judge=judge, min_keep=1)
 
-        assert len(batches) == 3, f"expected one call per outcome with >=2 members, got {len(batches)}"
-        # Each call's pairs must all come from a single outcome — i.e. index ranges must not mix.
+        # 3 per-outcome calls, then at most one cross-outcome band call. The band is ALLOWED to mix —
+        # that is its purpose — so the invariant is that the per-outcome calls come FIRST and never mix.
         groups = [set(range(0, 6)), set(range(6, 9)), set(range(9, 12))]
-        for b in batches:
+        per_outcome = batches[:3]
+        assert len(per_outcome) == 3, f"expected one call per outcome, got {len(batches)}"
+        for b in per_outcome:
             touched = {i for p in b for i in p}
-            assert any(touched <= g for g in groups), f"a batch mixed outcomes: {touched}"
+            assert any(touched <= g for g in groups), f"a per-outcome batch mixed outcomes: {touched}"
+        assert len(batches) <= 4, f"one band call at most, got {len(batches) - 3}"
 
-    def test_one_outcome_failing_still_balances_the_others(self):
-        """Per-outcome fail-open. A flat call meant one error discarded every verdict."""
+    def test_one_group_failing_still_balances_the_others(self):
+        """Per-group fail-open. A single flat call meant one error discarded every verdict."""
         seen = {"n": 0}
 
         def flaky(pairs):
             seen["n"] += 1
             if seen["n"] == 1:
                 raise RuntimeError("rate limited")
-            return list(pairs)
+            return list(pairs) if seen["n"] <= 3 else []   # band call judges nothing
 
         texts = HALLUCINATION + WORKFLOW + HUMAN_LOOP
         res = balance_by_outcome(texts, OUTCOMES, fits=[0.6] * len(texts),
                                  approved=[True] * len(texts), judge=flaky, min_keep=1)
-        assert res.judge_failed is True
-        assert res.drop, "the outcomes that DID judge must still be balanced"
-        assert not (set(res.drop) & set(range(6))), "the failed outcome keeps all its questions"
+        assert res.judge_failed is True, "the failure must be reported, not swallowed"
+        assert res.drop, "the groups that DID judge must still be balanced"
+        assert not (set(res.drop) & set(range(6))), (
+            "the failed group keeps its questions — no verdict, no removal")
+
+
+class TestTheCrossOutcomeStage:
+    """A per-outcome grouping structurally cannot see a duplicate filed under a DIFFERENT outcome.
+
+    Found by reading why two real runs failed their gate: 8 of 12 and 10 of 15 unresolved objections were
+    `duplicate`, and the shipped set showed why — **7 of 11 questions were prompt-engineering, spread over
+    FOUR near-synonymous interview topics**. So *"What is prompt engineering?"* and *"How do you approach
+    designing an effective prompt?"* were never once compared.
+    """
+
+    # Verbatim from the shipped set, with the outcomes they really assign to.
+    A = "What is prompt engineering?"                                  # -> "…fundamentals and best practices"
+    B = "How do you approach designing an effective prompt?"            # -> "Structuring prompts for clarity"
+    PE_OUTCOMES = ["Prompt engineering fundamentals and best practices",
+                   "Structuring prompts for clarity and specificity",
+                   "Human-in-the-loop AI systems"]
+
+    def test_the_fixture_really_spans_two_outcomes(self):
+        """Without this the next test could pass for the wrong reason — if both questions landed on one
+        outcome, stage 1 would be doing the work and the cross-outcome stage would be untested."""
+        from src.outcome_balance import _assign
+
+        assigned, orphans = _assign([self.A, self.B], self.PE_OUTCOMES, 0.35)
+        assert not orphans
+        assert len(assigned) == 2, f"expected two different outcomes, got {assigned}"
+
+    def test_a_duplicate_across_outcomes_is_dropped_and_labelled(self):
+        res = balance_by_outcome([self.A, self.B], self.PE_OUTCOMES, fits=[0.8, 0.7],
+                                 approved=[True, True], min_keep=1, judge=_judge((0, 1)))
+        assert len(res.keep) == 1, "one of the pair must go"
+        assert res.keep == [0], "the higher-ranked question survives"
+        assert res.cross_outcome == {1}, (
+            "it must be labelled cross-outcome, not as a per-topic cap — they are different findings")
+
+    def test_the_floor_is_what_makes_this_pair_visible(self):
+        """Self-demonstrating, because the constant is the whole fix. The pair scores 0.573, so the
+        `_SAME_THING_LOW` floor of 0.62 that `_same_thing_pass` uses would never have offered it."""
+        from src import embeddings
+        from src.config import CROSS_OUTCOME_FLOOR
+        from src.tools import _SAME_THING_LOW
+
+        sim = embeddings.cosine_matrix([self.A, self.B])
+        if sim is None:
+            pytest.skip("embeddings unavailable")
+        score = float(sim[0][1])
+        assert score < _SAME_THING_LOW, (
+            f"{score:.3f} — if this rises above 0.62, `_same_thing_pass` would already catch it")
+        assert score >= CROSS_OUTCOME_FLOOR, (
+            f"{score:.3f} is below the {CROSS_OUTCOME_FLOOR} floor, so the judge never sees it")
+
+    def test_nothing_crosses_without_a_verdict(self):
+        res = balance_by_outcome([self.A, self.B], self.PE_OUTCOMES, fits=[0.8, 0.7],
+                                 approved=[True, True], min_keep=1, judge=_judge())
+        assert res.drop == [] and res.cross_outcome == set()
+
+    def test_the_greedy_rule_is_non_transitive(self):
+        """A≈B and B≈C with A≉C keeps TWO. Union-find over pairwise verdicts once collapsed 17 unrelated
+        questions into a single group, which is why both stages compare only against already-KEPT members.
+
+        Exercised through a SINGLE outcome so the pairing is deterministic — stage 2 reuses this exact
+        loop. The first version of this test used three prompt questions and got 1 survivor, correctly:
+        two of them landed on one outcome, so stage 1 legitimately removed C as a duplicate of B before
+        stage 2 ever ran. The fixture was wrong, not the rule.
+        """
+        texts = [self.A, self.B, "How do you iterate on a prompt?"]
+        one_outcome = ["Prompt engineering fundamentals and best practices"]
+        res = balance_by_outcome(texts, one_outcome, fits=[0.9, 0.8, 0.7],
+                                 approved=[True] * 3, min_keep=1, judge=_judge((0, 1), (1, 2)))
+        kept = set(res.keep)
+        assert kept == {0, 2}, (
+            f"B duplicates A and goes; C was only judged against B, so it stays. got "
+            f"{[texts[i] for i in sorted(kept)]}")
+
+    def test_stage_two_is_non_transitive_too(self):
+        """Stage 2 has its OWN greedy loop, and a mutation check caught that nothing exercised it: making
+        it compare against every survivor instead of only the KEPT ones left all 59 tests green.
+
+        This triple is verbatim from the shipped set and lands in THREE different interview topics, with
+        (A,B) at 0.553 and (B,C) at 0.587 — both inside the cross-outcome band, so stage 1 forms no pairs
+        at all and only stage 2 can act.
+        """
+        A = "How do you approach designing an effective prompt?"
+        B = "How can prompt engineering be used to improve LLM outputs?"
+        C = "What is prompt engineering?"
+        outcomes = ["Structuring prompts for clarity and specificity",
+                    "Prompt engineering and crafting effective prompts for LLMs",
+                    "Prompt engineering fundamentals and best practices"]
+        from src.outcome_balance import _assign
+        assigned, _ = _assign([A, B, C], outcomes, 0.35)
+        assert len(assigned) == 3, f"the fixture must span three outcomes, got {assigned}"
+
+        res = balance_by_outcome([A, B, C], outcomes, fits=[0.9, 0.8, 0.7], approved=[True] * 3,
+                                 min_keep=1, judge=_judge((0, 1), (1, 2)))
+        assert set(res.keep) == {0, 2}, (
+            f"B duplicates A and goes; C was only judged against B, so it stays. got "
+            f"{[[A, B, C][i] for i in sorted(res.keep)]}")
+        assert res.cross_outcome == {1}, "and the drop is labelled as cross-outcome"
+
+    def test_a_question_dropped_in_stage_one_is_not_re_judged(self):
+        """Stage 2 works on SURVIVORS. Re-offering an already-dropped question wastes calls and could
+        drop a question that only duplicates something itself removed."""
+        seen = []
+
+        def judge(pairs):
+            seen.append(list(pairs))
+            return [pairs[0]] if pairs else []
+
+        texts = HALLUCINATION + [self.A, self.B]
+        balance_by_outcome(texts, OUTCOMES + self.PE_OUTCOMES, fits=[0.6] * len(texts),
+                           approved=[True] * len(texts), min_keep=1, judge=judge)
+        # The last call is the band; whatever stage 1 dropped must not appear in it.
+        stage1_dropped = {p[1] for p in (seen[0][:1] if seen else [])}
+        band = {i for p in seen[-1] for i in p} if len(seen) > 1 else set()
+        assert not (stage1_dropped & band), "a stage-1 drop was re-offered to the band"
+
+
+class TestApprovedRetainedDuplicatesAreDroppedButNotLost:
+    """Your call: remove it from what this run SHIPS, keep it in the topic set. Non-destructive, so the
+    decision is re-derived every run and nothing a reviewer approved is destroyed."""
+
+    @pytest.fixture
+    def db(self, tmp_path, monkeypatch):
+        from src import memory
+        monkeypatch.setattr(memory, "MEMORY_DB", tmp_path / "t.db")
+        memory.init_db()
+        return memory
+
+    def test_shipped_set_shrinks_while_the_topic_set_is_untouched(self, db, monkeypatch):
+        import src.tools as tools
+
+        A = TestTheCrossOutcomeStage.A
+        B = TestTheCrossOutcomeStage.B
+        # Realistically sized: `_cap_by_outcome` uses the MIN_QUESTIONS floor, so a 2-question fixture
+        # has its only drop restored and the test measures nothing. Same trap as the cluster-cap fixture.
+        filler = HUMAN_LOOP + WORKFLOW
+        tk = db.topic_key_for("Advanced Prompt Engineering")
+        db.upsert_topic_questions(tk, [{"content": c, "status": "approved"} for c in [A, B] + filler])
+        before = len(db.get_topic_questions(tk))
+        assert before == 8
+
+        # Judge ONLY the pair under test. A stub calling every pair a duplicate collapses each filler
+        # outcome too, the set falls under MIN_QUESTIONS, and the floor then RESTORES the cross-outcome
+        # drop — so the assertion measured the floor rather than the stage.
+        monkeypatch.setattr("src.outcome_balance.make_llm_judge",
+                            lambda *a, **k: (lambda pairs: [p for p in pairs if set(p) == {0, 1}]))
+        qs = ([_q(A, qid="a", fit=0.9, approved=True), _q(B, qid="b", fit=0.8, approved=True)]
+              + [_q(c, qid=f"f{i}", fit=0.7, approved=True) for i, c in enumerate(filler)])
+        st = TestTheCapWorks._state(qs)
+        st.session_context.interview_topics = (list(TestTheCrossOutcomeStage.PE_OUTCOMES)
+                                               + list(OUTCOMES))
+        out = tools._cap_by_outcome(st, qs)
+
+        assert out["cross_topic_duplicates"] >= 1, f"the cross-outcome duplicate must be caught: {out}"
+        assert B not in {q.content for q in qs}, "the lower-ranked duplicate is the one that goes"
+        assert len(db.get_topic_questions(tk)) == before, (
+            "the accumulated set must be untouched — the drop applies to this run's output only")
+        cross_records = [r for r in st.removed
+                         if r["stage"] == "duplicate" and "across interview topics" in r["reason"]]
+        assert cross_records, f"expected a cross-outcome removal record, got {st.removed}"
+
+
+class TestEveryFailOpenPathReturnsTheFullShape:
+    """A fail-open helper that omits a key does not fail open — it crashes the caller.
+
+    Adding `cross_topic_duplicates` to the happy path only turned a survivable API outage into
+    `KeyError: 'cross_topic_duplicates'` inside `tool_submit_question_set`, so a run that should have
+    degraded came back with `result.error`. Caught by `TestApiOutage`, which exists for that class.
+    """
+
+    KEYS = {"removed", "orphans", "cross_topic_duplicates", "uncovered"}
+
+    @staticmethod
+    def _state(questions, topics=("T",)):
+        from src.agent import AgentState
+        from src.data_loader import get_data_store
+
+        st = AgentState(config=GenerationConfig(session_names=["S"]), data_store=get_data_store())
+        st.session_context = SimpleNamespace(
+            session_name="S", session_type="mixed", learning_outcomes=[],
+            interview_topics=list(topics), key_concepts=[], scope_in=[], scope_out=[], matched_kp_ids=[])
+        st.questions = {q.question_id: q for q in questions}
+        return st
+
+    def test_no_session_context(self):
+        import src.tools as tools
+        st = self._state([_q(c, qid=f"h{i}") for i, c in enumerate(HALLUCINATION)])
+        st.session_context = None
+        assert set(tools._cap_by_outcome(st, list(st.questions.values()))) == self.KEYS
+
+    def test_no_interview_topics(self):
+        import src.tools as tools
+        st = self._state([_q(c, qid=f"h{i}") for i, c in enumerate(HALLUCINATION)], topics=())
+        st.session_context.learning_outcomes = []
+        assert set(tools._cap_by_outcome(st, list(st.questions.values()))) == self.KEYS
+
+    def test_fewer_than_two_questions(self):
+        import src.tools as tools
+        st = self._state([_q(HALLUCINATION[0], qid="only")])
+        assert set(tools._cap_by_outcome(st, list(st.questions.values()))) == self.KEYS
+
+    def test_the_balancer_blowing_up(self, monkeypatch):
+        import src.tools as tools
+        monkeypatch.setattr("src.outcome_balance.balance_by_outcome",
+                            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+        st = self._state([_q(c, qid=f"h{i}") for i, c in enumerate(HALLUCINATION)])
+        out = tools._cap_by_outcome(st, list(st.questions.values()))
+        assert set(out) == self.KEYS and out["removed"] == 0
 
 
 class TestMajorityVoteProtectsTheDestructivePath:

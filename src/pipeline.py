@@ -1177,6 +1177,16 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     # cause: a topic that supplies several questions is repetition the candidate hears, and a topic that
     # supplies none is a gap no count of questions reveals. On No-Code AI Automation three topics held 47%
     # of a 38-question set while 9 of 22 had nothing.
+    # Cross-topic duplicates are counted separately because they are a different finding: a per-outcome
+    # cap structurally cannot see them, and they are what a real gate objected to when 7 of 11 shipped
+    # questions were prompt-engineering filed under four near-synonymous interview topics.
+    _cross = sum(1 for r in (state.removed or [])
+                 if r.get("stage") == "duplicate"
+                 and "across interview topics" in (r.get("reason") or ""))
+    if _cross:
+        notes.append(
+            f"{_cross} question(s) were dropped as testing the same thing as another question in a "
+            f"DIFFERENT interview topic — the per-topic balance cannot see those.")
     _capped = sum(1 for r in (state.removed or []) if r.get("stage") == "outcome_cap")
     if _capped:
         # Say WHY they went, and do not name `OUTCOME_CAP`: the pipeline runs

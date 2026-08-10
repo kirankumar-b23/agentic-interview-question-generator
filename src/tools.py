@@ -1924,11 +1924,11 @@ def _cap_by_outcome(state: AgentState, questions: list) -> dict:
 
     ctx = state.session_context
     if not ctx or len(questions) < 2:
-        return {"removed": 0, "orphans": 0, "uncovered": []}
+        return {"removed": 0, "orphans": 0, "cross_topic_duplicates": 0, "uncovered": []}
     from src.pipeline import coverage_targets
     outcomes = coverage_targets(ctx)
     if not outcomes:
-        return {"removed": 0, "orphans": 0, "uncovered": []}
+        return {"removed": 0, "orphans": 0, "cross_topic_duplicates": 0, "uncovered": []}
 
     texts = [q.content for q in questions]
     # `session_fit` is the grounding score already computed for this run; retained questions get one from
@@ -1944,29 +1944,37 @@ def _cap_by_outcome(state: AgentState, questions: list) -> dict:
                                  on_usage=_usage_cb(state)))
     except Exception as exc:  # noqa: BLE001 — balancing must never lose the question set
         print(f"[outcome_cap] skipped ({type(exc).__name__}: {exc})")
-        return {"removed": 0, "orphans": 0, "uncovered": []}
+        return {"removed": 0, "orphans": 0, "cross_topic_duplicates": 0, "uncovered": []}
 
     dropped_for = res.dropped_for
     for i in res.drop:
         q = questions[i]
         t = dropped_for.get(i)
+        cross = i in res.cross_outcome
+        # Two different findings, labelled differently. "Another outcome already asks this" is precisely
+        # what a per-outcome cap cannot see, and it is what a real gate objected to: 7 of 11 shipped
+        # questions were prompt-engineering, filed under FOUR near-synonymous interview topics.
         state.removed.append({
             "content": q.content,
-            "reason": ("Interview topic already covered by another question"
-                       + (f': "{outcomes[t][:70]}"' if t is not None else "")),
-            "stage": "outcome_cap", "difficulty": q.difficulty, "company": q.attribution,
+            "reason": ("Another question already tests the same thing (across interview topics)"
+                       if cross else
+                       ("Interview topic already covered by another question"
+                        + (f': "{outcomes[t][:70]}"' if t is not None else ""))),
+            "stage": "duplicate" if cross else "outcome_cap",
+            "difficulty": q.difficulty, "company": q.attribution,
         })
     if res.drop:
         keep = set(res.keep)
         # In place: the caller rebuilds `state.questions` from this list immediately after.
         questions[:] = [q for i, q in enumerate(questions) if i in keep]
     state.uncovered_outcomes = [outcomes[t] for t in res.uncovered]
+    n_cross = len(res.cross_outcome)
     if res.drop or res.uncovered:
-        print(f"[outcome_cap] {len(res.drop)} capped, {len(res.orphans)} orphan(s) kept, "
-              f"{len(res.uncovered)} outcome(s) uncovered "
-              f"({res.same_verdicts}/{res.pairs_judged} pairs judged same)")
+        print(f"[outcome_cap] {len(res.drop) - n_cross} capped within an outcome, {n_cross} cross-topic "
+              f"duplicate(s), {len(res.orphans)} orphan(s) kept, {len(res.uncovered)} outcome(s) "
+              f"uncovered ({res.same_verdicts}/{res.pairs_judged} pairs judged same)")
     return {"removed": len(res.drop), "orphans": len(res.orphans),
-            "uncovered": state.uncovered_outcomes}
+            "cross_topic_duplicates": n_cross, "uncovered": state.uncovered_outcomes}
 
 
 def _add_retained(state: AgentState, selected: list) -> dict:
@@ -2595,6 +2603,7 @@ def tool_submit_question_set(state: AgentState) -> dict:
             "retained": retained["retained"], "newly_found": retained["newly_found"],
             "retained_stale": retained["stale"],
             "outcome_capped": capped["removed"], "outcome_orphans": capped["orphans"],
+            "cross_topic_duplicates": capped.get("cross_topic_duplicates", 0),
             "outcomes_uncovered": capped["uncovered"],
             "per_session": session_rep.get("per_session") or {},
             "sessions_without_candidates": session_rep.get("no_candidates") or []}

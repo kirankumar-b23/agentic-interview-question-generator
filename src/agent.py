@@ -210,15 +210,29 @@ def _deterministic_gate_issues(state: AgentState) -> list[dict]:
     min_q = getattr(state.config, "min_questions", MIN_QUESTIONS) or MIN_QUESTIONS
     max_q = min(getattr(state.config, "max_questions", None) or FINAL_SET_CAP, FINAL_SET_CAP)
 
+    # `too-few` is judged on the TOTAL: a 39-question set carried over from the topic is not thin.
     if total < min_q:
         issues.append({"id": None, "issue": "too-few",
                        "suggestion": f"Only {total} question(s); this run asked for at least {min_q}. "
                                      f"The on-topic pool was too thin — do NOT remove more."})
-    # Nothing else checks the upper bound. If selection didn't run, this is what catches it.
-    if total > max_q:
+    # `too-many` is judged on NEWLY-FOUND questions only, and that distinction is the whole check.
+    #
+    # It is still the only upper-bound check anywhere, and its real purpose is to catch a run where
+    # `_enforce_submission` failed and the raw candidate pool shipped unranked — those are all newly
+    # found, so it still fires (263 of them on one measured run).
+    #
+    # Counting the TOTAL made it fire on every mature topic instead. `_add_retained` deliberately carries
+    # the topic's accumulated set in, and the final set is NOT capped, so 36 retained + 3 new tripped a
+    # bar of 15 and the objection read "the set was never trimmed. Re-run submit_question_set." Two real
+    # runs then failed the gate on that alone — with every numeric condition passing — and burned both
+    # revision rounds instructing the agent to trim a set it must not trim. Same lesson the trim TESTS
+    # already had to learn: count NEWLY-FOUND questions.
+    fresh = sum(1 for q in questions if not getattr(q, "retained", False)) + len(state.coding_questions)
+    if fresh > max_q:
         issues.append({"id": None, "issue": "too-many",
-                       "suggestion": f"{total} questions exceeds the requested {max_q} — the set was "
-                                     f"never trimmed. Re-run submit_question_set."})
+                       "suggestion": f"{fresh} newly-found question(s) exceeds the requested {max_q} — "
+                                     f"selection did not run. Re-run submit_question_set. "
+                                     f"(Carried-over questions are excluded and are not a problem.)"})
     # A total relevance-judge failure leaves every candidate at the neutral default score, which
     # otherwise looks like a clean pass.
     if not state.relevance_scored:
