@@ -697,6 +697,71 @@ through on 1-of-2. The consequence to remember is that **a compound concept whos
 common can never be auto-flagged**, so `--evidence` (phrase-occurrence counts, no LLM) is the tool for
 that class — it reports the asymmetry (`hallucinat* x3`, `system prompt x0`) and never cuts anything.
 
+## The judge degrades with batch size — that was the bug, not the cap
+
+The most consequential finding of the balance work, recorded because the wrong diagnosis was very
+convincing. A reviewer flagged that hallucination was still asked six times in No-Code AI Automation.
+Measured on *"What are hallucinations in LLMs"* / *"What is an AI hallucination"* — the most obviously
+identical of the six:
+
+```
+batch of  1 pair   -> SAME, 3 of 3 trials
+batch of 52 pairs  -> "different"
+```
+
+In a 4-pair batch the same judge correctly called the fine-tuning pairs DISTINCT *and* the
+prevent/mitigate hallucination pair the same. **Small batches are right in both directions; one large
+batch was wrong in both.** So `outcome_balance.JUDGE_BATCH = 10`, and 52 pairs costs 6 Haiku calls
+instead of 1. Do not raise it to "save calls" — it degrades every verdict silently rather than failing.
+
+- **`_same_thing_pass` sends up to `_SAME_THING_MAX_PAIRS = 12` in ONE call and is at the edge of this.**
+  Not changed yet; it is the likeliest explanation for its "0 redundant" verdicts on large sets, on top of
+  the cap documented above.
+- **The first diagnosis blamed a per-outcome CAP and would have shipped real data loss.** With a hard
+  quota of 2, Gen AI Foundations lost **12 of the 14** questions under one coarse topic
+  ("Pre-trained vs fine-tuned models"), including *"What is the difference between pre-training and
+  fine-tuning?"*, *"What are the different Fine-tuning methods?"* and *"What is the difference between a
+  base model and an instruction-tuned model?"* — distinct asks that merely share a coarse outcome.
+- **The tell was that the same quota was right on one topic and destructive on another.** No-Code has 22
+  interview topics for 38 questions, Gen AI Foundations 15 for 54. The quota was measuring how finely the
+  curriculum enumerates `interview_topics`, not whether the questions repeat. Same
+  overlapping-distributions trap as `_outcome_coverage`'s proximity threshold and
+  `DEDUP_SEMANTIC_THRESHOLD`: no count separates the populations, so a judgement has to.
+
+## Per-outcome balance: `src/outcome_balance.py`
+
+`coverage_efficiency` asks "did each question earn its place against a DISTINCT interview topic" — but
+only inside a single run's selected set. Nothing applied it to the ACCUMULATED per-topic set, and
+`tool_submit_question_set` runs `_same_thing_pass` **before** `_add_retained`, so the accumulated set was
+never judged against itself or against the run's new picks. Six hallucination questions accumulated one
+run at a time, each below the 0.82 embedding bar.
+
+- **Grouping is by interview topic, and cutting is by JUDGEMENT alone** (`strict=False` default). `cap` /
+  `OUTCOME_CAP` only feeds the opt-in `strict=True` quota; nothing is dropped without a verdict.
+- **An ORPHAN is KEPT, never cut.** Best-outcome match below `OUTCOME_ORPHAN_FLOOR = 0.35` means no
+  outcome describes the question: *"What is the Split In Batches node used for?"* matches at **0.173**,
+  *"What are nodes in N8N"* at **0.132**. Those are the n8n gap showing up in the outcome list, not
+  duplicates. Counting them as redundant turns the feature into silent data loss.
+- **Ranking is approved-first, then `session_fit`** — a reviewer's decision is newer information than a
+  score, so *"What are hallucinations in LLMs"* (0.516, approved) is kept over a 0.719 backfilled one.
+- **Two call sites, deliberately different in what they destroy.** `tools._cap_by_outcome` trims only what
+  a run SHIPS and leaves `topic_question_set` whole, so it is idempotent and reversible;
+  `scripts/filter_topic_sets.py --cap 2 --apply` quarantines rows recoverably and calls
+  `memory.sync_canonical_payload`. Both call `balance_by_outcome`, so they cannot drift.
+- **`make_llm_judge(complete=…)` must receive the CALLER's `chat_completion_json`.** The first version
+  imported it from `src.llm_client` inside the judge, so every existing
+  `monkeypatch.setattr(tools, "chat_completion_json", …)` missed it and `tests/netguard.py` recorded
+  **3 real network calls per test** — swallowed by the fail-open handler, so assertions passed while a
+  working key would have spent credit.
+- **`tests/test_failure_paths.py` had NO database isolation** and was reading the live `memory.db`:
+  `_add_retained` silently pulled in 32 real questions, so its "the pool was trimmed to 5" assertion was
+  really measuring production data and moved whenever the shipped sets changed.
+- Applied to the 8 accumulated sets: **213 → 173**, hallucination on No-Code **6 → 2** (a definition and
+  an applied question), `memory.db` backed up, all 40 cuts in `quarantined_questions`.
+- The uncovered half is reported and never gated: **9 of 22** No-Code outcomes have no question at all
+  (*Human-in-the-loop*, *Testing and validation*, *Scheduling and triggering*…). Retrieval for those is a
+  separate decision — the same reason `topic_coverage` is reported and not scored.
+
 ## Web/UI notes
 
 - `main.py` errors use `{"error": ...}`, not FastAPI's `{"detail": ...}` — the React client reads
@@ -772,7 +837,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 624 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 684 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

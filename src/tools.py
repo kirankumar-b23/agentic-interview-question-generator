@@ -1904,6 +1904,71 @@ def _same_thing_pass(state: AgentState, questions: list) -> dict:
     return {"pairs_judged": len(pairs), "removed": removed, "flagged": flagged}
 
 
+def _cap_by_outcome(state: AgentState, questions: list) -> dict:
+    """Cap each interview topic's contribution to the SHIPPED set. Mutates `questions` in place.
+
+    Called after `_add_retained`, which is the whole reason it exists: `_same_thing_pass` judges only this
+    run's own picks, so the accumulated set was never examined as a whole. Measured on No-Code AI
+    Automation — 38 questions, 22 interview topics — three topics held 7, 6 and 5 questions while 8 had
+    none, and hallucination was asked six times.
+
+    NON-DESTRUCTIVE, and deliberately so. This trims what ships and leaves `topic_question_set` intact, so
+    the cap is idempotent (a re-run re-derives it), a cap change costs nothing, and a judge misfire is
+    reversible. The destructive counterpart is `scripts/filter_topic_sets.py --cap N --apply`, which
+    quarantines rows recoverably; both call `outcome_balance.balance_by_outcome`, so they cannot drift.
+
+    Fail-open at every level: no session context, no interview topics, or a dead judge all leave the set
+    untouched or fall back to cap-by-rank. One LLM call per run.
+    """
+    from src.outcome_balance import balance_by_outcome, make_llm_judge
+
+    ctx = state.session_context
+    if not ctx or len(questions) < 2:
+        return {"removed": 0, "orphans": 0, "uncovered": []}
+    from src.pipeline import coverage_targets
+    outcomes = coverage_targets(ctx)
+    if not outcomes:
+        return {"removed": 0, "orphans": 0, "uncovered": []}
+
+    texts = [q.content for q in questions]
+    # `session_fit` is the grounding score already computed for this run; retained questions get one from
+    # `_score_unscored_fits`. None reads as 0.0, which only affects ORDER within an outcome.
+    fits = [float(getattr(q, "session_fit", None) or 0.0) for q in questions]
+    approved = [bool(getattr(q, "retained_status", None) == "approved") for q in questions]
+    try:
+        res = balance_by_outcome(
+            texts, outcomes, fits=fits, approved=approved,
+            # `complete` is THIS module's symbol on purpose: it is what the suite stubs, and importing
+            # it inside the judge instead leaked real network calls past every existing stub.
+            judge=make_llm_judge(texts, model=run_model(state), complete=chat_completion_json,
+                                 on_usage=_usage_cb(state)))
+    except Exception as exc:  # noqa: BLE001 — balancing must never lose the question set
+        print(f"[outcome_cap] skipped ({type(exc).__name__}: {exc})")
+        return {"removed": 0, "orphans": 0, "uncovered": []}
+
+    dropped_for = res.dropped_for
+    for i in res.drop:
+        q = questions[i]
+        t = dropped_for.get(i)
+        state.removed.append({
+            "content": q.content,
+            "reason": ("Interview topic already covered by another question"
+                       + (f': "{outcomes[t][:70]}"' if t is not None else "")),
+            "stage": "outcome_cap", "difficulty": q.difficulty, "company": q.attribution,
+        })
+    if res.drop:
+        keep = set(res.keep)
+        # In place: the caller rebuilds `state.questions` from this list immediately after.
+        questions[:] = [q for i, q in enumerate(questions) if i in keep]
+    state.uncovered_outcomes = [outcomes[t] for t in res.uncovered]
+    if res.drop or res.uncovered:
+        print(f"[outcome_cap] {len(res.drop)} capped, {len(res.orphans)} orphan(s) kept, "
+              f"{len(res.uncovered)} outcome(s) uncovered "
+              f"({res.same_verdicts}/{res.pairs_judged} pairs judged same)")
+    return {"removed": len(res.drop), "orphans": len(res.orphans),
+            "uncovered": state.uncovered_outcomes}
+
+
 def _add_retained(state: AgentState, selected: list) -> dict:
     """Union this topic's accumulated set into the shipped set. Returns the retained/new split.
 
@@ -2511,6 +2576,10 @@ def tool_submit_question_set(state: AgentState) -> dict:
     # After the same-thing pass (so it judges only this run's picks against each other) and before the
     # syllabus audit (so retained questions are audited and flagged like everything else).
     retained = _add_retained(state, selected)
+    # AFTER `_add_retained`, and that is the entire point of this call. `_same_thing_pass` above judges
+    # only this run's own picks, so nothing had ever looked at the ACCUMULATED set as a whole — which is
+    # how hallucination came to be asked six times in one 38-question topic.
+    capped = _cap_by_outcome(state, selected)
     state.questions = {q.question_id: q for q in selected}
     audit = _syllabus_audit(state, selected)
     state.off_syllabus = audit["off_syllabus"]
@@ -2525,6 +2594,8 @@ def tool_submit_question_set(state: AgentState) -> dict:
             "same_thing_removed": same["removed"], "same_thing_flagged": same["flagged"],
             "retained": retained["retained"], "newly_found": retained["newly_found"],
             "retained_stale": retained["stale"],
+            "outcome_capped": capped["removed"], "outcome_orphans": capped["orphans"],
+            "outcomes_uncovered": capped["uncovered"],
             "per_session": session_rep.get("per_session") or {},
             "sessions_without_candidates": session_rep.get("no_candidates") or []}
 

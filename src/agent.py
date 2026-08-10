@@ -64,6 +64,11 @@ class AgentState:
     # Selected questions testing a concept absent from their session's material, and the LLM-judged
     # outcome coverage that replaces the proximity measure. See `tools._syllabus_audit`.
     off_syllabus: list[dict] = field(default_factory=list)
+    # Interview topics the FINAL set leaves with no question at all (`tools._cap_by_outcome`). Reported,
+    # never gated — a mature topic can legitimately have thin outcomes, the same reason `topic_coverage`
+    # is reported only. It is the more useful half of the balance diagnosis: on No-Code AI Automation 9 of
+    # 22 outcomes had nothing while three others held 47% of the set.
+    uncovered_outcomes: list[str] = field(default_factory=list)
     # Did the last-resort open-web tier run, and how many questions did it contribute.
     open_web_used: bool = False
     open_web_added: int = 0

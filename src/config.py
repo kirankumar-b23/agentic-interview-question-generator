@@ -263,6 +263,29 @@ DEDUP_SEMANTIC_THRESHOLD = float(os.getenv("DEDUP_SEMANTIC_THRESHOLD", "0.82"))
 # company-attributed coding questions the LMS coding tabs exist for. Set to 0 to ship them again.
 CONVERSATIONAL_ONLY = os.getenv("CONVERSATIONAL_ONLY", "1") == "1"
 
+# Questions per interview topic in `outcome_balance.balance_by_outcome` — used ONLY by its opt-in
+# `strict=True` quota mode, NOT by the default path. Kept because the quota is occasionally the right
+# blunt instrument, but it is not what balances a set: a question is normally dropped only when the LLM
+# judge says another question already covers that outcome.
+#
+# Why the quota is not the default, measured: a cap of 2 is about right on No-Code AI Automation (22
+# interview topics for 38 questions) and destroys Gen AI Foundations (15 topics for 54), where one coarse
+# topic holds 14 questions and the quota deletes 12 — including three genuinely distinct "what is the
+# difference between…" questions. The number was measuring how finely the curriculum enumerates
+# `interview_topics`, not whether the questions repeat.
+#
+# The problem the balance exists for is real regardless: `coverage_efficiency` asks "did each question
+# earn its place against a DISTINCT topic" but only within a single run's selected set, and
+# `tool_submit_question_set` runs `_same_thing_pass` BEFORE `_add_retained`, so the ACCUMULATED set was
+# never judged against itself. That is how hallucination came to be asked six times in 38 questions.
+OUTCOME_CAP = int(os.getenv("OUTCOME_CAP", "2"))
+# Below this, a question's best-matching interview topic is not a real match, so the question is an ORPHAN
+# and is KEPT rather than counted against any cap. Not a tuning knob — it is what stops the cap deleting
+# on-topic questions the outcome list fails to describe: "What is the Split In Batches node used for?"
+# matches its best outcome at 0.173 and "What are nodes in N8N" at 0.132, because `interview_topics`
+# under-describes n8n. Those are the n8n gap showing up again, not duplicates.
+OUTCOME_ORPHAN_FLOOR = float(os.getenv("OUTCOME_ORPHAN_FLOOR", "0.35"))
+
 # Live question harvesting (tools 12 & 13 — search_github_questions / search_web_questions)
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")   # optional; raises GitHub API rate limit from 60→5000/hr

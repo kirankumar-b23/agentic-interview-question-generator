@@ -48,12 +48,23 @@ class TestSelectionIsGuaranteed:
 
     @pytest.fixture(autouse=True)
     def _no_llm(self, monkeypatch):
-        """`_enforce_submission` calls `tool_submit_question_set`, which makes three OpenRouter calls
-        (`_scope_trim`, `_syllabus_audit`, `_same_thing_pass`). These tests are about the trim, not the
-        LLM, and every one of those paths is fail-open — so the calls were being attempted, swallowed,
-        and spending credit invisibly. Caught by the conftest network ledger."""
+        """`_enforce_submission` calls `tool_submit_question_set`, which makes four OpenRouter calls
+        (`_scope_trim`, `_syllabus_audit`, `_same_thing_pass`, `_cap_by_outcome`). These tests are about
+        the trim, not the LLM, and every one of those paths is fail-open — so the calls were being
+        attempted, swallowed, and spending credit invisibly. Caught by the conftest network ledger."""
         import src.tools as tools_mod
         monkeypatch.setattr(tools_mod, "chat_completion_json", lambda **kw: {})
+
+    @pytest.fixture(autouse=True)
+    def _isolated_db(self, tmp_path, monkeypatch):
+        """Submit reads the topic's ACCUMULATED set (`tools._add_retained`), so without this the test
+        depends on live `memory.db` contents: it was silently pulling in 32 real questions, and the
+        assertion below was really measuring production data. Any edit to the shipped sets then moved
+        the numbers here for reasons unrelated to the trim.
+        """
+        from src import memory
+        monkeypatch.setattr(memory, "MEMORY_DB", tmp_path / "failure_paths.db")
+        memory.init_db()
 
     def test_pool_is_trimmed_when_the_agent_never_submits(self, monkeypatch):
         st = _state(n_questions=40, max_questions=5)

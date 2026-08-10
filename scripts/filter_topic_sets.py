@@ -53,8 +53,9 @@ from types import SimpleNamespace
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src import embeddings, memory  # noqa: E402
-from src.config import (DATA_DIR, MEMORY_DB, SESSION_FIT_RELATIVE,  # noqa: E402
+from src.config import (DATA_DIR, MEMORY_DB, OUTCOME_CAP, SESSION_FIT_RELATIVE,  # noqa: E402
                         SESSION_PROFILE_RM_WEIGHT)
+from src.llm_client import get_active_model  # noqa: E402
 from src.pipeline import _session_profile  # noqa: E402
 from src.tools import _tool_terms  # noqa: E402
 
@@ -271,6 +272,95 @@ def _dupes(structure: dict, keys: list, args) -> int:
     return 0
 
 
+def _cap(structure: dict, keys: list, args) -> int:
+    """Balance each topic's set per interview topic. The destructive counterpart of `_cap_by_outcome`.
+
+    Same function, different consequence — `tools._cap_by_outcome` trims only what a run SHIPS and leaves
+    the accumulated set whole; this quarantines rows in the database. Both call
+    `outcome_balance.balance_by_outcome` so the two cannot drift.
+
+    Reports the uncovered outcomes either way: a topic supplying several questions is repetition the
+    candidate hears, and a topic supplying none is a gap no question count reveals.
+    """
+    from src.outcome_balance import balance_by_outcome, make_llm_judge
+    from src.pipeline import coverage_targets
+
+    plan = []
+    for tk in keys:
+        if args.topic and args.topic.lower() not in tk.lower():
+            continue
+        sessions = structure.get(tk) or []
+        if not sessions:
+            continue
+        ctx = _topic_context(sessions)
+        outcomes = coverage_targets(ctx)
+        rows = memory.get_topic_questions(tk)
+        if not rows or not outcomes:
+            continue
+        curated, rm = _session_profile(sessions, ctx)
+        texts = [r["content"] for r in rows]
+        fits = _fits(texts, curated, rm)
+        judge = None if args.no_judge else make_llm_judge(texts, model=get_active_model())
+        res = balance_by_outcome(texts, outcomes, fits=fits,
+                                 approved=[r["status"] == "approved" for r in rows],
+                                 cap=args.cap, judge=judge, strict=args.strict)
+        plan.append({"topic": tk, "rows": rows, "fits": fits, "outcomes": outcomes, "res": res})
+
+        print(f"{tk}  ({len(rows)} questions, {len(outcomes)} interview topics) -> {len(res.keep)}")
+        if res.judge_failed:
+            print("   NOTE: the judge failed — fell back to cap-by-rank, nothing extra was dropped")
+        dropped = set(res.drop)
+        for t, members in sorted(res.assigned.items(), key=lambda kv: -len(kv[1])):
+            if len(members) < 2:
+                continue
+            print(f"   [{len(members)} -> {len(members) - sum(1 for i in members if i in dropped)}] "
+                  f"{outcomes[t][:64]}")
+            for i in sorted(members, key=lambda i: (rows[i]['status'] != 'approved', -fits[i])):
+                print(f"      {'cut ' if i in dropped else 'KEEP'} fit {fits[i]:.3f} "
+                      f"[{rows[i]['status'][:4]}] {texts[i][:64]}")
+        if res.orphans:
+            print(f"   {len(res.orphans)} orphan(s) KEPT — no interview topic describes them, so they are "
+                  f"not redundant:")
+            for i in res.orphans:
+                print(f"      KEEP {texts[i][:74]}")
+        if res.uncovered:
+            print(f"   {len(res.uncovered)} outcome(s) with NO question:")
+            for t in res.uncovered:
+                print(f"      —— {outcomes[t][:74]}")
+        print()
+
+    total = sum(len(p["res"].drop) for p in plan)
+    print(f"=> {total} question(s) to cut across {len(plan)} topic(s) at cap {args.cap}")
+    if not args.apply:
+        print("   [report only — pass --apply to quarantine the cuts]")
+        return 0
+    if not total:
+        print("   nothing to apply")
+        return 0
+
+    backup = Path(str(MEMORY_DB) + f".{datetime.now().strftime('%Y%m%d-%H%M%S')}.bak")
+    shutil.copy2(MEMORY_DB, backup)
+    print(f"\n  backed up {MEMORY_DB.name} -> {backup.name}")
+    applied = 0
+    for p in plan:
+        res, rows, outcomes = p["res"], p["rows"], p["outcomes"]
+        for i, t in res.dropped_for.items():
+            memory.quarantine_question(
+                p["topic"], rows[i]["content"],
+                f'interview topic already covered (cap {args.cap}): "{outcomes[t][:70]}"',
+                rows[i].get("first_run_id"))
+            if memory.remove_topic_question(p["topic"], rows[i]["content"]):
+                applied += 1
+        # Without this the cut exists in the database and NOT in the product: /review/<id> and the
+        # Sheets export both read the canonical payload, not the set.
+        if res.drop:
+            n = memory.sync_canonical_payload(p["topic"])
+            if n is not None:
+                print(f"  synced {p['topic'][:44]}: payload now {n}")
+    print(f"  quarantined {applied} (recoverable from quarantined_questions)")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -285,6 +375,14 @@ def main() -> int:
                     help="collapse ONE cluster by its term: keep the best member, quarantine the rest")
     ap.add_argument("--evidence", metavar="SUBSTRING",
                     help="show how often a question's distinctive phrases occur in the reading material")
+    ap.add_argument("--cap", type=int, metavar="N", default=None,
+                    help=f"balance per interview topic: keep at most N per outcome "
+                         f"(default {OUTCOME_CAP}); a CEILING, the judge may keep fewer")
+    ap.add_argument("--no-judge", action="store_true",
+                    help="--cap without the LLM: pure cap by rank, fully reproducible, no API cost")
+    ap.add_argument("--strict", action="store_true",
+                    help="hard quota: drop everything past --cap even if the judge calls it distinct. "
+                         "Blunt where interview_topics are coarse — see outcome_balance's docstring")
     args = ap.parse_args()
 
     structure = json.loads((DATA_DIR / "course_structure.json").read_text())
@@ -297,6 +395,8 @@ def main() -> int:
         return _evidence(structure, keys, args.evidence, args.topic)
     if args.dupes or args.collapse:
         return _dupes(structure, keys, args)
+    if args.cap is not None:
+        return _cap(structure, keys, args)
 
     plan, skipped = [], []
     for tk in keys:

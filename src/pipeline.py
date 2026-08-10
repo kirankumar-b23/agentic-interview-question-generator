@@ -18,7 +18,7 @@ from typing import Callable
 from src.agent import AgentState, PipelineResult, _critique_question_set
 from src.data_loader import get_data_store
 from src.models import GenerationConfig, SessionContext, CurationMetadata, CuratedOutput, QualityReport
-from src.config import MIN_QUESTIONS, MAX_QUESTIONS
+from src.config import MIN_QUESTIONS, MAX_QUESTIONS, OUTCOME_CAP
 from src.agents import UnderstandingAgent, RetrievalAgent, ValidationAgent, EvaluationAgent
 
 MAX_REVISION_ROUNDS = 2
@@ -1095,6 +1095,21 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
         if _fresh == 0:
             notes.append("No NEW questions were found for this topic — the set is unchanged. That is a "
                          "supply result, not a quality failure.")
+    # Per-outcome balance. Both halves are reported because they are different problems with the same
+    # cause: a topic that supplies several questions is repetition the candidate hears, and a topic that
+    # supplies none is a gap no count of questions reveals. On No-Code AI Automation three topics held 47%
+    # of a 38-question set while 9 of 22 had nothing.
+    _capped = sum(1 for r in (state.removed or []) if r.get("stage") == "outcome_cap")
+    if _capped:
+        notes.append(
+            f"{_capped} question(s) were dropped because their interview topic was already covered "
+            f"(cap {OUTCOME_CAP} per topic). Questions matching no topic are kept, not capped.")
+    if state.uncovered_outcomes:
+        _u = "; ".join(f"“{o}”" for o in state.uncovered_outcomes[:6])
+        notes.append(
+            f"{len(state.uncovered_outcomes)} interview topic(s) have NO question in this set: {_u}"
+            + ("; …" if len(state.uncovered_outcomes) > 6 else "")
+            + " — reported, not gated; retrieval for these is a separate decision.")
     # Say what the conversational filter cost. A pool filter that silently shrinks the supply reads as
     # "this session has few questions", which is the misdiagnosis the yield harness exists to prevent.
     _hands_on = sum(1 for r in (state.removed or []) if r.get("stage") == "hands_on")
