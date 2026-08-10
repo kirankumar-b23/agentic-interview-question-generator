@@ -40,17 +40,21 @@ class RetrievalAgent(BaseAgent):
         from src.config import BANK_POOL_CAP
         from src.sources.tavily_search import TavilyConnector
 
-        # Proactively CHECK the Tavily API is calling correctly BEFORE any web search relies on it.
-        ok, status, detail = TavilyConnector().health_check()
-        state.web_status = status
-        if ok:
-            emit("tavily_health", "done", f"Tavily API check: OK — {detail}")
-        else:
-            # Terminal failure (no key / quota / auth / rate) — disable web search for this run so we
-            # don't burn calls that will fail; the bank-only fallback is surfaced in the report banner.
-            state.web_search_disabled = True
-            state.web_error = detail
-            emit("tavily_health", "error", f"Tavily API check FAILED ({status}): {detail} — running bank-only.")
+        # The Tavily health probe already ran in `pipeline._tavily_preflight`, BEFORE the Understanding
+        # agent, so a dead web tier costs zero LLM calls. Do NOT probe again here: it would double the
+        # latency and the API call for information already on the state, and it is a cost regression no
+        # assertion about behaviour would catch. `state.web_probes` is asserted to be 1 in the tests.
+        #
+        # Only probe if nothing has (a caller driving this agent directly, e.g. a unit test).
+        if not getattr(state, "web_probes", 0):
+            ok, status, detail = TavilyConnector().health_check()
+            state.web_probes = 1
+            state.web_status = status
+            if not ok:
+                state.web_search_disabled = True
+                state.web_error = detail
+                emit("tavily_health", "error",
+                     f"Tavily API check FAILED ({status}): {detail} — running bank-only.")
 
         # LLM loop: bank → web → github, gathering up to the candidate pool.
         super().run(state, emit)

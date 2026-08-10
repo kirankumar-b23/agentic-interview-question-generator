@@ -151,9 +151,12 @@ export default function History() {
                     // below, since a <tr> is not focusable.
                     <tr
                       key={run.run_id}
-                      className="hist-row"
-                      onClick={() => navigate(`/review/${run.run_id}`)}
-                      title={`${run.topic || run.session_name} — ${run.created_at || ''}`}
+                      className={`hist-row${run.error ? ' hist-row-failed' : ''}`}
+                      // A failed run has no `run_results` payload, so Review would 404 on it.
+                      onClick={() => { if (!run.error) navigate(`/review/${run.run_id}`) }}
+                      title={run.error
+                        ? `${run.topic || run.session_name} — ${run.error}`
+                        : `${run.topic || run.session_name} — ${run.created_at || ''}`}
                     >
                       <td className="hist-date"><DateCell ts={run.created_at} /></td>
                       <td className="hist-run">
@@ -166,6 +169,12 @@ export default function History() {
                           )}
                         </span>
                         <span className="hist-run-sessions" title={run.session_name}>{run.session_name}</span>
+                        {/* A run that produced nothing now reaches History (it used to be persisted
+                            nowhere, so a Tavily outage looked identical to never pressing Generate).
+                            The cause goes on the row, or this reads as a bad topic. */}
+                        {run.error && (
+                          <span className="hist-run-error" title={run.error}>{run.error}</span>
+                        )}
                       </td>
                       <td className="hist-count">{run.question_count ?? '—'}</td>
                       <td className="hist-score-cell">
@@ -176,18 +185,21 @@ export default function History() {
                         {run.cost != null ? `$${run.cost.toFixed(4)}` : '—'}
                       </td>
                       <td className="hist-go">
-                        <span className={`hist-status ${run.approved ? 'hist-approved' : 'hist-pending'}`}>
-                          {run.approved ? 'Approved' : 'In memory'}
+                        <span className={`hist-status ${run.error ? 'hist-failed'
+                          : run.approved ? 'hist-approved' : 'hist-pending'}`}>
+                          {run.error ? 'Failed' : run.approved ? 'Approved' : 'In memory'}
                         </span>
                         {/* Keeps the run reachable by keyboard: a <tr> takes no focus, so the
                             visible affordance has to be a real button. */}
-                        <button
-                          className="hist-open"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/review/${run.run_id}`) }}
-                          aria-label={`Open run for ${run.session_name}`}
-                        >
-                          <Icon name="arrowRight" size={13} />
-                        </button>
+                        {!run.error && (
+                          <button
+                            className="hist-open"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/review/${run.run_id}`) }}
+                            aria-label={`Open run for ${run.session_name}`}
+                          >
+                            <Icon name="arrowRight" size={13} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -924,6 +924,15 @@ kbd { display: inline-block; min-width: 1.15rem; padding: 0.05rem 0.3rem; backgr
 .hist-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .hist-approved { color: var(--ok); }
 .hist-pending { color: var(--text-3); }
+/* A run that produced nothing. It reaches History now (a failed run used to be persisted nowhere, so a
+   Tavily outage looked identical to never pressing Generate) and must not read as a thin-but-real set. */
+.hist-failed { color: var(--danger); }
+/* No `run_results` payload exists behind a failed row, so it is not a link — drop the affordances that
+   promise it is. `default` rather than `not-allowed`: the row is inert, not forbidden. */
+.hist-row-failed { cursor: default; }
+.hist-row-failed:hover { background: var(--danger-soft); }
+.hist-run-error { display: block; font-size: var(--fs-2xs); color: var(--danger); margin-top: 0.15rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist-go { text-align: right; white-space: nowrap; }
 .hist-go .hist-status { margin-right: var(--s-3); }
 .hist-open { color: var(--text-3); padding: var(--s-1); border-radius: var(--r-sm); vertical-align: middle; transition: color var(--t), transform var(--t); }

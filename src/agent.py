@@ -23,6 +23,26 @@ from src.tools import TOOL_SCHEMAS, TOOL_DISPATCH
 # sit here, unused, where it could silently diverge from the one that actually applies.
 
 
+class RetrievalUnavailable(Exception):
+    """A retrieval tier the run depends on is down, so the run stops before spending anything.
+
+    A POLICY stop, not a crash — `AgentPipeline.run` catches it ahead of the generic handler so no
+    traceback is printed and the reason reaches the report verbatim.
+
+    Retrieval is not a preliminary to the "real" work, it IS the work: with the web tier dead, the
+    Evaluation agent, the syllabus audit, the same-thing pass, the outcome balance and up to three
+    quality-gate critiques would all still run, judging a pool the failure already decided.
+
+    Lives here rather than in `pipeline` so the agents can raise it without importing `pipeline`
+    (which imports them).
+    """
+
+    def __init__(self, status: str, detail: str = ""):
+        self.status = status
+        self.detail = detail
+        super().__init__(f"Tavily unavailable ({status})" + (f" — {detail}" if detail else ""))
+
+
 # ── Agent State ─────────────────────────────────────────────────────────────
 
 @dataclass
@@ -95,6 +115,10 @@ class AgentState:
     web_status: str = "not_run"
     web_error: str | None = None   # human-readable Tavily failure detail, if any
     web_search_disabled: bool = False   # set when the pre-flight Tavily health check fails (skip web calls)
+    # How many times the Tavily health probe ran this run. Must be 1 (2 if a transient status was
+    # retried): the probe moved to `pipeline._tavily_preflight`, and a `RetrievalAgent` that also probed
+    # would double the latency and the API call silently. Asserted in tests.
+    web_probes: int = 0
     # Pipeline-level state (set by UnderstandingAgent, read by RetrievalAgent)
     suggested_queries: list[str] = field(default_factory=list)
     # Quality gate revision instructions (set by pipeline, read by EvaluationAgent)

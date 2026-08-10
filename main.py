@@ -215,7 +215,17 @@ def _payload(result: PipelineResult, run_id: str) -> dict:
 def _persist_result(run_id: str, result: PipelineResult, batch_id: str | None = None) -> None:
     """Persist a completed run so Review + re-export survive restarts, and surface it in History."""
     try:
-        if not result or result.error or not result.curated_output:
+        if not result:
+            return
+        if result.error or not result.curated_output:
+            # Record WHY it produced nothing. Previously this returned early, so a Tavily outage was
+            # indistinguishable in History from never having pressed Generate. No `run_results` payload
+            # — there is no question set — so Review correctly has nothing to open.
+            memory.save_run(
+                run_id=run_id,
+                session_name=(result.context.session_name if result.context else "Unknown"),
+                question_count=0, composite_score=0, loops_used=0, approved=False,
+                batch_id=batch_id, error=result.error or "Run produced no question set")
             return
         memory.save_run_result(run_id, _payload(result, run_id))
         total_q = (len(result.curated_output.question_details)

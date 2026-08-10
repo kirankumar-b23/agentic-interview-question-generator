@@ -96,10 +96,15 @@ def stub_llm(monkeypatch):
         import src.session_understanding as su
         monkeypatch.setattr(su, "chat_completion_json", lambda **kw: _fake_session_context())
 
-        # No web calls: report Tavily as unavailable so the run goes bank-only.
+        # Report Tavily HEALTHY, and stub every actual web call below. It used to report `no_key` to
+        # force a bank-only run, but `pipeline._tavily_preflight` now STOPS the run when the probe fails
+        # (REQUIRE_WEB_SEARCH, on by default) — so that stub aborted all 18 pipeline runs in this file
+        # before they reached the behaviour under test. Reporting healthy keeps the run on its real path
+        # AND costs nothing, because `tool_search_web_questions` and `fetch_open_web` are both stubbed.
+        # `tests/test_retrieval_preflight.py` is where the failing-probe path is exercised.
         import src.sources.tavily_search as tav
         monkeypatch.setattr(tav.TavilyConnector, "health_check",
-                            lambda self: (False, "no_key", "stubbed out for tests"))
+                            lambda self: (True, "ok", "stubbed out for tests"))
         # Tavily has a SECOND path: the last-resort open-web tier, which `_top_up_from_open_web` imports
         # from this module at call time. Stubbing `tool_search_web_questions` below does not cover it.
         # It went live once the zero-tool-representation trigger began firing at any count — 21 pipeline

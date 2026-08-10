@@ -775,6 +775,43 @@ run at a time, each below the 0.82 embedding bar.
   (*Human-in-the-loop*, *Testing and validation*, *Scheduling and triggering*…). Retrieval for those is a
   separate decision — the same reason `topic_coverage` is reported and not scored.
 
+## Retrieval is the run — a dead web tier stops it before anything is spent
+
+`REQUIRE_WEB_SEARCH=1` (default). A failed Tavily pre-flight raises `agent.RetrievalUnavailable` and the run
+ends; it used to only set `web_search_disabled` and carry on bank-only through the relevance judge, the
+Evaluation agent, the syllabus audit, the same-thing pass, the outcome balance and up to three gate
+critiques — all judging a pool the failure had already decided.
+
+- **THE POSITION OF THE PROBE IS THE FEATURE.** It moved from `RetrievalAgent.run` to
+  `pipeline._tavily_preflight`, called FIRST in `_pick_questions`, because `RetrievalAgent` runs *after*
+  `UnderstandingAgent` and understanding costs one `chat_completion_json` per session. Checking in the old
+  place and then stopping would still have spent those calls. `RetrievalAgent` now reads the pre-probed
+  status (`state.web_probes`) instead of probing again — a second probe is a silent cost regression no
+  behavioural assertion catches, so a test pins the count at 1.
+- **The cost of this guard is measured and accepted, not assumed.** The bank supplies **75%** of all shipped
+  questions (459 of 615 across 62 runs), and on a 17-run sample **12 would have shipped ≥5 questions
+  bank-only**. So the guard refuses runs that would have worked — the chosen trade-off is guaranteed-no-waste
+  over best-effort output. `REQUIRE_WEB_SEARCH=0` restores the previous behaviour exactly and is the only
+  route back, so `TestTheEscapeHatch` guards it.
+- **Terminal vs transient is a real distinction.** `no_key`/`auth`/`quota` fail immediately — nothing will
+  work today. `rate`/`error` get ONE retry (`WEB_PREFLIGHT_RETRY_STATUSES`): a single 429 must not be able to
+  kill an 8-topic batch. The retry lives in the caller, not in `health_check`, which stays one honest probe.
+- **"Nothing is spent" needs a spy on BOTH LLM boundaries.** `chat_completion_json` (bound at import time by
+  every module that uses it, so each needs its own patch) **and** `base_agent.get_client`, because the agent
+  tool loops call `client.chat.completions.create` directly. A mutation check exposed this: with the probe
+  moved back after Understanding, the assertion still passed and only `tests/netguard.py` saw the 3 real
+  connections.
+- **A failed run now reaches History.** `main._persist_result` returned early on any error, so a Tavily
+  outage was indistinguishable from never having pressed Generate. It now writes a `run_history` row with
+  `error` and `question_count = 0` and NO `run_results` payload, so Review has nothing to open — History
+  renders it as `Failed`, non-clickable. The aborted result gets `_fallback_context` or every failed row
+  would read "Unknown".
+- **`/api/result` reports the failure before the row is persisted** (`main.py:457` sets `_results`, 458
+  persists). A test that polls the endpoint and then reads History races — wait for the row.
+- **`tests/test_pipeline_integration.py` reports Tavily HEALTHY and stubs the web calls instead.** It used to
+  stub `health_check` as `no_key` to force bank-only, which now aborted all 18 pipeline runs in that file
+  before they reached the behaviour under test.
+
 ## Web/UI notes
 
 - `main.py` errors use `{"error": ...}`, not FastAPI's `{"detail": ...}` — the React client reads
@@ -850,7 +887,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 690 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 711 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

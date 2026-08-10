@@ -286,6 +286,25 @@ OUTCOME_CAP = int(os.getenv("OUTCOME_CAP", "2"))
 # under-describes n8n. Those are the n8n gap showing up again, not duplicates.
 OUTCOME_ORPHAN_FLOOR = float(os.getenv("OUTCOME_ORPHAN_FLOOR", "0.35"))
 
+# Stop a run outright when the Tavily pre-flight fails, instead of continuing bank-only. ON by default.
+#
+# Retrieval is the run. With the web tier dead, every downstream stage — the Evaluation agent, the
+# relevance judge, the syllabus audit, the same-thing pass, the outcome balance, up to three gate
+# critiques — still executes against a pool the failure already decided, and buys nothing.
+#
+# THE COST OF THIS IS MEASURED AND ACCEPTED, not assumed. Across 62 persisted runs the bank supplies
+# **75%** of all shipped questions (459 of 615), and on a 17-run sample **12 would have shipped >= 5
+# questions bank-only** while 5 would genuinely have been too thin. So this guard refuses runs that would
+# have worked. That is the chosen policy — guaranteed no wasted spend over best-effort output.
+#
+# Set to 0 for exactly the previous behaviour: a failed pre-flight disables web search and the run
+# continues bank-only, with the failure surfaced in the report banner.
+REQUIRE_WEB_SEARCH = os.getenv("REQUIRE_WEB_SEARCH", "1") == "1"
+# Tavily statuses worth a second probe. `no_key`, `auth` and `quota` are terminal — nothing will work
+# today, so re-probing is pure latency. A rate limit or a network blip is not the same thing, and one 429
+# should not be able to kill an 8-topic batch.
+WEB_PREFLIGHT_RETRY_STATUSES = ("rate", "error")
+
 # Live question harvesting (tools 12 & 13 — search_github_questions / search_web_questions)
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")   # optional; raises GitHub API rate limit from 60→5000/hr

@@ -167,6 +167,10 @@ def init_db():
         # `topic_question_set` shipped without this for one commit, and CREATE TABLE IF NOT EXISTS does
         # not alter an existing table — so a database created in between has the table without the column.
         "ALTER TABLE topic_question_set ADD COLUMN detail_json TEXT",
+        # Why a run produced nothing. Failed runs were not persisted at all, so a Tavily outage looked
+        # identical to never having pressed Generate — the reviewer had no way to tell a retrieval
+        # problem from a bad topic. NULL for a successful run.
+        "ALTER TABLE run_history ADD COLUMN error TEXT",
     ]:
         try:
             conn.execute(migration)
@@ -223,15 +227,22 @@ def clear_session_resolution(session_name: str) -> int:
 
 def save_run(run_id: str, session_name: str, question_count: int,
              composite_score: float, loops_used: int, approved: bool = False,
-             api_usage: dict | None = None, batch_id: str | None = None):
+             api_usage: dict | None = None, batch_id: str | None = None,
+             error: str | None = None):
+    """Record a run in History. `error` is set for a run that produced nothing and says WHY.
+
+    A failed run used to be persisted nowhere (`main._persist_result` returned early on `result.error`),
+    so a Tavily outage was indistinguishable from never having pressed Generate — and a reviewer had no
+    way to tell a retrieval problem from a bad topic.
+    """
     conn = get_connection()
     conn.execute(
         """INSERT OR REPLACE INTO run_history
            (run_id, session_name, question_count, composite_score, loops_used, approved,
-            api_usage_json, batch_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            api_usage_json, batch_id, error)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (run_id, session_name, question_count, composite_score, loops_used, int(approved),
-         json.dumps(api_usage) if api_usage else None, batch_id)
+         json.dumps(api_usage) if api_usage else None, batch_id, error)
     )
     conn.commit()
     conn.close()
@@ -365,7 +376,7 @@ def get_run_history(limit: int = 100, include_superseded: bool = False) -> list[
     conn = get_connection()
     rows = conn.execute(
         "SELECT run_id, session_name, question_count, composite_score, loops_used, approved, "
-        "created_at, api_usage_json, batch_id, superseded_by FROM run_history "
+        "created_at, api_usage_json, batch_id, superseded_by, error FROM run_history "
         + ("" if include_superseded else "WHERE superseded_by IS NULL ")
         + "ORDER BY created_at DESC LIMIT ?",
         (limit,)

@@ -19,6 +19,7 @@ from src.agent import AgentState, PipelineResult, _critique_question_set
 from src.data_loader import get_data_store
 from src.models import GenerationConfig, SessionContext, CurationMetadata, CuratedOutput, QualityReport
 from src.config import MIN_QUESTIONS, MAX_QUESTIONS
+from src.agent import RetrievalUnavailable
 from src.agents import UnderstandingAgent, RetrievalAgent, ValidationAgent, EvaluationAgent
 
 MAX_REVISION_ROUNDS = 2
@@ -238,11 +239,70 @@ def _open_web_shortfall(surviving: int, requested: int, missing_tools=None):
     return None
 
 
+def _retrieval_stopped_message(exc) -> str:
+    """One sentence a reviewer can act on, in History and on the Progress stream.
+
+    Names the tier, the status and the escape hatch. Without the last part this looks like a bug rather
+    than the configured policy it is.
+    """
+    detail = f" — {exc.detail}" if getattr(exc, "detail", "") else ""
+    return (f"Stopped before spending: Tavily unavailable ({exc.status}){detail}. "
+            f"Retrieval is the run, and the question bank alone is not a substitute. "
+            f"Set REQUIRE_WEB_SEARCH=0 to allow a bank-only run.")
+
+
 class AgentPipeline:
 
     # ── Reusable stages ───────────────────────────────────────────────────
+    def _tavily_preflight(self, state, emit) -> None:
+        """Probe the web tier BEFORE anything is spent. Raises `RetrievalUnavailable` when it is down.
+
+        THE POSITION OF THIS CALL IS THE POINT. The same probe used to live in `RetrievalAgent.run`,
+        which executes AFTER `UnderstandingAgent` — and understanding costs one `chat_completion_json`
+        per session (`session_understanding.py`). Checking there and then stopping would still have spent
+        those calls, so "stopped before spending anything" would have been false.
+
+        One probe per run: the result is left on `state` and `RetrievalAgent` reads it instead of
+        re-probing. Two probes would double the latency and the API call for no information.
+
+        Retried ONCE for `WEB_PREFLIGHT_RETRY_STATUSES` only. The retry lives here rather than inside
+        `health_check` so that stays a single honest probe, which is what its docstring promises.
+        """
+        # `REQUIRE_WEB_SEARCH` is read HERE, not at import time, so a test or an operator can flip the
+        # module attribute and have it take effect — the same pattern `_drop_hands_on` uses for
+        # `CONVERSATIONAL_ONLY`.
+        from src.config import REQUIRE_WEB_SEARCH, WEB_PREFLIGHT_RETRY_STATUSES
+        from src.sources.tavily_search import TavilyConnector
+
+        connector = TavilyConnector()
+        ok, status, detail = connector.health_check()
+        state.web_probes = getattr(state, "web_probes", 0) + 1
+        if not ok and status in WEB_PREFLIGHT_RETRY_STATUSES:
+            emit("tavily_health", "running", f"Tavily check failed ({status}) — retrying once...")
+            ok, status, detail = connector.health_check()
+            state.web_probes += 1
+
+        state.web_status = status
+        if ok:
+            emit("tavily_health", "done", f"Tavily API check: OK — {detail}")
+            return
+
+        state.web_error = detail
+        if REQUIRE_WEB_SEARCH:
+            emit("tavily_health", "error",
+                 f"Tavily API check FAILED ({status}): {detail} — stopping before any spend.")
+            raise RetrievalUnavailable(status, detail)
+        # Guard off: exactly the previous behaviour — skip web calls that would fail, run bank-only,
+        # and let the report banner say so.
+        state.web_search_disabled = True
+        emit("tavily_health", "error",
+             f"Tavily API check FAILED ({status}): {detail} — running bank-only "
+             f"(REQUIRE_WEB_SEARCH=0).")
+
     def _pick_questions(self, state, emit):
         """Stages 1–3: Understanding → Retrieval → Validation (the 'picked' set)."""
+        # FIRST, before the Understanding agent spends a token — see `_tavily_preflight`.
+        self._tavily_preflight(state, emit)
         UnderstandingAgent().run(state, emit)
         RetrievalAgent().run(state, emit)
         # Suppress previously-rejected questions (per session) BEFORE validation/selection — so a
@@ -706,6 +766,15 @@ class AgentPipeline:
                  revisions=revision_round, usage=dict(state.api_usage),
                  score=result.quality_report.composite_score if result.quality_report else None,
                  verdict=result.quality_report.pass_fail if result.quality_report else None)
+        except RetrievalUnavailable as exc:
+            # A POLICY stop, caught AHEAD of the generic handler: no traceback for an expected outcome,
+            # and the reason reaches History verbatim so this reads as a retrieval outage rather than a
+            # bad topic or a crash.
+            result.error = _retrieval_stopped_message(exc)
+            # The stop precedes UnderstandingAgent, so `state.session_context` is None — without this
+            # History cannot even name the topic that failed, and every failed row would read "Unknown".
+            result.context = _fallback_context(config, state)
+            emit("error", "error", result.error)
         except Exception as exc:
             import traceback
             traceback.print_exc()
@@ -736,6 +805,15 @@ class AgentPipeline:
             result.awaiting_gate = True
             emit("complete", "done",
                  f"Preview ready — {state.total_questions} picked question(s) to verify.")
+        except RetrievalUnavailable as exc:
+            # A POLICY stop, caught AHEAD of the generic handler: no traceback for an expected outcome,
+            # and the reason reaches History verbatim so this reads as a retrieval outage rather than a
+            # bad topic or a crash.
+            result.error = _retrieval_stopped_message(exc)
+            # The stop precedes UnderstandingAgent, so `state.session_context` is None — without this
+            # History cannot even name the topic that failed, and every failed row would read "Unknown".
+            result.context = _fallback_context(config, state)
+            emit("error", "error", result.error)
         except Exception as exc:
             import traceback
             traceback.print_exc()
