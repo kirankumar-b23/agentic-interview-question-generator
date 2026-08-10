@@ -282,7 +282,7 @@ def _cap(structure: dict, keys: list, args) -> int:
     Reports the uncovered outcomes either way: a topic supplying several questions is repetition the
     candidate hears, and a topic supplying none is a gap no question count reveals.
     """
-    from src.outcome_balance import balance_by_outcome, make_llm_judge
+    from src.outcome_balance import balance_by_outcome, majority, make_llm_judge
     from src.pipeline import coverage_targets
 
     plan = []
@@ -300,7 +300,12 @@ def _cap(structure: dict, keys: list, args) -> int:
         curated, rm = _session_profile(sessions, ctx)
         texts = [r["content"] for r in rows]
         fits = _fits(texts, curated, rm)
+        # `--apply` writes to the database, so a wrong verdict is permanent: require 2 of 3. Report
+        # mode uses a single pass so previewing stays cheap — which does mean the report can differ
+        # slightly from what --apply then does, in the conservative direction (fewer cuts).
         judge = None if args.no_judge else make_llm_judge(texts, model=get_active_model())
+        if judge and args.apply:
+            judge = majority(judge)
         res = balance_by_outcome(texts, outcomes, fits=fits,
                                  approved=[r["status"] == "approved" for r in rows],
                                  cap=args.cap, judge=judge, strict=args.strict)
@@ -376,8 +381,9 @@ def main() -> int:
     ap.add_argument("--evidence", metavar="SUBSTRING",
                     help="show how often a question's distinctive phrases occur in the reading material")
     ap.add_argument("--cap", type=int, metavar="N", default=None,
-                    help=f"balance per interview topic: keep at most N per outcome "
-                         f"(default {OUTCOME_CAP}); a CEILING, the judge may keep fewer")
+                    help=f"balance per interview topic. By default nothing is dropped without an LLM "
+                         f"verdict that another kept question covers the same outcome; N (default "
+                         f"{OUTCOME_CAP}) applies only with --strict")
     ap.add_argument("--no-judge", action="store_true",
                     help="--cap without the LLM: pure cap by rank, fully reproducible, no API cost")
     ap.add_argument("--strict", action="store_true",

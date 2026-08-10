@@ -162,6 +162,90 @@ class TestSmallBatchesAreTheWholePoint:
         assert out, "verdicts from the surviving batch must be kept"
 
 
+class TestOneJudgeCallPerOutcome:
+    """A verdict must depend only on its own outcome's members.
+
+    Found by re-running `--apply`: it cut 8 MORE questions, including *"What is the difference between a
+    base model and an instruction-tuned model?"* which the first pass had deliberately kept. The cause was
+    not a flaky model — the same 28 pairs of one outcome gave 3 "same" verdicts when batched alongside
+    other outcomes' pairs and **0 across 3 trials** when batched alone. Flat batching made the whole pass
+    non-idempotent.
+    """
+
+    def test_pairs_from_different_outcomes_are_never_batched_together(self):
+        batches = []
+
+        def judge(pairs):
+            batches.append(list(pairs))
+            return []
+
+        texts = HALLUCINATION + WORKFLOW + HUMAN_LOOP
+        balance_by_outcome(texts, OUTCOMES, fits=[0.6] * len(texts),
+                           approved=[True] * len(texts), judge=judge, min_keep=1)
+
+        assert len(batches) == 3, f"expected one call per outcome with >=2 members, got {len(batches)}"
+        # Each call's pairs must all come from a single outcome — i.e. index ranges must not mix.
+        groups = [set(range(0, 6)), set(range(6, 9)), set(range(9, 12))]
+        for b in batches:
+            touched = {i for p in b for i in p}
+            assert any(touched <= g for g in groups), f"a batch mixed outcomes: {touched}"
+
+    def test_one_outcome_failing_still_balances_the_others(self):
+        """Per-outcome fail-open. A flat call meant one error discarded every verdict."""
+        seen = {"n": 0}
+
+        def flaky(pairs):
+            seen["n"] += 1
+            if seen["n"] == 1:
+                raise RuntimeError("rate limited")
+            return list(pairs)
+
+        texts = HALLUCINATION + WORKFLOW + HUMAN_LOOP
+        res = balance_by_outcome(texts, OUTCOMES, fits=[0.6] * len(texts),
+                                 approved=[True] * len(texts), judge=flaky, min_keep=1)
+        assert res.judge_failed is True
+        assert res.drop, "the outcomes that DID judge must still be balanced"
+        assert not (set(res.drop) & set(range(6))), "the failed outcome keeps all its questions"
+
+
+class TestMajorityVoteProtectsTheDestructivePath:
+    """`--apply` writes to the database, so one flapping verdict is permanent. 2 of 3 required."""
+
+    def test_a_single_dissenting_trial_does_not_cut(self):
+        from src.outcome_balance import majority
+
+        calls = {"n": 0}
+
+        def flappy(pairs):
+            calls["n"] += 1
+            return [pairs[0]] if calls["n"] == 1 else []        # "same" once, "different" twice
+
+        assert majority(flappy)([(0, 1)]) == [], "1 of 3 must not be enough to delete a real question"
+
+    def test_two_of_three_is_enough(self):
+        from src.outcome_balance import majority
+
+        calls = {"n": 0}
+
+        def mostly(pairs):
+            calls["n"] += 1
+            return [] if calls["n"] == 2 else [pairs[0]]
+
+        assert majority(mostly)([(0, 1)]) == [(0, 1)]
+
+    def test_the_script_uses_it_only_when_applying(self):
+        """Report mode stays single-pass so previewing is cheap; the write path pays 3x."""
+        src = (Path(__file__).resolve().parent.parent / "scripts" / "filter_topic_sets.py").read_text()
+        assert "if judge and args.apply:" in src and "majority(judge)" in src
+
+    def test_the_pipeline_does_not_pay_for_it(self):
+        """`_cap_by_outcome` only trims what a run SHIPS and re-derives it every run, so a wrong verdict
+        costs nothing permanent — paying 3x per run to stabilise a reversible decision is not worth it."""
+        src = (Path(__file__).resolve().parent.parent / "src" / "tools.py").read_text()
+        cap = src[src.index("def _cap_by_outcome"):src.index("def _add_retained")]
+        assert "majority" not in cap
+
+
 class TestTheQuotaIsOptIn:
     """`strict=True` restores the original hard quota. It exists, it is not the default, and the reason
     is measured: on Gen AI Foundations the topic "Pre-trained vs fine-tuned models" holds 14 questions and
@@ -501,7 +585,9 @@ class TestTheQualityReportNamesIt:
 
         report = _build_quality_report(st, 0)
         notes = " ".join(report.critique)
-        assert "already covered" in notes
+        assert "already covers the same" in notes
+        assert "judged, not counted" in notes, (
+            "the note must not credit a CAP — the pipeline runs strict=False, so counting plays no part")
         assert "Human-in-the-loop AI systems" in notes
         assert "not gated" in notes
 

@@ -756,8 +756,21 @@ run at a time, each below the 0.82 embedding bar.
 - **`tests/test_failure_paths.py` had NO database isolation** and was reading the live `memory.db`:
   `_add_retained` silently pulled in 32 real questions, so its "the pool was trimmed to 5" assertion was
   really measuring production data and moved whenever the shipped sets changed.
-- Applied to the 8 accumulated sets: **213 → 173**, hallucination on No-Code **6 → 2** (a definition and
-  an applied question), `memory.db` backed up, all 40 cuts in `quarantined_questions`.
+- **ONE judge call PER OUTCOME, and this is what makes the pass idempotent.** A verdict depends on which
+  OTHER pairs share its batch: the same 28 pairs of "Pre-trained vs fine-tuned models" gave 3 "same"
+  verdicts batched alongside other outcomes' pairs and **0 across 3 trials** batched alone. With one flat
+  call, a second `--apply` cut **8 more** questions — including *"What is the difference between a base
+  model and an instruction-tuned model?"*, which the first pass had deliberately KEPT as distinct. Per
+  outcome, the pass converges in one step (41 → 38 → 38 → 38) and a re-run proposes **0** cuts.
+- **`majority()` (2 of 3) guards the DESTRUCTIVE path only.** `--apply` writes to the database, so one flap
+  is permanent; `_cap_by_outcome` only trims what a run ships and re-derives it every run, so paying 3×
+  there to stabilise a reversible decision is not worth it. Report mode is single-pass, so the preview can
+  differ slightly from `--apply` — in the conservative direction.
+- Applied to the 8 accumulated sets: **213 → 169**, hallucination on No-Code **6 → 2** (a definition and
+  an applied question), `memory.db` backed up, all 46 cuts in `quarantined_questions`.
+- **The quality-report note must not name `OUTCOME_CAP`.** The pipeline runs `strict=False`, so counting
+  plays no part in what was dropped; an earlier note credited "cap 2 per topic" and described the wrong
+  mechanism entirely.
 - The uncovered half is reported and never gated: **9 of 22** No-Code outcomes have no question at all
   (*Human-in-the-loop*, *Testing and validation*, *Scheduling and triggering*…). Retrieval for those is a
   separate decision — the same reason `topic_coverage` is reported and not scored.
@@ -837,7 +850,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 684 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 690 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

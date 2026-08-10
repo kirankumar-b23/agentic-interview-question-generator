@@ -18,7 +18,7 @@ from typing import Callable
 from src.agent import AgentState, PipelineResult, _critique_question_set
 from src.data_loader import get_data_store
 from src.models import GenerationConfig, SessionContext, CurationMetadata, CuratedOutput, QualityReport
-from src.config import MIN_QUESTIONS, MAX_QUESTIONS, OUTCOME_CAP
+from src.config import MIN_QUESTIONS, MAX_QUESTIONS
 from src.agents import UnderstandingAgent, RetrievalAgent, ValidationAgent, EvaluationAgent
 
 MAX_REVISION_ROUNDS = 2
@@ -1101,9 +1101,13 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     # of a 38-question set while 9 of 22 had nothing.
     _capped = sum(1 for r in (state.removed or []) if r.get("stage") == "outcome_cap")
     if _capped:
+        # Say WHY they went, and do not name `OUTCOME_CAP`: the pipeline runs
+        # `balance_by_outcome` with strict=False, so the cap plays no part in this — a question is
+        # dropped only when the LLM judge says a kept one already covers that outcome. An earlier
+        # version of this line credited "cap 2 per topic" and was simply describing the wrong mechanism.
         notes.append(
-            f"{_capped} question(s) were dropped because their interview topic was already covered "
-            f"(cap {OUTCOME_CAP} per topic). Questions matching no topic are kept, not capped.")
+            f"{_capped} question(s) were dropped because another question already covers the same "
+            f"interview topic (judged, not counted). Questions matching no topic are never dropped.")
     if state.uncovered_outcomes:
         _u = "; ".join(f"“{o}”" for o in state.uncovered_outcomes[:6])
         notes.append(

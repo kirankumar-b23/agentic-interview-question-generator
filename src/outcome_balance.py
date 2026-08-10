@@ -174,21 +174,33 @@ def balance_by_outcome(texts: list[str], outcomes: list[str], *, fits: list[floa
 
     # EVERY outcome with >=2 members — restricting this to over-served outcomes is the bug described
     # in the module docstring.
-    pairs = [(a, b) for members in ordered.values()
-             for x, a in enumerate(members) for b in members[x + 1:]]
+    #
+    # ONE judge call PER OUTCOME, not one flat call for the whole set. A verdict depends on which OTHER
+    # pairs share its batch, which was found the hard way: the same 28 pairs of "Pre-trained vs
+    # fine-tuned models" yielded 3 "same" verdicts when batched alongside other outcomes' pairs and
+    # **0 across 3 trials** when batched alone. Flat batching therefore made the whole pass
+    # non-idempotent — a second `--apply` cut 8 more questions, including
+    # *"What is the difference between a base model and an instruction-tuned model?"*, which the first
+    # pass had deliberately kept. Judging one outcome at a time makes a verdict a function of that
+    # outcome's own members and nothing else.
     same: set[tuple[int, int]] = set()
-    if pairs and judge is not None:
-        asked = {(min(a, b), max(a, b)) for a, b in pairs}
+    total_pairs = 0
+    for t, members in ordered.items():
+        group = [(a, b) for x, a in enumerate(members) for b in members[x + 1:]]
+        if not group or judge is None:
+            continue
+        total_pairs += len(group)
+        asked = {(min(a, b), max(a, b)) for a, b in group}
         try:
-            for a, b in (judge(pairs) or []):
+            for a, b in (judge(group) or []):
                 key = (min(int(a), int(b)), max(int(a), int(b)))
                 if key in asked:                      # verified: only a pair we actually asked about
                     same.add(key)
         except Exception as exc:  # noqa: BLE001 — a dead judge must not lose the set
-            print(f"[outcome_balance] judge skipped ({type(exc).__name__}: {exc})")
+            # Per-outcome fail-open: one bad outcome keeps its questions, the rest are still balanced.
+            print(f"[outcome_balance] outcome {t} skipped ({type(exc).__name__}: {exc})")
             res.judge_failed = True
-            same = set()
-    res.pairs_judged = len(pairs) if (judge is not None and not res.judge_failed) else 0
+    res.pairs_judged = total_pairs
     res.same_verdicts = len(same)
     is_same = lambda a, b: (min(a, b), max(a, b)) in same  # noqa: E731
 
@@ -236,6 +248,32 @@ Foundations destroyed 12 distinct questions under one coarse topic. The cap was 
 
 Cost: 52 pairs is 6 calls instead of 1, on Haiku. Cheap, and the alternative is verdicts that are wrong.
 """
+
+
+def majority(judge, trials: int = 3):
+    """Wrap a judge so a pair counts as redundant only if MOST trials say so.
+
+    For the DESTRUCTIVE path (`filter_topic_sets.py --cap --apply`), where a wrong verdict removes a real
+    question from the database. The pipeline path deliberately does NOT use this: it only trims what a run
+    ships, re-derives the result every run, and paying 3x on every run to stabilise a reversible decision
+    is not worth it.
+
+    Why it is needed at all: verdicts are not perfectly reproducible, and a single flap is permanent once
+    applied. A second `--apply` removed 8 further questions — one of them a question the first pass had
+    explicitly kept as distinct. Requiring 2 of 3 makes an erosion like that need two independent
+    misjudgements instead of one.
+    """
+    from collections import Counter
+
+    def voted(pairs):
+        votes: Counter = Counter()
+        for _ in range(trials):
+            for a, b in (judge(pairs) or []):
+                votes[(min(a, b), max(a, b))] += 1
+        need = trials // 2 + 1
+        return [p for p, n in votes.items() if n >= need]
+
+    return voted
 
 
 def make_llm_judge(texts: list[str], *, model: str, complete=None, on_usage=None,
