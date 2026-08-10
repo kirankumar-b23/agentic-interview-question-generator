@@ -602,6 +602,45 @@ def mark_superseded(run_id: str, canonical_run_id: str) -> None:
     conn.close()
 
 
+def sync_canonical_payload(topic_key: str) -> int | None:
+    """Re-render the topic's canonical run payload from `topic_question_set`. Returns the new count.
+
+    The canonical run's payload is what `/review/<id>` and the Sheets export read, so a change to the set
+    is INVISIBLE until this runs. Quarantining 15 questions left four payloads still showing the old
+    counts (67 vs 56, 37 vs 35…) — the cut had happened in the database and not in the product.
+
+    Lives here so `scripts/consolidate_topic_sets.py` and `scripts/filter_topic_sets.py` cannot drift on
+    how a canonical payload is built. Returns None when the topic has no canonical run or no payload.
+    """
+    run_id = get_canonical_run(topic_key)
+    if not run_id:
+        return None
+    payload = get_run_result(run_id)
+    if not payload:
+        return None
+    details = []
+    for row in get_topic_questions(topic_key):
+        if row.get("detail_json"):
+            try:
+                details.append(json.loads(row["detail_json"]))
+                continue
+            except Exception:  # noqa: BLE001 — fall back to the plain columns
+                pass
+        details.append({"content": row["content"], "question_id": row["content_norm"][:36],
+                        "category": "GEN_AI", "topic": "Gen AI",
+                        "difficulty": row.get("difficulty") or "Medium",
+                        "source": row.get("source") or "interview_db"})
+    out = dict(payload.get("output") or {})
+    out["question_details"] = details
+    payload["output"] = out
+    save_run_result(run_id, payload)
+    conn = get_connection()
+    conn.execute("UPDATE run_history SET question_count=? WHERE run_id=?", (len(details), run_id))
+    conn.commit()
+    conn.close()
+    return len(details)
+
+
 def get_topic_sheet(topic_key: str) -> dict | None:
     conn = get_connection()
     row = conn.execute("SELECT * FROM topic_sheets WHERE topic_key=?", (topic_key,)).fetchone()
