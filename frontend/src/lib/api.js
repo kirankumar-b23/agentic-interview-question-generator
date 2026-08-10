@@ -37,6 +37,19 @@ export const api = {
     }).then(j),
 
   // TESTING: preview mode — resume a paused run through the quality gate
+  // Multi-topic: queues ONE RUN PER TOPIC and returns every run_id at once. Not a merged run —
+  // each topic keeps its own question set, gate verdict, review screen and spreadsheet.
+  generateBatch: (topics, maxQuestions, model, course) =>
+    fetch('/api/generate/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topics, max_questions: maxQuestions, model, course: course?.id || 'gen_ai',
+        category: course?.category, course_type: course?.course_type,
+      }),
+    }).then(j),
+  getBatch: (batchId) => fetch(`/api/batch/${batchId}`).then(j),
+
   proceed: (runId) =>
     fetch(`/api/proceed/${runId}`, { method: 'POST' }).then(j),
 

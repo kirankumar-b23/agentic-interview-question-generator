@@ -38,6 +38,7 @@ frontend/                           # React SPA (Vite). Pages: SessionSelector, 
   src/pages/Review.jsx              # Per-question review, keyboard-first triage
   src/pages/Progress.jsx            # Live agent transcript
   src/pages/AddCourse.jsx           # Add/import a course (new sessions/topics)
+  src/pages/Batch.jsx               # Multi-topic batch: one row per topic, links into each review
 scripts/
   prepare_data.py                   # One-time: CSV→JSON, build knowledge graph, eval sets
   build_session_reading_material.py # Build data/reading_materials/session_map.json (per-session content)
@@ -534,6 +535,33 @@ loosely-related filler.
   on it. It is passed to the trim prompt as a hint only; the run that raised this did not list
   guardrails in its 26-item `scope_out`.
 
+## Multi-topic batches: ONE RUN PER TOPIC, never a merged run
+
+`POST /api/generate/batch` queues one full pipeline per selected topic; `src/pipeline.py`, the agents and
+the gate are untouched by it.
+
+- **Do not "simplify" this into one merged run.** Review, approve, rejection feedback and learned rules
+  are all keyed by `run_id`, and `sheets_writer` titles one spreadsheet per run
+  `"<Topic> - <sessions> (NxtMock)"`. Merging would give one gate verdict and one all-or-nothing approve
+  for every topic, and would push 6-12 sessions into a single `SessionContext` — the per-session
+  attribution collapse documented above showed up at **two**. (22 topics ship, 1-4 sessions each.)
+- **Runs are SEQUENTIAL, and `_start` has no lock to stop you making them parallel.** Two reasons it
+  must stay sequential: a 3-topic batch is 3 full pipelines, so parallel multiplies the LLM/Tavily burst
+  (this project has already exhausted a Tavily plan and an OpenRouter key's headroom); and `memory.db` is
+  SQLite, where concurrent pipeline writes are lock contention for no user benefit.
+  `tests/test_batch_generate.py::TestRunsAreSequential` asserts **no two runs OVERLAP**, not the call
+  count — a parallel worker still produces N calls, so counting proves nothing.
+- **A failing topic does not stop the batch** — it is recorded on that row and the worker moves on, the
+  same discipline as `state.phase_errors`. Validation is all-or-nothing though: one unknown topic rejects
+  the whole request before anything is queued, so a half-started batch cannot silently spend credit.
+- **`GET /api/batch/{id}` must never join the worker.** `/api/result` already 409s in flight because
+  polling tabs blocking on a thread starved Starlette's bounded threadpool.
+- Every `run_id` is minted and given its SSE queue up front, so `/api/stream/{run_id}` and the Progress
+  page work per topic with **no SSE changes**. `run_history.batch_id` is the durable copy, since the
+  in-memory `_batches` registry is bounded and pruned.
+- Preview mode is deliberately unavailable for a batch: it pauses mid-run for a human, which would stall
+  every queued topic behind it.
+
 ## Web/UI notes
 
 - `main.py` errors use `{"error": ...}`, not FastAPI's `{"detail": ...}` — the React client reads
@@ -609,7 +637,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 573 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 587 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

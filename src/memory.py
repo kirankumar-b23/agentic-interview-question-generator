@@ -96,6 +96,9 @@ def init_db():
         "ALTER TABLE run_history ADD COLUMN api_usage_json TEXT",
         "ALTER TABLE question_feedback ADD COLUMN session_name TEXT",
         "ALTER TABLE question_feedback ADD COLUMN content TEXT",
+        # Which multi-topic batch a run belonged to, or NULL for a single run. Persisted so the batch
+        # view survives a server restart instead of living only in main.py's in-memory registry.
+        "ALTER TABLE run_history ADD COLUMN batch_id TEXT",
     ]:
         try:
             conn.execute(migration)
@@ -152,17 +155,32 @@ def clear_session_resolution(session_name: str) -> int:
 
 def save_run(run_id: str, session_name: str, question_count: int,
              composite_score: float, loops_used: int, approved: bool = False,
-             api_usage: dict | None = None):
+             api_usage: dict | None = None, batch_id: str | None = None):
     conn = get_connection()
     conn.execute(
         """INSERT OR REPLACE INTO run_history
-           (run_id, session_name, question_count, composite_score, loops_used, approved, api_usage_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+           (run_id, session_name, question_count, composite_score, loops_used, approved,
+            api_usage_json, batch_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (run_id, session_name, question_count, composite_score, loops_used, int(approved),
-         json.dumps(api_usage) if api_usage else None)
+         json.dumps(api_usage) if api_usage else None, batch_id)
     )
     conn.commit()
     conn.close()
+
+
+def get_batch_runs(batch_id: str) -> list[dict]:
+    """Runs recorded for a multi-topic batch, oldest first.
+
+    Read from SQLite rather than main.py's in-memory registry so the batch view still works after a
+    restart — the registry is bounded and pruned, this is not.
+    """
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT run_id, session_name, question_count, composite_score, approved, created_at
+           FROM run_history WHERE batch_id = ? ORDER BY created_at""", (batch_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def save_run_result(run_id: str, payload: dict):
@@ -272,7 +290,7 @@ def get_run_history(limit: int = 100) -> list[dict]:
     conn = get_connection()
     rows = conn.execute(
         "SELECT run_id, session_name, question_count, composite_score, loops_used, approved, "
-        "created_at, api_usage_json FROM run_history ORDER BY created_at DESC LIMIT ?",
+        "created_at, api_usage_json, batch_id FROM run_history ORDER BY created_at DESC LIMIT ?",
         (limit,)
     ).fetchall()
     conn.close()

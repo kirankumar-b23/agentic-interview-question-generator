@@ -62,6 +62,7 @@ SSE_STALL_SECONDS = float(os.getenv("SSE_STALL_SECONDS", "900"))
 # only bound memory — they don't lose anything. Insertion order makes the oldest the first evicted.
 MAX_CACHED_RESULTS = int(os.getenv("MAX_CACHED_RESULTS", "50"))
 MAX_CACHED_PREVIEWS = int(os.getenv("MAX_CACHED_PREVIEWS", "10"))
+MAX_CACHED_BATCHES = int(os.getenv("MAX_CACHED_BATCHES", "20"))
 
 REACT_DIST = os.path.join(os.path.dirname(__file__), "frontend", "dist")
 _has_react = os.path.isdir(REACT_DIST)
@@ -78,6 +79,10 @@ _results: dict[str, PipelineResult] = {}
 _running: dict[str, threading.Thread] = {}
 # TESTING: preview mode — retained AgentState between the pick and gate phases
 _preview_states: dict = {}
+# Multi-topic batches, keyed by batch_id: one row per topic with its own run_id. Runs execute
+# SEQUENTIALLY on a single worker thread — see `_run_batch` for why parallel is the wrong choice.
+# Bounded by `_prune_run_state` like the stores above; the durable copy is `run_history.batch_id`.
+_batches: dict[str, dict] = {}
 
 
 # ── Error shape ──────────────────────────────────────────────────────────────
@@ -115,6 +120,36 @@ class GenerateRequest(BaseModel):
         if self.custom_topic.strip():
             names.append(self.custom_topic.strip())
         return names
+
+    def resolved_category(self) -> str:
+        return (self.category or "GEN_AI").strip().upper().replace(" ", "_")
+
+
+class BatchGenerateRequest(BaseModel):
+    """Generate for several topics from one click — ONE RUN PER TOPIC, not one merged run.
+
+    Each run keeps its own question set, quality gate, review screen and spreadsheet
+    (`sheets_writer` titles it "<Topic> - <sessions> (NxtMock)"), because review, approve, rejection
+    feedback and learned rules are all keyed by run_id. Merging topics would give one verdict and one
+    all-or-nothing approve for everything, and would push 6-12 sessions into a single SessionContext —
+    the per-session attribution collapse documented in CLAUDE.md showed up at TWO.
+    """
+    topics: list[str] = Field(default_factory=list)
+    course: str = "gen_ai"
+    max_questions: int = Field(default=12, ge=1, le=60)
+    model: str | None = None
+    category: str = "GEN_AI"
+    course_type: str | None = None
+
+    def resolved_topics(self) -> list[str]:
+        """De-duplicated, order-preserving. A repeated topic would otherwise run twice."""
+        seen, out = set(), []
+        for t in self.topics:
+            t = (t or "").strip()
+            if t and t not in seen:
+                seen.add(t)
+                out.append(t)
+        return out
 
     def resolved_category(self) -> str:
         return (self.category or "GEN_AI").strip().upper().replace(" ", "_")
@@ -177,7 +212,7 @@ def _payload(result: PipelineResult, run_id: str) -> dict:
     }
 
 
-def _persist_result(run_id: str, result: PipelineResult) -> None:
+def _persist_result(run_id: str, result: PipelineResult, batch_id: str | None = None) -> None:
     """Persist a completed run so Review + re-export survive restarts, and surface it in History."""
     try:
         if not result or result.error or not result.curated_output:
@@ -193,6 +228,7 @@ def _persist_result(run_id: str, result: PipelineResult) -> None:
             loops_used=result.quality_report.loops_used if result.quality_report else 0,
             approved=False,
             api_usage=dict(result.quality_report.api_usage) if result.quality_report else None,
+            batch_id=batch_id,
         )
     except Exception as e:  # noqa: BLE001 — a persistence failure must not lose the in-memory run
         log.error("failed to persist run %s: %s", run_id, e)
@@ -234,7 +270,8 @@ def _prune_run_state() -> None:
     oldest in-memory copies costs nothing but a database read.
     """
     for name, store, cap in (("results", _results, MAX_CACHED_RESULTS),
-                             ("previews", _preview_states, MAX_CACHED_PREVIEWS)):
+                             ("previews", _preview_states, MAX_CACHED_PREVIEWS),
+                             ("batches", _batches, MAX_CACHED_BATCHES)):
         while len(store) > cap:
             store.pop(next(iter(store)), None)
     for run_id, thread in [(r, t) for r, t in _running.items() if not t.is_alive()]:
@@ -412,6 +449,120 @@ def api_generate(body: GenerateRequest):
 
     _start(run_id, _run)
     return {"run_id": run_id}
+
+
+def _topics_for_course(course: str) -> dict:
+    """Same topic→sessions map the picker reads, so the batch cannot disagree with the UI."""
+    if course and course != "gen_ai":
+        return memory.get_course_topics(course) or {}
+    return _gen_ai_topics() or {}
+
+
+def _run_batch(batch_id: str) -> None:
+    """Run each topic's pipeline one at a time, and keep going when one fails.
+
+    SEQUENTIAL on purpose, not for caution. `_start` has no global lock so N runs *could* go at once,
+    but a batch of 3 topics is 3 full pipelines: firing them together multiplies the LLM/Tavily burst
+    (this project has already exhausted both a Tavily plan and an OpenRouter key's headroom), and
+    `memory.db` is SQLite — concurrent pipelines writing run history and feedback is lock contention
+    for no user benefit.
+
+    CONTINUE ON FAILURE: each topic is an independent deliverable, so a dead phase or a bad gate on one
+    is recorded against that row and the worker moves on — the same discipline as `state.phase_errors`.
+    A systemic failure (bad key) will simply mark every row failed, which is the honest outcome.
+    """
+    batch = _batches.get(batch_id)
+    if not batch:
+        return
+    for row in batch["runs"]:
+        run_id = row["run_id"]
+        row["status"] = "running"
+        try:
+            config = GenerationConfig(
+                session_names=list(row["sessions"]),
+                max_questions=batch["max_questions"],
+                model=batch["model"],
+                category=batch["category"],
+                course_type=batch["course_type"],
+            )
+            result = run_pipeline(config, run_id=run_id)
+            _results[run_id] = result
+            _persist_result(run_id, result, batch_id=batch_id)
+            if result.error:
+                row["status"], row["error"] = "failed", str(result.error)
+            else:
+                row["status"] = "done"
+                out = result.curated_output
+                row["question_count"] = (len(out.question_details) + len(out.coding_questions)) if out else 0
+                row["verdict"] = (result.quality_report.pass_fail if result.quality_report else None)
+        except Exception as exc:  # noqa: BLE001 — one topic must not take the batch down
+            log.error("batch %s: topic %r failed: %s", batch_id[:8], row["topic"], exc)
+            row["status"], row["error"] = "failed", f"{type(exc).__name__}: {exc}"
+    batch["finished"] = True
+
+
+@app.post("/api/generate/batch")
+def api_generate_batch(body: BatchGenerateRequest):
+    """Queue one pipeline run per selected topic. Returns immediately with every run_id."""
+    topics = body.resolved_topics()
+    if not topics:
+        raise HTTPException(400, "No topics provided")
+
+    available = _topics_for_course(body.course)
+    unknown = [t for t in topics if not (available.get(t) or [])]
+    if unknown:
+        raise HTTPException(400, f"Unknown or empty topic(s): {', '.join(unknown)}")
+
+    batch_id = str(uuid.uuid4())
+    runs = []
+    for topic in topics:
+        run_id = str(uuid.uuid4())
+        # Create the SSE queue up front so /api/stream/{run_id} and the Progress page work per topic
+        # with no changes at all — a queued run streams as soon as the worker reaches it.
+        get_progress_queue(run_id)
+        runs.append({"run_id": run_id, "topic": topic, "sessions": list(available[topic]),
+                     "status": "queued", "question_count": None, "verdict": None, "error": None})
+
+    _batches[batch_id] = {
+        "batch_id": batch_id, "runs": runs, "finished": False,
+        "max_questions": body.max_questions, "model": (body.model or "").strip() or None,
+        "category": body.resolved_category(), "course_type": body.course_type,
+    }
+    # Display default for the picker only; each run takes its model from its own GenerationConfig.
+    set_active_model((body.model or "").strip() or None)
+    _start(batch_id, lambda: _run_batch(batch_id))
+    return {"batch_id": batch_id,
+            "runs": [{k: r[k] for k in ("run_id", "topic", "sessions")} for r in runs]}
+
+
+@app.get("/api/batch/{batch_id}")
+def api_batch_status(batch_id: str):
+    """Per-topic batch status. NON-BLOCKING by design — never join the worker here.
+
+    `/api/result` already returns 409 while a run is in flight because polling tabs blocking on a
+    thread starved Starlette's bounded threadpool and stalled every other endpoint.
+    """
+    batch = _batches.get(batch_id)
+    if batch:
+        thread = _running.get(batch_id)
+        return {
+            "batch_id": batch_id,
+            "running": bool(thread and thread.is_alive()),
+            "finished": batch["finished"],
+            "runs": [{k: r[k] for k in
+                      ("run_id", "topic", "sessions", "status", "question_count", "verdict", "error")}
+                     for r in batch["runs"]],
+        }
+    # Fall back to the durable copy so a restart (or an evicted registry entry) still renders.
+    persisted = memory.get_batch_runs(batch_id)
+    if not persisted:
+        raise HTTPException(404, "Batch not found")
+    return {
+        "batch_id": batch_id, "running": False, "finished": True,
+        "runs": [{"run_id": r["run_id"], "topic": r["session_name"], "sessions": [],
+                  "status": "done", "question_count": r["question_count"],
+                  "verdict": None, "error": None} for r in persisted],
+    }
 
 
 @app.get("/api/stream/{run_id}")

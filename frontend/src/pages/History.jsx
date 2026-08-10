@@ -157,7 +157,14 @@ export default function History() {
                     >
                       <td className="hist-date"><DateCell ts={run.created_at} /></td>
                       <td className="hist-run">
-                        <span className="hist-run-topic" title={run.topic || ''}>{run.topic || '—'}</span>
+                        <span className="hist-run-topic" title={run.topic || ''}>
+                          {run.topic || '—'}
+                          {/* Batched runs are one-per-topic, so seeing which came from a batch
+                              explains why several share a timestamp. */}
+                          {run.batch_id && (
+                            <span className="hist-batch-tag" title={`Part of batch ${run.batch_id}`}>batch</span>
+                          )}
+                        </span>
                         <span className="hist-run-sessions" title={run.session_name}>{run.session_name}</span>
                       </td>
                       <td className="hist-count">{run.question_count ?? '—'}</td>
