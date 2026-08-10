@@ -85,6 +85,192 @@ def _fits(texts: list[str], curated: list[str], rm: list[str]) -> list[float]:
     return out
 
 
+
+# ── Candidate near-duplicate clusters ────────────────────────────────────────────────────────────────
+#
+# Grouped by a SHARED DISTINCTIVE TERM, not by embedding similarity. That is not a stylistic choice:
+# across the six hallucination questions in No-Code AI Automation, ZERO pairs reach the 0.82 dedup bar and
+# the two most obviously identical — "What are hallucinations in LLMs" and "What is an AI hallucination" —
+# score 0.486, the LOWEST of all fifteen pairs. Short definitional questions carry little signal, so
+# similarity cannot group them at any threshold that is not also catastrophic elsewhere.
+#
+# Similarity is used only for COHESION (is this group about one thing?) and to order members.
+#
+# A cluster means "these ask about the same subject", NOT "these are duplicates". Measured on the shipped
+# sets, 'hallucinat' (6) and 'large/language' (8) are genuine duplication, while 'workflow' (7) is seven
+# genuinely different questions that happen to share a word. So collapsing is per-cluster and explicit
+# (`--collapse TERM`); there is deliberately no blanket apply.
+_CLUSTER_STOP = set("""what is are the a an of to in for and or how do you your with on can could would why
+when which explain describe define does did it its this that these those be been being as at by from we they
+not no if then than there their them use used using make makes made give given get gets between difference
+differences vs versus example examples any some all more most other others improve approach through answer
+aspect complex technique prevent structure design reason fail engineer engineering ensure handle manage build
+create implement about should might where whose scenario situation project experience""".split())
+
+
+def _terms(content: str) -> set:
+    words = [w for w in re.findall(r"[A-Za-z][A-Za-z0-9'-]+", (content or "").lower())
+             if w not in _CLUSTER_STOP and len(w) >= 5]
+    return {re.sub(r"(ions?|s|ing|ed)$", "", w) for w in words}
+
+
+def _clusters(rows: list, fits: list, min_cohesion: float = 0.45) -> list:
+    """Candidate groups: shared distinctive term + mutually related members. Overlapping groups merged."""
+    texts = [r["content"] for r in rows]
+    sim = embeddings.cosine_matrix(texts)
+    by_term: dict = {}
+    for i, r in enumerate(rows):
+        for t in _terms(r["content"]):
+            by_term.setdefault(t, []).append(i)
+    cap = max(2, int(0.30 * len(rows)))
+    found = []
+    for term, ids in sorted(by_term.items(), key=lambda kv: -len(kv[1])):
+        if not (2 <= len(ids) <= cap):
+            continue
+        pairs = [float(sim[a][b]) for a in ids for b in ids if a < b] if sim is not None else []
+        cohesion = st.mean(pairs) if pairs else 0.0
+        if cohesion < min_cohesion:
+            continue                      # a generic word shared by unrelated questions
+        found.append({"term": term, "ids": set(ids), "cohesion": cohesion})
+    # Merge groups that are substantially the SAME group ('large' and 'language' cover the same eight
+    # questions). The bar is high and cohesion is re-checked afterwards: at 0.5 the merge chained through
+    # partial overlaps and dragged "Have you used cloud services before…" into the LLM-definition cluster.
+    merged: list = []
+    for c in found:
+        for m in merged:
+            overlap = len(c["ids"] & m["ids"]) / min(len(c["ids"]), len(m["ids"]))
+            if overlap < 0.8:
+                continue
+            union = m["ids"] | c["ids"]
+            pairs = [float(sim[a][b]) for a in union for b in union if a < b] if sim is not None else []
+            if pairs and st.mean(pairs) < min_cohesion:
+                continue                  # merging would make the group incoherent — keep them apart
+            m["ids"] = union
+            m["term"] += "/" + c["term"]
+            m["cohesion"] = st.mean(pairs) if pairs else m["cohesion"]
+            break
+        else:
+            merged.append(dict(c))
+    for m in merged:
+        m["members"] = sorted(m["ids"], key=lambda i: (rows[i]["status"] != "approved", -fits[i]))
+    return sorted(merged, key=lambda m: -len(m["ids"]))
+
+
+def _evidence(structure: dict, keys: list, needle: str, only_topic: str = None) -> int:
+    """How often does a question's own vocabulary appear in the material? Evidence, not a verdict.
+
+    This is the check that answered "is this question supported?" in seconds: for
+    "Explain your methodology for designing and testing system prompts to prevent model hallucination"
+    the material has `hallucinat*` 3 times and **`system prompt` 0 times** — so it attaches two things the
+    session never covers to one it does.
+
+    A phrase can be absent while the concept is taught in other words, so this NEVER cuts anything.
+    `_concept_is_absent` is deliberately not used here: it is a VERIFIER for an LLM's claim and returns
+    False for everything (including "Split In Batches node", which has 0 occurrences), which is right for
+    its job and useless as a detector.
+    """
+    from src.tools import _session_corpus
+
+    for tk in keys:
+        if only_topic and only_topic.lower() not in tk.lower():
+            continue
+        sessions = structure.get(tk) or []
+        if not sessions:
+            continue
+        rows = [r for r in memory.get_topic_questions(tk) if needle.lower() in r["content"].lower()]
+        if not rows:
+            continue
+        corpus = _session_corpus(sessions)
+        print(f"{tk}   (material: {len(corpus)} chars across {len(sessions)} session(s))\n")
+        for r in rows:
+            print(f"  [{r['status'][:4]}] {r['content']}")
+            words = [w for w in re.findall(r"[A-Za-z][A-Za-z0-9'-]+", r["content"]) if len(w) >= 5]
+            phrases = {w.lower() for w in words}
+            toks = r["content"].split()
+            phrases |= {" ".join(toks[i:i + 2]).strip(" ?.,\"'").lower() for i in range(len(toks) - 1)}
+            scored = []
+            for ph in phrases:
+                if len(ph) < 5 or ph in _CLUSTER_STOP:
+                    continue
+                n = len(re.findall(re.escape(ph), corpus, re.I))
+                scored.append((n, ph))
+            absent = sorted(p for n, p in scored if n == 0)
+            present = sorted(((n, p) for n, p in scored if n), reverse=True)[:6]
+            print("      in the material : " + ", ".join(f"{p} x{n}" for n, p in present) or "      (nothing)")
+            print("      NOT in it       : " + (", ".join(absent[:10]) or "(everything appears)"))
+            print()
+    return 0
+
+
+def _dupes(structure: dict, keys: list, args) -> int:
+    """Report candidate clusters, or collapse one by term."""
+    total = 0
+    for tk in keys:
+        if args.topic and args.topic.lower() not in tk.lower():
+            continue
+        sessions = structure.get(tk) or []
+        if not sessions:
+            continue
+        ctx = _topic_context(sessions)
+        curated, rm = _session_profile(sessions, ctx)
+        rows = memory.get_topic_questions(tk)
+        if len(rows) < 2:
+            continue
+        fits = _fits([r["content"] for r in rows], curated, rm)
+        groups = _clusters(rows, fits)
+        if args.collapse:
+            groups = [g for g in groups if args.collapse.lower() in g["term"].lower()]
+            if not groups:
+                continue
+        if not groups:
+            continue
+        print(f"{tk}  ({len(rows)} questions)")
+        for g in groups:
+            print(f"   cluster '{g['term']}'  {len(g['ids'])} questions, cohesion {g['cohesion']:.3f}")
+            for rank, i in enumerate(g["members"]):
+                tag = "KEEP " if rank == 0 else "dup  "
+                print(f"      {tag} fit {fits[i]:.3f} [{rows[i]['status'][:4]}] {rows[i]['content'][:66]}")
+            total += len(g["ids"]) - 1
+        print()
+    if not args.collapse:
+        print(f"=> {total} question(s) sit in candidate clusters beyond the best member.")
+        print("   A cluster means 'same subject', NOT 'duplicate' — 'workflow' groups 7 genuinely")
+        print("   different questions. Collapse one explicitly: --collapse hallucinat")
+        return 0
+
+    backup = Path(str(MEMORY_DB) + f".{datetime.now().strftime('%Y%m%d-%H%M%S')}.bak")
+    shutil.copy2(MEMORY_DB, backup)
+    print(f"  backed up {MEMORY_DB.name} -> {backup.name}")
+    dropped = 0
+    for tk in keys:
+        if args.topic and args.topic.lower() not in tk.lower():
+            continue
+        sessions = structure.get(tk) or []
+        if not sessions:
+            continue
+        ctx = _topic_context(sessions)
+        curated, rm = _session_profile(sessions, ctx)
+        rows = memory.get_topic_questions(tk)
+        if len(rows) < 2:
+            continue
+        fits = _fits([r["content"] for r in rows], curated, rm)
+        for g in _clusters(rows, fits):
+            if args.collapse.lower() not in g["term"].lower():
+                continue
+            keeper = rows[g["members"][0]]
+            for i in g["members"][1:]:
+                memory.quarantine_question(
+                    tk, rows[i]["content"],
+                    f'duplicate of "{keeper["content"][:80]}" (cluster {g["term"]})',
+                    rows[i].get("first_run_id"))
+                if memory.remove_topic_question(tk, rows[i]["content"]):
+                    dropped += 1
+            n = memory.sync_canonical_payload(tk)
+            print(f"  {tk[:46]}: kept 1, quarantined {len(g['members']) - 1}, payload now {n}")
+    print(f"\n  quarantined {dropped}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -92,7 +278,13 @@ def main() -> int:
     ap.add_argument("--relative", action="store_true",
                     help=f"use {SESSION_FIT_RELATIVE} * best_fit per topic instead of --floor")
     ap.add_argument("--topic", default=None, help="substring match on one topic key")
-    ap.add_argument("--apply", action="store_true", help="quarantine the proposed cuts")
+    ap.add_argument("--apply", action="store_true", help="quarantine the proposed grounding cuts")
+    ap.add_argument("--dupes", action="store_true",
+                    help="report candidate near-duplicate clusters instead of grounding cuts")
+    ap.add_argument("--collapse", metavar="TERM",
+                    help="collapse ONE cluster by its term: keep the best member, quarantine the rest")
+    ap.add_argument("--evidence", metavar="SUBSTRING",
+                    help="show how often a question's distinctive phrases occur in the reading material")
     args = ap.parse_args()
 
     structure = json.loads((DATA_DIR / "course_structure.json").read_text())
@@ -100,6 +292,11 @@ def main() -> int:
     keys = [r["topic_key"] for r in con.execute(
         "SELECT topic_key, COUNT(*) n FROM topic_question_set GROUP BY topic_key ORDER BY n DESC")]
     con.close()
+
+    if args.evidence:
+        return _evidence(structure, keys, args.evidence, args.topic)
+    if args.dupes or args.collapse:
+        return _dupes(structure, keys, args)
 
     plan, skipped = [], []
     for tk in keys:

@@ -194,6 +194,11 @@ def strip_artifacts(text: str) -> str:
     s = _LEAD_JUNK.sub("", s)
     s = _SITE_TAIL.sub("", s)          # drop "… | Dataford Interview Questions" SEO tails
     s = s.strip(" \t`*_[]#>-")
+    # A quote mark left dangling AFTER the terminal punctuation is scrape residue, not content:
+    # a shipped set carried `How do you prevent hallucinations?"`. Only stripped when it follows ? . or !
+    # — a quote elsewhere may be a real quotation, and measured across both banks (2,828 rows) exactly one
+    # row matches and zero have the mark anywhere but after a terminal, so this is safe and narrow.
+    s = re.sub(r'(?<=[?.!])\s*["”“\'’]+\s*$', "", s)
     s = _WS.sub(" ", s).strip()
     # A Title-cased wh-question often harvested as a page heading ("What Is Gradient Descent",
     # "How Does Backpropagation Work") is a real interview question missing its mark — restore the

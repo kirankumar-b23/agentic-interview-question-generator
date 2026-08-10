@@ -646,6 +646,57 @@ the gate are untouched by it.
 - Preview mode is deliberately unavailable for a batch: it pauses mid-run for a human, which would stall
   every queued topic behind it.
 
+## Repeated questions in an accumulated set, and what each duplicate check can actually see
+
+A review of No-Code AI Automation found hallucination asked **six times in 38 questions**, and prompt
+engineering about as often. Three separate mechanisms exist to catch that and each missed for its own
+reason, so do not "fix" one by pointing at another.
+
+- **Embedding similarity cannot group them at ANY usable threshold.** Across the six, **zero pairs reach
+  the 0.82 `DEDUP_SEMANTIC_THRESHOLD`**, and the two most obviously identical — *"What are hallucinations
+  in LLMs"* / *"What is an AI hallucination"* — score **0.486, the LOWEST of all fifteen pairs**. Short
+  definitional questions carry little signal and "LLMs" vs "AI" pushes them apart. That is why
+  `filter_topic_sets._clusters` groups by a **shared distinctive term** and uses similarity only for
+  cohesion and member order. `tests/test_topic_dupes.py` asserts the 0.486 pair directly so a future
+  "just lower the threshold" cannot look reasonable.
+- **A cluster means "same subject", not "duplicate".** On the shipped sets `hallucinat` (6) and
+  `large/language` (8) are real duplication while `workflow` (7) is seven different questions sharing a
+  word. So collapsing is per-cluster and explicit (`--collapse TERM`), never blanket. Cohesion ≥ 0.45 is
+  what keeps a merely-shared word from forming a cluster; it rejects **55 term-groups** across the nine
+  topics, and a test that does not exercise a real rejected group is vacuous (the first version used
+  hallucination-vs-Kubernetes, which share no distinctive term, and passed with the bar set to 0.0).
+- **The cluster cap is a share of the set** (`max(2, 30%)`), so a cluster is never just "the whole topic".
+  A consequence for tests: six questions are 16% of the real 38-question set but 100% of a six-item
+  fixture, which the cap correctly refuses — fixtures must be realistically sized.
+- **`_same_thing_pass` is the accurate test and never saw most of the set.** `_SAME_THING_MAX_PAIRS = 12`
+  was sized for a ~10-question selected set; the 38-question accumulated set has **41 eligible pairs, so
+  29 are never judged**, and the one hallucination pair the judge does call redundant ranks **14th** —
+  just past the cap. With the cap lifted the judge calls **17 of 41** pairs the same thing. So "0
+  redundant" from this pass can mean "not looked at". Its floor is `_SAME_THING_LOW = 0.62`, which also
+  means the 0.486 pair is never shown to it — `--dupes` and this pass are complements, neither subsumes
+  the other.
+- **`_same_thing_pass` MUTATES the list it is handed** (`questions[:] = [...]`). A caller that diffs
+  against that same list afterwards finds nothing removed; `scripts/judge_topic_sets.py` reported
+  "0 redundant" while the pass was removing five. Snapshot before the call, or read the returned counts.
+
+### Why the off-syllabus flag stayed silent on a question that IS off-syllabus
+
+*"Explain your methodology for designing and testing system prompts to prevent model hallucination"* —
+reviewer-approved. The material teaches hallucination (`hallucinat*` **3–5** occurrences) but has
+**`system prompt` 0 times** and `methodolog` **0 times**.
+
+`_syllabus_audit`'s LLM **did** claim it, as `system prompt design methodology`. `_concept_is_absent`
+**dropped the claim** — and correctly, by its own rule. `system`/`prompt` are in `_UBIQUITOUS_DOMAIN`, so
+the distinctive words are `design` and `methodology`; `methodology` is absent but **`design` appears 4
+times** in unrelated senses ("design prompts that improve consistency"), and the rule is `all(missing)`.
+One present word vetoes the claim. Across that topic the LLM proposed 9 untaught concepts and **1
+survived**.
+
+That is the documented conservative trade-off, not a bug: a majority rule instead lets "agent guardrails"
+through on 1-of-2. The consequence to remember is that **a compound concept whose words are individually
+common can never be auto-flagged**, so `--evidence` (phrase-occurrence counts, no LLM) is the tool for
+that class — it reports the asymmetry (`hallucinat* x3`, `system prompt x0`) and never cuts anything.
+
 ## Web/UI notes
 
 - `main.py` errors use `{"error": ...}`, not FastAPI's `{"detail": ...}` — the React client reads
