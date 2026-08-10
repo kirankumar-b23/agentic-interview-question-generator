@@ -89,6 +89,9 @@ class AgentState:
     # is reported only. It is the more useful half of the balance diagnosis: on No-Code AI Automation 9 of
     # 22 outcomes had nothing while three others held 47% of the set.
     uncovered_outcomes: list[str] = field(default_factory=list)
+    # Rejected questions the accumulated set tried to carry back in (`tools._add_retained`). 67 of 149
+    # before that filter existed, so it is reported rather than left silent.
+    rejected_suppressed: int = 0
     # Did the last-resort open-web tier run, and how many questions did it contribute.
     open_web_used: bool = False
     open_web_added: int = 0

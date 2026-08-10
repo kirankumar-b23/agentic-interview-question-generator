@@ -2003,9 +2003,11 @@ def _add_retained(state: AgentState, selected: list) -> dict:
     questions are audited and flagged like everything else).
 
     A retained question that today's gates would reject is FLAGGED, never dropped — a reviewer approved
-    it, and the pipeline improvements post-date some of the set. `_drop_rejected` already keeps anything
-    the reviewer rejected from coming back, and cross-run dedup already removed this run's candidates that
-    duplicate the set, so nothing here can produce a duplicate.
+    it, and the pipeline improvements post-date some of the set.
+
+    A REJECTED question is the exception: it is skipped outright, never flagged. `_drop_rejected` filters the
+    RETRIEVED pool in `_pick_questions`, long before this, so the accumulated set bypassed it — 67 of the 149
+    questions in the topic sets had been rejected by the reviewer and were re-added every run.
     """
     ctx = state.session_context
     if not ctx or not getattr(ctx, "session_name", None):
@@ -2025,12 +2027,38 @@ def _add_retained(state: AgentState, selected: list) -> dict:
     if not rows:
         return {"retained": 0, "newly_found": newly_found, "stale": 0}
 
+    # A REJECTED question must never come back, and this is where it was coming back.
+    #
+    # `_drop_rejected` runs in `_pick_questions`, long before this — it filters the RETRIEVED pool. The
+    # accumulated set is unioned in here, afterwards, so it bypassed the rejection filter entirely. This
+    # function's own docstring used to claim "`_drop_rejected` already keeps anything the reviewer rejected
+    # from coming back"; that was simply false for retained questions.
+    #
+    # Measured before the fix: **67 of the 149 questions in the topic sets had been REJECTED by the
+    # reviewer** (30 of 39 in Gen AI Foundations, 23 of 33 in Productivity Power-Up) and were re-added to
+    # every run. It is also the obvious explanation for a report reading "23 question(s) closely repeat
+    # something already rejected" and for a low `predicted_accept`.
+    #
+    # Scoped to the TOPIC's sessions, not the run's: a question rejected while reviewing one grouping must
+    # stay rejected for every other grouping of the same topic.
+    rejected: set = set()
+    try:
+        from src.curriculum_order import _course_structure
+        sessions = [s["name"] if isinstance(s, dict) else s
+                    for s in (_course_structure().get(topic_key) or [])]
+        rejected = _memory.get_rejected_norms(" + ".join(sessions) if sessions else ctx.session_name)
+    except Exception as exc:  # noqa: BLE001 — a lookup failure must not lose the set
+        print(f"[retained] rejection lookup skipped ({type(exc).__name__}: {exc})")
+
     have = {_memory.normalize_content(q.content) for q in selected}
-    added = stale = 0
+    added = stale = suppressed = 0
     for row in rows:
         norm = row.get("content_norm") or _memory.normalize_content(row["content"])
         if norm in have:
             continue                      # this run found it too; keep the freshly-scored copy
+        if norm in rejected:
+            suppressed += 1
+            continue                      # the reviewer said no — do not resurrect it
         content = row["content"]
         reason = None
         if not is_quality_question(content):
@@ -2067,7 +2095,10 @@ def _add_retained(state: AgentState, selected: list) -> dict:
         have.add(norm)
         added += 1
         stale += 1 if reason else 0
-    return {"retained": added, "newly_found": newly_found, "stale": stale}
+    if suppressed:
+        print(f"[retained] {suppressed} rejected question(s) were NOT carried over")
+    return {"retained": added, "newly_found": newly_found, "stale": stale,
+            "rejected_suppressed": suppressed}
 
 
 _TRIM_SYSTEM = """You remove OFF-SYLLABUS sub-clauses from real interview questions.
@@ -2597,6 +2628,7 @@ def tool_submit_question_set(state: AgentState) -> dict:
     # After the same-thing pass (so it judges only this run's picks against each other) and before the
     # syllabus audit (so retained questions are audited and flagged like everything else).
     retained = _add_retained(state, selected)
+    state.rejected_suppressed = retained.get("rejected_suppressed", 0)
     # AFTER `_add_retained`, and that is the entire point of this call. `_same_thing_pass` above judges
     # only this run's own picks, so nothing had ever looked at the ACCUMULATED set as a whole — which is
     # how hallucination came to be asked six times in one 38-question topic.
@@ -2615,6 +2647,7 @@ def tool_submit_question_set(state: AgentState) -> dict:
             "same_thing_removed": same["removed"], "same_thing_flagged": same["flagged"],
             "retained": retained["retained"], "newly_found": retained["newly_found"],
             "retained_stale": retained["stale"],
+            "rejected_suppressed": retained.get("rejected_suppressed", 0),
             "outcome_capped": capped["removed"], "outcome_orphans": capped["orphans"],
             "cross_topic_duplicates": capped.get("cross_topic_duplicates", 0),
             "outcomes_uncovered": capped["uncovered"],

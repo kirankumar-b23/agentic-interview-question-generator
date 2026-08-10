@@ -1225,6 +1225,14 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     # cause: a topic that supplies several questions is repetition the candidate hears, and a topic that
     # supplies none is a gap no count of questions reveals. On No-Code AI Automation three topics held 47%
     # of a 38-question set while 9 of 22 had nothing.
+    # Rejected questions that the accumulated set tried to resurrect. Reported because the count was 67 of
+    # 149 before this was fixed, and a reviewer needs to see that their rejections are being honoured.
+    _resurrect = int(getattr(state, "rejected_suppressed", 0) or 0)
+    if _resurrect:
+        notes.append(
+            f"{_resurrect} previously-rejected question(s) in this topic's accumulated set were NOT "
+            f"carried over. Clean them out with scripts/filter_topic_sets.py --rejected if you want them "
+            f"out of the set itself.")
     # Say what cross-topic suppression withheld. A question silently missing because another topic owns it
     # is indistinguishable from one that was never found, and the accepted risk of this rule is that a
     # genuinely shared fundamental stays locked to whichever topic holds it — so it has to be visible.

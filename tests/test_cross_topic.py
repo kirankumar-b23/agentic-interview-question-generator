@@ -337,3 +337,103 @@ class TestTheBankIsKeyedOnTheTopic:
         db.save_question_to_bank("q1", "Advanced Prompt Engineering", PROMPT_Q, "interview_db")
         assert db.get_bank_questions("Generative AI Foundations") == [], (
             "the fix must widen the match to the TOPIC, not to everything")
+
+
+class TestARejectedQuestionNeverComesBack:
+    """`_drop_rejected` filters the RETRIEVED pool in `_pick_questions`; `_add_retained` unions the
+    accumulated set in LATER, inside submit — so rejections were bypassed entirely.
+
+    Measured before the fix: **67 of the 149 questions in the topic sets had been REJECTED by the
+    reviewer** (30 of 39 in Gen AI Foundations, 23 of 33 in Productivity Power-Up), re-added to every run.
+    `_add_retained`'s own docstring claimed `_drop_rejected` prevented this. It did not.
+    """
+
+    @pytest.fixture
+    def db(self, tmp_path, monkeypatch):
+        from src import memory
+        monkeypatch.setattr(memory, "MEMORY_DB", tmp_path / "t.db")
+        memory.init_db()
+        return memory
+
+    @staticmethod
+    def _state(session="Advanced Prompt Engineering"):
+        from src.agent import AgentState
+        from src.data_loader import get_data_store
+
+        st = AgentState(config=GenerationConfig(session_names=[session]), data_store=get_data_store())
+        st.session_context = SimpleNamespace(
+            session_name=session, session_type="mixed", learning_outcomes=["Understand prompting"],
+            interview_topics=["Prompt engineering"], key_concepts=["prompt"], scope_in=[], scope_out=[],
+            matched_kp_ids=[])
+        return st
+
+    def test_a_rejected_question_is_not_carried_over(self, db):
+        from src.tools import _add_retained
+
+        tk = db.topic_key_for("Advanced Prompt Engineering")
+        db.upsert_topic_questions(tk, [{"content": PROMPT_Q, "status": "approved"},
+                                       {"content": "What is a system prompt?", "status": "approved"}])
+        db.record_rejections("Advanced Prompt Engineering", [PROMPT_Q])
+
+        st = self._state()
+        selected = []
+        out = _add_retained(st, selected)
+
+        kept = {q.content for q in selected}
+        assert PROMPT_Q not in kept, "the reviewer said no — it must not be resurrected"
+        assert "What is a system prompt?" in kept, "the rest of the set must still carry over"
+        assert out["rejected_suppressed"] == 1
+
+    def test_it_is_skipped_outright_not_merely_flagged(self, db):
+        """Everything else `_add_retained` disapproves of is FLAGGED via `stale_reason` and still ships,
+        because a reviewer approved it. A rejection is the opposite: an explicit no."""
+        from src.tools import _add_retained
+
+        tk = db.topic_key_for("Advanced Prompt Engineering")
+        db.upsert_topic_questions(tk, [{"content": PROMPT_Q, "status": "approved"}])
+        db.record_rejections("Advanced Prompt Engineering", [PROMPT_Q])
+
+        selected = []
+        _add_retained(self._state(), selected)
+        assert selected == [], "a rejected question must not ship, flagged or otherwise"
+
+    def test_a_rejection_under_a_DIFFERENT_grouping_still_suppresses(self, db):
+        """Rejections are banked per session name. A question rejected while reviewing one grouping of a
+        topic must stay rejected for every other grouping — so the lookup spans the TOPIC's sessions."""
+        from src.tools import _add_retained
+
+        tk = db.topic_key_for("Advanced Prompt Engineering")
+        db.upsert_topic_questions(tk, [{"content": PROMPT_Q, "status": "approved"}])
+        # Rejected while reviewing a sibling session of the same topic.
+        db.record_rejections("Building Social Media Content Automation Workflow | Part 1", [PROMPT_Q])
+
+        selected = []
+        out = _add_retained(self._state(), selected)
+        assert out["rejected_suppressed"] == 1, (
+            "a run grouped differently must still honour the rejection")
+
+    def test_nothing_rejected_means_nothing_suppressed(self, db):
+        from src.tools import _add_retained
+
+        tk = db.topic_key_for("Advanced Prompt Engineering")
+        db.upsert_topic_questions(tk, [{"content": PROMPT_Q, "status": "approved"}])
+        selected = []
+        out = _add_retained(self._state(), selected)
+        assert out["rejected_suppressed"] == 0 and len(selected) == 1
+
+    def test_submit_reports_the_count(self, db, monkeypatch):
+        """Wired, not merely callable — asserted through `tool_submit_question_set`."""
+        import src.tools as tools
+
+        tk = db.topic_key_for("Advanced Prompt Engineering")
+        db.upsert_topic_questions(tk, [{"content": PROMPT_Q, "status": "approved"}])
+        db.record_rejections("Advanced Prompt Engineering", [PROMPT_Q])
+        monkeypatch.setattr(tools, "chat_completion_json", lambda **kw: {})
+
+        st = self._state()
+        st.questions = {q.question_id: q for q in
+                        [_q(f"What is prompting idea number {i}?", qid=f"q{i}") for i in range(6)]}
+        st.config.max_questions = 60
+        out = tools.tool_submit_question_set(st)
+        assert out["rejected_suppressed"] == 1
+        assert st.rejected_suppressed == 1

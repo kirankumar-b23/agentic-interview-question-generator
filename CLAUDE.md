@@ -888,6 +888,27 @@ session belongs to two topics** (0 of 56) — every de-dup mechanism was simply 
   for rows already stored.
 - Applied: **170 → 149**, 21 rows quarantined recoverably, re-running proposes 0.
 
+## A rejected question was coming back every run
+
+**67 of the 149 questions in the topic sets had been REJECTED by the reviewer** (30 of 39 in Gen AI
+Foundations, 23 of 33 in Productivity Power-Up) and were re-added to every run.
+
+- **`_drop_rejected` filters the RETRIEVED pool** in `_pick_questions`; **`_add_retained` unions the
+  accumulated set in LATER**, inside `tool_submit_question_set`. So retained questions never passed through
+  the rejection filter at all. `_add_retained`'s own docstring asserted the opposite —
+  *"`_drop_rejected` already keeps anything the reviewer rejected from coming back"* — which was simply false
+  for the set it adds.
+- **A rejection is SKIPPED OUTRIGHT, never flagged.** Everything else `_add_retained` disapproves of gets a
+  `stale_reason` and still ships, because a reviewer approved it once. A rejection is the opposite: an
+  explicit no.
+- **The lookup spans the TOPIC's sessions, not the run's.** Rejections are banked per session name, so a
+  question rejected while reviewing one grouping must stay rejected for every other grouping of that topic.
+- Reported in the run report (`rejected_suppressed`), because the count was 45% of the sets and a reviewer
+  needs to see their rejections being honoured. It also explains a report reading *"23 question(s) closely
+  repeat something already rejected"* and a low `predicted_accept`.
+- **The 67 rows are still in `topic_question_set`** — inert now, since retention skips them. Cleaning them
+  out of the sets themselves is a separate, destructive step and has not been done.
+
 ## Web/UI notes
 
 - `main.py` errors use `{"error": ...}`, not FastAPI's `{"detail": ...}` — the React client reads
@@ -963,7 +984,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 761 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 766 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

@@ -59,7 +59,9 @@ class TestRetainedAreCarriedIn:
         st = _state(fresh)
 
         out = _add_retained(st, fresh)
-        assert out == {"retained": 2, "newly_found": 1, "stale": 0}
+        # `rejected_suppressed` joined this dict when retained questions started honouring
+        # reviewer rejections (67 of 149 in the topic sets had been rejected and came back).
+        assert out == {"retained": 2, "newly_found": 1, "stale": 0, "rejected_suppressed": 0}
         assert len(st.questions) == 3
         contents = {q.content for q in st.questions.values()}
         assert contents == {"What is the ReAct pattern?", "What is agent memory?",
