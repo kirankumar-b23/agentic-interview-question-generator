@@ -79,7 +79,8 @@ def _session_profile(session_names, ctx) -> tuple[list[str], list[str]]:
     reading material cannot dilute a short, precise outcome statement.
     """
     import json
-    from src.config import DATA_DIR, SESSION_PROFILE_RM_CHUNKS
+    from src.config import (DATA_DIR, RM_CHUNK_MAX_CHARS, RM_CHUNK_MIN_CHARS,
+                            SESSION_PROFILE_RM_CHUNKS)
 
     texts: list[str] = []
     rm_texts: list[str] = []
@@ -103,7 +104,30 @@ def _session_profile(session_names, ctx) -> tuple[list[str], list[str]]:
                               + list(getattr(ctx, "key_concepts", None) or []))
                   if isinstance(t, str) and t.strip()]
 
-    # 3. Reading-material chunks — paragraph-ish slices of THIS session's content only.
+    # 3. Reading-material chunks — EVERY substantive paragraph of THIS session's content.
+    #
+    # This used to keep only ~36% of the material, and it discarded exactly the passages that identify
+    # what a session teaches. Three lossy steps compounded:
+    #
+    #   chunks = [c for c in content.split("\n\n") if len(c.strip()) > 120]   # drops short paragraphs
+    #   step   = max(1, len(chunks) // 12)                                     # then STRIDE-SAMPLES
+    #   rm_texts += [c[:800] for c in chunks[::step][:12]]                     # then truncates
+    #
+    # Measured on the No-Code sessions: 24,521 chars of material -> 8,728 in the profile. The bullet that
+    # defines the node most precisely is 85 characters —
+    #     '- **HTTP Request Node**: Allows n8n to talk to almost any web service that has an API.'
+    # — so the >120 filter threw it away, the phrase appeared in NONE of the 12 chunks, and
+    # "What is the HTTP Request node and when do you use it?" scored 0.275 against a session that
+    # literally teaches it. After this change it scores 0.540 (0.703 on the other topic that teaches it),
+    # while the topic's median moves 0.615 -> 0.622: the fix reaches the questions naming something
+    # specific and leaves the rest alone.
+    #
+    # This is not a display bug. `_score_session_fit` DROPS candidates below a floor derived from these
+    # scores (107-169 per run, the largest cut in the funnel), `session_grounding` is 20% of the
+    # composite, `_rank_key` uses it as the tiebreak, and `_attribute_sessions` reuses this profile.
+    # Same class as the 4,000-char truncation already documented for `_attribute_sessions`.
+    #
+    # Bullets are the most information-dense lines in this material, so the floor is low on purpose.
     try:
         from src.data_loader import get_data_store
         store = get_data_store()
@@ -111,9 +135,25 @@ def _session_profile(session_names, ctx) -> tuple[list[str], list[str]]:
             content = store.get_session_content(name)
             if not content:
                 continue
-            chunks = [c.strip() for c in content.split("\n\n") if len(c.strip()) > 120]
-            step = max(1, len(chunks) // SESSION_PROFILE_RM_CHUNKS) if chunks else 1
-            rm_texts += [c[:800] for c in chunks[::step][:SESSION_PROFILE_RM_CHUNKS]]
+            for para in content.split("\n\n"):
+                p = para.strip()
+                if len(p) < RM_CHUNK_MIN_CHARS:
+                    continue                      # true noise only — a bare heading or stray token
+                # Sub-split a long paragraph at a word boundary rather than truncating it, so its tail
+                # is still searchable instead of silently discarded.
+                while len(p) > RM_CHUNK_MAX_CHARS:
+                    cut = p.rfind(" ", 0, RM_CHUNK_MAX_CHARS)
+                    if cut <= 0:
+                        cut = RM_CHUNK_MAX_CHARS
+                    rm_texts.append(p[:cut].strip())
+                    p = p[cut:].strip()
+                if p:
+                    rm_texts.append(p)
+            if len(rm_texts) >= SESSION_PROFILE_RM_CHUNKS:
+                # Runaway guard only. Reaching it means the material is unexpectedly large, not that a
+                # sample was wanted — treating this cap as a sampling budget is what caused the bug.
+                rm_texts = rm_texts[:SESSION_PROFILE_RM_CHUNKS]
+                break
     except Exception:  # noqa: BLE001
         pass
 

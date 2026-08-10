@@ -553,6 +553,34 @@ pipeline improvement keeps what exists and adds only what is new.
 - A deleted or inaccessible sheet falls back to create-and-re-save: an approve must not fail because a
   spreadsheet went away. Accepted knowingly: rewriting in place overwrites manual edits.
 
+## The grounding profile must be the WHOLE reading material, not a sample
+
+`_session_profile` used to keep **~36%** of a session's material. Three lossy steps compounded: a
+`len(c) > 120` filter, a `chunks[::step]` **stride sample** down to 12, and a `[:800]` truncation.
+Measured on the No-Code sessions: 24,521 chars → 8,728.
+
+- **The loss was biased toward exactly what identifies a session.** The line defining the node most
+  precisely is 85 characters — `- **HTTP Request Node**: Allows n8n to talk to almost any web service…` —
+  so the `>120` filter discarded it, the phrase appeared in NONE of the 12 surviving chunks, and
+  *"What is the HTTP Request node and when do you use it?"* scored **0.275** against a session that
+  literally teaches it. Now **0.540** (0.703 on the other topic that teaches it).
+- **`SESSION_PROFILE_RM_CHUNKS` is a RUNAWAY GUARD, not a sampling budget** — now 400. Conflating the two
+  is what caused the bug. Raise it rather than sampling. `RM_CHUNK_MIN_CHARS = 40` because in this
+  curriculum the bullets ARE the tool definitions; long paragraphs are sub-split at a word boundary
+  rather than truncated.
+- **Do not overclaim the effect, which was measured both ways.** The dramatic gain is on questions naming
+  something specific: a topic's median fit moves only 0.615 → 0.622, ~5 of 40 questions change materially.
+  Replayed over 7 persisted runs, the fit gate would drop **936 → 924** candidates — only 12 fewer,
+  because `SESSION_FIT_RELATIVE` makes the floor 0.5 × the best fit, so lifting every score lifts the
+  floor too. `session_grounding` gains **+0.013** mean, worth **+0.003** on the composite. So this fixes
+  per-question scoring, ranking and any filtering built on it; it is **not** a retrieval supply win, and
+  the earlier hypothesis that it explained the n8n shortage is **not supported**.
+- Cost: **4.5×** more chunks per profile (168 → 750 across six topics), local MiniLM. The suite went from
+  ~105s to ~140s because the integration tests run real pipelines.
+- `tests/test_session_profile.py` asserts against the SHIPPED material, not a fixture: any short synthetic
+  paragraph would have been dropped by the same filter, so a crafted test would have passed while
+  describing nothing. Mutation-checked — restoring either the `>120` filter or the stride fails it.
+
 ## Two different "slicing" mechanisms — do not merge them
 
 - **`_trim_to_topic` + `split_into_clauses`** cut a COMPOUND question at boundaries between separate
@@ -685,7 +713,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 617 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 624 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

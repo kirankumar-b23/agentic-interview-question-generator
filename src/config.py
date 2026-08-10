@@ -218,7 +218,19 @@ SESSION_FIT_HIGH = float(os.getenv("SESSION_FIT_HIGH", "0.35"))
 # How much of the session profile is reading material (vs curated outcomes). The reading material is
 # long and dilutes short outcome statements, so outcomes are embedded separately and we take the MAX
 # similarity over profile texts; this cap just bounds how many RM chunks join the profile.
-SESSION_PROFILE_RM_CHUNKS = int(os.getenv("SESSION_PROFILE_RM_CHUNKS", "12"))
+# Reading-material chunking for the grounding profile (`pipeline._session_profile`).
+#
+# SESSION_PROFILE_RM_CHUNKS is a RUNAWAY GUARD, not a sampling budget. It used to be 12 AND the code
+# stride-sampled down to it, so only ~36% of a session's material reached the profile and the bullet
+# defining the HTTP Request node (85 chars) was dropped entirely — a question about something the
+# session literally teaches scored 0.275. Treating this cap as a budget is what caused that; raise it
+# rather than sampling.
+SESSION_PROFILE_RM_CHUNKS = int(os.getenv("SESSION_PROFILE_RM_CHUNKS", "400"))
+# Keep short paragraphs: in this curriculum the bullets ARE the tool/node definitions, which is exactly
+# what grounding needs to match. Only true noise (a bare heading, a stray token) is below this.
+RM_CHUNK_MIN_CHARS = int(os.getenv("RM_CHUNK_MIN_CHARS", "40"))
+# Long paragraphs are sub-split at a word boundary instead of truncated, so their tail stays searchable.
+RM_CHUNK_MAX_CHARS = int(os.getenv("RM_CHUNK_MAX_CHARS", "600"))
 # Reading-material chunks are instructional prose, not statements of interview intent — a setup
 # walkthrough about copying an auth token matches generic auth questions. Discount them so an
 # RM-only match has to be distinctly stronger than a curated-outcome match to keep a candidate.
