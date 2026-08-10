@@ -334,7 +334,7 @@ def majority(judge, trials: int = 3):
 
 
 def make_llm_judge(texts: list[str], *, model: str, complete=None, on_usage=None,
-                   max_pairs: int = 400, batch: int = JUDGE_BATCH):
+                   max_pairs: int = 400, batch: int = JUDGE_BATCH, stats: dict | None = None):
     """A `judge` backed by one JSON completion, reusing `tools._SAME_THING_SYSTEM`.
 
     Deliberately NOT the default: callers pass this in, so tests never reach the network.
@@ -346,6 +346,9 @@ def make_llm_judge(texts: list[str], *, model: str, complete=None, on_usage=None
     `tests/netguard.py` recorded **3 real network connections per test** — swallowed by the fail-open
     handler, so the assertions passed while a working key would have spent credit. That is exactly the
     leak class the guard was built for.
+
+    `stats`, when given, is filled with `{"batches": n, "failed": n}` so the caller can distinguish a
+    total outage from a genuine "nothing is redundant".
 
     `max_pairs` is a runaway guard on the prompt, not a sampling budget — conflating those is what left
     `_same_thing_pass` judging 12 of 41 eligible pairs on a 38-question set while reporting "0 redundant".
@@ -395,6 +398,11 @@ def make_llm_judge(texts: list[str], *, model: str, complete=None, on_usage=None
         if failures:
             print(f"[outcome_balance] {failures} batch(es) failed — those pairs were NOT judged, so "
                   f"their questions are KEPT")
+        if stats is not None:
+            # So a caller can tell "judged, nothing redundant" from "every call died". Without it a
+            # total outage reports the pair count as judged, which reads as a clean result.
+            stats["batches"] = (len(use) + batch - 1) // batch
+            stats["failed"] = failures
         return out
 
     return judge

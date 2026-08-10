@@ -665,11 +665,21 @@ class TestItRunsFromSubmit:
     @staticmethod
     def _all_same(monkeypatch):
         """A judge calling every offered pair redundant, so each outcome collapses to one question.
+
         Stubbing the FACTORY is required: `_cap_by_outcome` builds the judge itself, and stubbing only
-        `chat_completion_json` yields an empty reply — i.e. no verdicts and no cuts, which cannot
-        distinguish "wired and judged nothing" from "not wired at all"."""
-        monkeypatch.setattr("src.outcome_balance.make_llm_judge",
-                            lambda *a, **k: (lambda pairs: list(pairs)))
+        `chat_completion_json` yields an empty reply — no verdicts and no cuts, which cannot distinguish
+        "wired and judged nothing" from "not wired at all".
+
+        `_same_thing_pass` now shares this same factory, so the stub has to leave IT alone or the two
+        passes both act and the split under test becomes untestable. It identifies itself by passing
+        `max_pairs`; nothing else does.
+        """
+        def factory(*a, **k):
+            if "max_pairs" in k:                     # _same_thing_pass — not the pass under test here
+                return lambda pairs: []
+            return lambda pairs: list(pairs)
+
+        monkeypatch.setattr("src.outcome_balance.make_llm_judge", factory)
 
     def test_submit_caps_and_reports_it(self, db, monkeypatch):
         import src.tools as tools_mod

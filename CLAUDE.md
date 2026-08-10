@@ -714,9 +714,14 @@ prevent/mitigate hallucination pair the same. **Small batches are right in both 
 batch was wrong in both.** So `outcome_balance.JUDGE_BATCH = 10`, and 52 pairs costs 6 Haiku calls
 instead of 1. Do not raise it to "save calls" — it degrades every verdict silently rather than failing.
 
-- **`_same_thing_pass` sends up to `_SAME_THING_MAX_PAIRS = 12` in ONE call and is at the edge of this.**
-  Not changed yet; it is the likeliest explanation for its "0 redundant" verdicts on large sets, on top of
-  the cap documented above.
+- **`_same_thing_pass` now uses the same batched judge.** It used to send every pair in ONE call at
+  `max_tokens=1024` with a 12-pair cap — both wrong for the same reasons documented here, and the likeliest
+  explanation for its "0 redundant" verdicts. `_SAME_THING_MAX_PAIRS` is now **400**, a runaway guard rather
+  than a sampling budget, and it is only safe to lift because the pairs go out in batches of `JUDGE_BATCH`.
+- **A per-batch fail-open changes what "0 judged" means.** Since the batched judge returns `[]` instead of
+  raising, reporting `pairs_judged = len(pairs)` after a total outage would claim the set was checked when
+  every call died. `make_llm_judge(stats=…)` reports `{batches, failed}` so the caller can tell a genuine
+  "nothing is redundant" from "nothing was looked at" — the silent-success class this project keeps hitting.
 - **The first diagnosis blamed a per-outcome CAP and would have shipped real data loss.** With a hard
   quota of 2, Gen AI Foundations lost **12 of the 14** questions under one coarse topic
   ("Pre-trained vs fine-tuned models"), including *"What is the difference between pre-training and
@@ -925,7 +930,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 733 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 737 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

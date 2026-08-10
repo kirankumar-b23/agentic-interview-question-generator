@@ -1791,7 +1791,16 @@ def _shares_head_noun(kept: list[str], cut: list[str]) -> bool:
 # one call over the 5-60 SELECTED questions, never over the corpus. Moving it to retrieval time is the
 # mistake `_scope_trim` documents at length.
 _SAME_THING_LOW = 0.62          # below this a pair is not plausibly the same ask; do not spend a call
-_SAME_THING_MAX_PAIRS = 12      # bound the prompt; pairs are considered closest-first
+# A RUNAWAY GUARD, not a sampling budget — and it used to be 12, which is a very different thing.
+#
+# At 12 the pass was sized for a ~10-question selected set. On a 38-question accumulated set there are 41
+# eligible pairs, so 29 were silently never judged, and the one hallucination pair the judge does call
+# redundant ranked 14th — just past the cut. "0 redundant" therefore meant "not looked at". With the cap
+# lifted the judge called 17 of those 41 the same thing.
+#
+# Lifting it is only safe because the pairs are now sent in SMALL BATCHES (`outcome_balance.JUDGE_BATCH`):
+# a single call carrying 52 pairs produced measurably worse verdicts than the same pairs in batches of 10.
+_SAME_THING_MAX_PAIRS = 400
 
 
 def _near_duplicate_pairs(questions: list) -> list[tuple]:
@@ -1855,29 +1864,33 @@ def _same_thing_pass(state: AgentState, questions: list) -> dict:
     if not pairs:
         return {"pairs_judged": 0, "removed": 0, "flagged": 0}
 
-    numbered = [{"n": k + 1, "a": questions[i].content[:400], "b": questions[j].content[:400]}
-                for k, (i, j, _) in enumerate(pairs)]
+    # SMALL BATCHES, via the shared judge. This used to be one `chat_completion_json` carrying every pair
+    # at `max_tokens=1024`, which had two measured problems: verdict quality degrades with batch size (a
+    # pair called SAME 3 times out of 3 on its own was called "different" inside a batch of 52), and a
+    # 1024-token ceiling truncates the reply once there are many pairs. `make_llm_judge` batches at
+    # `JUDGE_BATCH`, fails open PER BATCH so one bad chunk cannot discard the verdicts already collected,
+    # and applies the same verify-by-index rule this function used to do inline.
+    from src.outcome_balance import make_llm_judge
+
+    sims = {(min(i, j), max(i, j)): s for i, j, s in pairs}
+    stats: dict = {}
+    judge = make_llm_judge([q.content for q in questions], model=run_model(state),
+                           complete=chat_completion_json, on_usage=_usage_cb(state),
+                           max_pairs=_SAME_THING_MAX_PAIRS, stats=stats)
     try:
-        result = chat_completion_json(
-            model=run_model(state),           # the run's model, never the UI global
-            system_prompt=_SAME_THING_SYSTEM,
-            user_prompt=f"PAIRS:\n{json.dumps(numbered)}",
-            max_tokens=1024,
-            on_usage=_usage_cb(state),
-        )
+        verdicts = judge([(i, j) for i, j, _ in pairs]) or []
     except Exception as exc:  # noqa: BLE001 — a failed pass must never lose the question set
         print(f"[same_thing] skipped ({type(exc).__name__}: {exc})")
         return {"pairs_judged": 0, "removed": 0, "flagged": 0}
+    # Batching fails open PER BATCH, so a total outage returns [] rather than raising. Reporting
+    # `pairs_judged = len(pairs)` there would claim the set was checked when every call died.
+    if stats.get("batches") and stats["failed"] >= stats["batches"]:
+        print("[same_thing] every batch failed — the set was NOT checked for duplicates")
+        return {"pairs_judged": 0, "removed": 0, "flagged": 0}
 
-    # VERIFY IN CODE: only a pair we actually asked about, by its own index, can be acted on.
-    confirmed = []
-    for row in (result.get("pairs") or []):
-        try:
-            k = int(row["n"]) - 1
-        except (KeyError, TypeError, ValueError):
-            continue
-        if 0 <= k < len(pairs) and bool(row.get("same")):
-            confirmed.append(pairs[k])
+    # Closest-first, so the strongest signal is acted on before the MIN_QUESTIONS budget runs out.
+    confirmed = sorted(((i, j, sims.get((min(i, j), max(i, j)), 0.0)) for i, j in verdicts),
+                       key=lambda t: -t[2])
 
     removed = flagged = 0
     dropped_ids: set = set()
