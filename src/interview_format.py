@@ -20,15 +20,30 @@ they must stay apart:
   the export targets has coding tabs. This is reversible POLICY (`config.CONVERSATIONAL_ONLY`), not a
   data defect, so it filters at runtime and leaves the corpus intact.
 
-"DESIGN" IS DELIBERATELY NOT HANDS-ON
-------------------------------------
-It is the one do-verb that is answerable in conversation: *"Design a news aggregator system"* means "talk
-me through the architecture", which is exactly what a conversational interview is for. Measured, treating
-it as hands-on is actively harmful — across the last 6 runs the broad rule pushed **2 of 6 under the
-5-question minimum** (6→4 and 5→4) and it dropped *"Design an RSS News Feed Service"*, one of only three
-tool-specific questions the n8n retrieval work recovered.
+"DESIGN" AND "DRAW" ARE HANDS-ON — AND THIS WAS REVERSED ON PURPOSE
+------------------------------------------------------------------
+The first version deliberately EXCLUDED `design`, on the argument that *"Design a news aggregator
+system"* means "talk me through the architecture". That was the chosen behaviour for one round, then
+reversed: an imperative *"Design an end-to-end image generation system. Cover the following: …"* is a
+whiteboard exercise, and a candidate with no board and no shared screen cannot do it any more than they
+can type code.
 
-The compound `"design and implement"` IS caught: it reads like discussion and demands an artifact.
+**The wh-opener exemption is what makes the reversal safe**, and it is the whole reason this is not a
+blunt keyword ban. Measured on the 236 live questions:
+
+    SKIPPED (21)   "Design an LLM API pipeline"
+                   "Design a real-time smart translation system for live video meetings…"
+                   "Design an end-to-end image generation system. Cover the following:"
+
+    KEPT    (17)   "How would you design an agentic workflow to handle a multi-step user task?"
+                   "How do you approach designing an effective prompt?"
+                   "Explain your methodology for designing and testing system prompts"
+
+So "talk me through how you would design X" survives; "Design X" does not. That is the distinction the
+first version could not express, and adding the verbs without the exemption would have removed both.
+
+Cost, measured before landing: 21 of 236 live questions (9%), and 75 of the 2,828 shipped bank rows
+(2.7%). The compound `"design and implement"` was already caught.
 
 THE DISCRIMINATOR — three parts, all load-bearing
 -------------------------------------------------
@@ -51,8 +66,11 @@ from __future__ import annotations
 
 import re
 
-# Verbs that demand a PRODUCED artifact. "design" is absent on purpose — see the module docstring.
-_PRODUCE = (r"(?:write|code|implement|program|refactor|debug|build|create|integrate|deploy)")
+# Verbs that demand a PRODUCED artifact — including an artifact drawn or specified on a board.
+# `design`/`draw`/`sketch`/`diagram` were excluded in the first version; see the docstring for why that
+# was reversed and why the wh-opener exemption is what makes it safe.
+_PRODUCE = (r"(?:write|code|implement|program|refactor|debug|build|create|integrate|deploy"
+            r"|design|draw|sketch|diagram)")
 
 # A directive: "do this now". Bare imperative, or an explicit request. The final alternative catches
 # "design and implement", which no bare-verb rule would.

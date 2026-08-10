@@ -424,10 +424,18 @@ Fibonacci series"* is not a hard question, it is an impossible one. Two real run
 each burning a slot in a set of 9. `interview_format.is_hands_on_task` decides; `pipeline._drop_hands_on`
 filters the pool; `config.CONVERSATIONAL_ONLY=0` turns it off.
 
-- **"Design" is deliberately NOT hands-on.** It is the one do-verb answerable in conversation — *"Design a
-  news aggregator system"* means "talk me through the architecture". Measured, treating it as hands-on
-  pushed **2 of the last 6 runs UNDER the 5-question minimum** (6→4, 5→4) and dropped *"Design an RSS News
-  Feed Service"*, one of only three tool-specific questions the n8n work recovered. The compound
+- **"Design"/"draw" ARE hands-on — this was REVERSED, and the reversal is the interesting part.** They
+  were excluded for one round on the argument that *"Design a news aggregator system"* means "talk me
+  through the architecture". Reversed on the reviewer's call: an imperative *"Design an end-to-end image
+  generation system. Cover the following: …"* is a whiteboard exercise, and a candidate with no board
+  cannot do it any more than they can type code.
+  **The wh-opener exemption is the only reason this is safe** and not a keyword ban on "design" —
+  measured on the 236 live questions, **21 are skipped** (*"Design an LLM API pipeline"*) while
+  **17 are kept** (*"How would you design an agentic workflow?"*, *"How do you approach designing an
+  effective prompt?"*). Adding the verbs without the exemption removes both halves.
+  When design was first excluded, the measured cost of including it was that **2 of 6 runs fell under the
+  5-question minimum**; that risk is now absorbed because a topic's accumulated set is carried into every
+  run (`tools._add_retained`). Cost at ingest: 75 of 2,828 bank rows (2.7%). The compound
   **`"design and implement"` IS caught** — it reads like discussion and demands an artifact.
 - **A wh-opener is never hands-on**, and that single exemption carries the whole distinction:
   *"How did you implement JWT authentication in your project?"* is a strong question about a candidate's
