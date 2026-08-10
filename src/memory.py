@@ -470,14 +470,23 @@ def save_question_to_bank(question_id: str, session_name: str, content: str, sou
 
 
 def get_bank_questions(session_name: str) -> list[dict]:
-    """Return all banked questions for the given session (for cross-run dedup)."""
+    """Banked questions for the session's TOPIC (for cross-run dedup).
+
+    Matched by topic, not by the literal name. Every stored key is a JOINED name ("A + B") and two of them
+    are different groupings of the same sessions, so an exact-string match meant a run grouped differently
+    could not see its own topic's banked questions — the mechanism silently did nothing for those runs.
+
+    Resolved in Python rather than with a new indexed column: `question_bank` is ~48 rows, so this is free
+    and — unlike a column — it works for the rows already stored under joined names. Add a `topic_key`
+    column if it ever reaches thousands.
+    """
+    want = topic_key_for(session_name or "")
     conn = get_connection()
     rows = conn.execute(
-        "SELECT question_id, content FROM question_bank WHERE session_name = ? ORDER BY created_at DESC",
-        (session_name,)
-    ).fetchall()
+        "SELECT question_id, content, session_name FROM question_bank ORDER BY created_at DESC").fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    return [{"question_id": r["question_id"], "content": r["content"]} for r in rows
+            if topic_key_for(r["session_name"] or "") == want]
 
 
 # --- The accumulating per-topic question set (the "single reference") ---
@@ -549,6 +558,26 @@ def get_topic_questions(topic_key: str) -> list[dict]:
         (topic_key,)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def content_norms_in_other_topics(topic_key: str) -> dict[str, str]:
+    """`content_norm` -> the topic holding it, for every topic EXCEPT `topic_key`.
+
+    Backs the cross-topic suppression: a question homed to another topic must not be asked here too. 16 of
+    149 distinct questions sat in more than one topic before this existed, five of them in three, and no
+    session belongs to two topics — so it was pure duplication, not shared content.
+
+    Returns the topic name so the removal reason can NAME it. "already used in another topic" with no
+    name leaves a reviewer unable to tell a correct suppression from a mis-homed question.
+    """
+    if not topic_key:
+        return {}
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT content_norm, topic_key FROM topic_question_set WHERE topic_key != ?",
+        (topic_key,)).fetchall()
+    conn.close()
+    return {r["content_norm"]: r["topic_key"] for r in rows}
 
 
 def remove_topic_question(topic_key: str, content: str) -> bool:

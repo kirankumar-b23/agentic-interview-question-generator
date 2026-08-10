@@ -309,6 +309,9 @@ class AgentPipeline:
         # rejected question never resurfaces on re-generation and doesn't take a slot. Matched by
         # normalized content (question_ids regenerate each run).
         self._drop_rejected(state, emit)
+        # One question, one topic. Immediately after the rejection filter and before any embedding or LLM
+        # stage, so nothing is spent on a candidate that belongs to a different topic.
+        self._drop_used_by_other_topics(state, emit)
         # Drop questions that cannot be ANSWERED in a conversational interview ("Write a Python program
         # to…"). Here, before session-fit embeddings and long before the LLM relevance judge, so no spend
         # goes on candidates that can never ship. Any shortfall this creates reaches
@@ -470,6 +473,51 @@ class AgentPipeline:
                 })
         if drop:
             emit("suppress_rejected", "done", f"Suppressed {len(drop)} previously-rejected question(s).")
+
+    def _drop_used_by_other_topics(self, state, emit):
+        """Drop freshly-retrieved candidates that already belong to ANOTHER topic's set.
+
+        16 of 149 distinct questions sat in more than one topic (five in three) because every de-dup
+        mechanism is scoped to one topic. No session belongs to two topics, so that was pure repetition:
+        a student sitting several of these mock interviews would be asked "What is a prompt?" three times.
+
+        Placed immediately after `_drop_rejected` and BEFORE `_score_session_fit` / the LLM relevance
+        judge, for the same reason as `_drop_hands_on`: nothing should be spent on candidates that cannot
+        ship.
+
+        SAFE FOR THIS TOPIC'S OWN SET. It only ever sees freshly-retrieved candidates — `_add_retained`
+        runs later, inside `tool_submit_question_set` — so a question this topic already owns is never at
+        risk here even though 8 of No-Code's 27 currently also sit elsewhere.
+
+        A candidate whose home SHOULD be this topic (because this topic covers it better) is still dropped,
+        but recorded as a relocation candidate: re-homing is `filter_topic_sets.py --cross-topic`'s job,
+        offline and backed up, not something to do mid-run.
+        """
+        ctx = state.session_context
+        if not ctx or not state.questions:
+            return
+        from src import memory
+        topic_key = memory.topic_key_for(getattr(ctx, "session_name", "") or "")
+        elsewhere = memory.content_norms_in_other_topics(topic_key)
+        if not elsewhere:
+            return
+        drop = [(qid, elsewhere[memory.normalize_content(q.content)])
+                for qid, q in state.questions.items()
+                if memory.normalize_content(q.content) in elsewhere]
+        for qid, owner in drop:
+            q = state.questions.pop(qid, None)
+            if q is not None:
+                state.excluded.add(qid)
+                state.removed.append({
+                    "content": q.content,
+                    "reason": f"Already used in another topic: {owner}",
+                    "stage": "other_topic", "difficulty": q.difficulty, "company": q.attribution,
+                })
+        if drop:
+            owners = sorted({o for _, o in drop})
+            emit("suppress_other_topic", "done",
+                 f"Suppressed {len(drop)} question(s) already used in "
+                 f"{len(owners)} other topic(s).", dropped=len(drop))
 
     def _score_session_fit(self, state, emit, only_ids=None):
         """SESSION-grounded scoring + gate.
@@ -1177,6 +1225,16 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
     # cause: a topic that supplies several questions is repetition the candidate hears, and a topic that
     # supplies none is a gap no count of questions reveals. On No-Code AI Automation three topics held 47%
     # of a 38-question set while 9 of 22 had nothing.
+    # Say what cross-topic suppression withheld. A question silently missing because another topic owns it
+    # is indistinguishable from one that was never found, and the accepted risk of this rule is that a
+    # genuinely shared fundamental stays locked to whichever topic holds it — so it has to be visible.
+    _other = [r for r in (state.removed or []) if r.get("stage") == "other_topic"]
+    if _other:
+        _owners = sorted({(r.get("reason") or "").split(": ", 1)[-1] for r in _other})
+        notes.append(
+            f"{len(_other)} question(s) were withheld because another topic already uses them "
+            f"({', '.join(_owners[:3])}{'; …' if len(_owners) > 3 else ''}). Re-home them with "
+            f"scripts/filter_topic_sets.py --cross-topic if this topic is the better fit.")
     # Cross-topic duplicates are counted separately because they are a different finding: a per-outcome
     # cap structurally cannot see them, and they are what a real gate objected to when 7 of 11 shipped
     # questions were prompt-engineering filed under four near-synonymous interview topics.

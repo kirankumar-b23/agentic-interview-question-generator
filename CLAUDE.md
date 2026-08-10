@@ -855,6 +855,39 @@ dict key is `ok`, not `pass`.
   `output` is the subset approved in Review, which then became the topic's canonical run (`main.py` calls
   `set_canonical_run` on approve). Chasing that consumed real effort — check `topic_runs` first.
 
+## One question, one topic
+
+**16 of 149 distinct questions (11%) sat in more than one topic**, five in three. Not shared content — **no
+session belongs to two topics** (0 of 56) — every de-dup mechanism was simply scoped to one topic
+(`_add_retained`, `_drop_rejected`, the outcome balance are keyed by `topic_key`; cross-run dedup matched
+`get_bank_questions(session_name)` on the exact string).
+
+- **A question's home is the EARLIEST topic whose material COVERS it** (`src/curriculum_order.py`), not the
+  best-fitting topic and not the latest. Both alternatives were measured on the real 16 and both are wrong:
+  *latest* sends *"What is a prompt?"* to No-Code; *best fit* sends *"How do you approach designing an
+  effective prompt?"* to AI Workflows (0.742) instead of Prompt Engineering (0.729), where prompts are
+  TAUGHT. The rule must move questions BOTH ways — *"What is the HTTP Request node?"* correctly moves LATER
+  (No-Code 0.540 → AI Workflows 0.703) because the earlier topic does not cover it.
+- **`CROSS_TOPIC_COVER_RATIO = 0.9` is relative on purpose.** Absolute similarity bars have repeatedly failed
+  to separate overlapping populations here; the question is only which of a handful of topics covers ONE
+  question about as well as any.
+- **Order comes from `knowledge_graph.json`'s `session_order_edges`, not dict order.** A single-root DAG,
+  topologically ordered, covering 52 of 52 sessions. `course_structure.json`'s key order agrees today —
+  that is the corroboration, not the source, since `AddCourse` can change it. A topic's position is the
+  **max** over its sessions, and sessions ABSENT from the graph are ignored: a sentinel poisons the whole
+  topic through the max, which scored four topics at 999 in the first attempt.
+- **`pipeline._drop_used_by_other_topics` runs right after `_drop_rejected`** — before session-fit embeddings
+  and the LLM judge, same reasoning as `_drop_hands_on`. It only ever sees freshly-retrieved candidates
+  (`_add_retained` runs later, inside submit), so this topic's own set is never at risk.
+- **The report NAMES what was withheld and how to re-home it.** A question silently missing because another
+  topic owns it is indistinguishable from one never found, and the accepted risk of this rule is a shared
+  fundamental locked to one topic.
+- **`get_bank_questions` matches by TOPIC, not the literal name.** Every stored key is a joined name and two
+  are different groupings of the same sessions, so an exact-string match meant a differently-grouped run saw
+  none of its own topic's banked questions. Resolved in Python — 48 rows, and unlike a new column it works
+  for rows already stored.
+- Applied: **170 → 149**, 21 rows quarantined recoverably, re-running proposes 0.
+
 ## Web/UI notes
 
 - `main.py` errors use `{"error": ...}`, not FastAPI's `{"detail": ...}` — the React client reads
@@ -930,7 +963,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 737 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 761 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

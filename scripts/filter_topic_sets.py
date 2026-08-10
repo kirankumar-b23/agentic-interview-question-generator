@@ -366,6 +366,83 @@ def _cap(structure: dict, keys: list, args) -> int:
     return 0
 
 
+def _cross_topic(structure: dict, keys: list, args) -> int:
+    """One question, one topic — homed at the EARLIEST topic whose material covers it.
+
+    Not best-fit and not latest: see `src/curriculum_order.py`. Measured on the 16 real duplicates, the
+    rule moves questions in both directions, which is the point — "How do you approach designing an
+    effective prompt?" stays at Prompt Engineering (0.729) rather than moving to the higher-fitting AI
+    Workflows (0.742), while "What is the HTTP Request node?" correctly moves LATER.
+    """
+    import collections
+
+    from src.curriculum_order import home_topic, topic_position
+
+    con = memory.get_connection()
+    rows = con.execute("SELECT topic_key, content_norm, content FROM topic_question_set").fetchall()
+    con.close()
+    holders: dict = collections.defaultdict(set)
+    text: dict = {}
+    for r in rows:
+        holders[r["content_norm"]].add(r["topic_key"])
+        text[r["content_norm"]] = r["content"]
+    multi = {k: v for k, v in holders.items() if len(v) > 1}
+    if not multi:
+        print("No question appears in more than one topic.")
+        return 0
+
+    profiles: dict = {}
+
+    def fit_for(tk: str, question: str) -> float:
+        if tk not in profiles:
+            sessions = structure.get(tk) or []
+            profiles[tk] = _session_profile(sessions, _topic_context(sessions)) if sessions else ([], [])
+        curated, rm = profiles[tk]
+        return _fits([question], curated, rm)[0] if (curated or rm) else 0.0
+
+    plan = []
+    for norm, tks in multi.items():
+        q = text[norm]
+        fits = {tk: fit_for(tk, q) for tk in tks}
+        home = home_topic(fits)
+        plan.append({"norm": norm, "content": q, "fits": fits, "home": home,
+                     "drop": [t for t in tks if t != home]})
+
+    plan.sort(key=lambda p: (topic_position(p["home"]) if topic_position(p["home"]) is not None else 999))
+    total = sum(len(p["drop"]) for p in plan)
+    for p in plan:
+        print(f"  {p['content'][:74]}")
+        for tk in sorted(p["fits"], key=lambda t: (topic_position(t) is None, topic_position(t) or 0)):
+            mark = "KEEP" if tk == p["home"] else "drop"
+            print(f"     {mark}  pos {str(topic_position(tk)):>3}  fit {p['fits'][tk]:.3f}  {tk[:50]}")
+    print(f"\n=> {len(plan)} question(s) in more than one topic; {total} row(s) to quarantine "
+          f"({len(rows)} -> {len(rows) - total})")
+    if not args.apply:
+        print("   [report only — pass --apply to quarantine the non-home copies]")
+        return 0
+
+    backup = Path(str(MEMORY_DB) + f".{datetime.now().strftime('%Y%m%d-%H%M%S')}.bak")
+    shutil.copy2(MEMORY_DB, backup)
+    print(f"\n  backed up {MEMORY_DB.name} -> {backup.name}")
+    applied = 0
+    touched: set = set()
+    for p in plan:
+        for tk in p["drop"]:
+            memory.quarantine_question(
+                tk, p["content"],
+                f'homed to "{p["home"]}" instead (earliest topic whose material covers it)', None)
+            if memory.remove_topic_question(tk, p["content"]):
+                applied += 1
+                touched.add(tk)
+    # Without this the cut exists in the database and NOT in Review — that gap has bitten twice.
+    for tk in sorted(touched):
+        n = memory.sync_canonical_payload(tk)
+        if n is not None:
+            print(f"  synced {tk[:46]}: payload now {n}")
+    print(f"  quarantined {applied} (recoverable from quarantined_questions)")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -386,6 +463,9 @@ def main() -> int:
                          f"{OUTCOME_CAP}) applies only with --strict")
     ap.add_argument("--no-judge", action="store_true",
                     help="--cap without the LLM: pure cap by rank, fully reproducible, no API cost")
+    ap.add_argument("--cross-topic", action="store_true",
+                    help="one question, one topic: home each duplicated question at the EARLIEST topic "
+                         "whose material covers it and quarantine the rest (with --apply)")
     ap.add_argument("--strict", action="store_true",
                     help="hard quota: drop everything past --cap even if the judge calls it distinct. "
                          "Blunt where interview_topics are coarse — see outcome_balance's docstring")
@@ -401,6 +481,8 @@ def main() -> int:
         return _evidence(structure, keys, args.evidence, args.topic)
     if args.dupes or args.collapse:
         return _dupes(structure, keys, args)
+    if args.cross_topic:
+        return _cross_topic(structure, keys, args)
     if args.cap is not None:
         return _cap(structure, keys, args)
 

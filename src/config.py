@@ -296,6 +296,19 @@ OUTCOME_ORPHAN_FLOOR = float(os.getenv("OUTCOME_ORPHAN_FLOOR", "0.35"))
 # Precision does not depend on this number: nothing is dropped without a judge verdict, so the floor only
 # decides what gets LOOKED at.
 CROSS_OUTCOME_FLOOR = float(os.getenv("CROSS_OUTCOME_FLOOR", "0.55"))
+# A question belongs to the EARLIEST topic whose reading material covers it about as well as any — this is
+# how close to the best fit "about as well" means. See `src/curriculum_order.py`.
+#
+# RELATIVE, not an absolute bar: the question is only which of a handful of topics covers ONE question
+# best, and absolute similarity bars have repeatedly failed to separate overlapping populations here
+# (DEDUP_SEMANTIC_THRESHOLD, _outcome_coverage's proximity threshold, the dedup band).
+#
+# 0.9 was measured against the 16 real cross-topic duplicates and moves questions in BOTH directions:
+# "How do you approach designing an effective prompt?" stays at Prompt Engineering (0.729) rather than
+# going to the higher-fitting AI Workflows (0.742), while "What is the HTTP Request node?" correctly moves
+# LATER to AI Workflows (0.703) because No-Code does not cover it (0.540). A rule that only ever picked the
+# earliest, or only the best fit, gets one of those wrong.
+CROSS_TOPIC_COVER_RATIO = float(os.getenv("CROSS_TOPIC_COVER_RATIO", "0.9"))
 
 # Stop a run outright when the Tavily pre-flight fails, instead of continuing bank-only. ON by default.
 #
