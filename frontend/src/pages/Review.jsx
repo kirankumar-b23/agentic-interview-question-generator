@@ -27,7 +27,8 @@ function CompactQuestion({
   // so "Indeed" looked like an employer that had asked the question.
   // `original` is set only when the scope trim shortened the question: it still carries the company's
   // name, so the edit has to be visible and the source text inspectable.
-  company, site, original, offSyllabus, unvetted, duplicateOf, role, topic, subTopic, language, source, sourceUrl,
+  company, site, original, offSyllabus, unvetted, duplicateOf, retained, retainedStatus, staleReason,
+  role, topic, subTopic, language, source, sourceUrl,
   snippet, decision, onDecide, index, fit, reason, focused, onFocus,
 }) {
   const [open, setOpen] = useState(false)
@@ -79,6 +80,18 @@ function CompactQuestion({
           {duplicateOf && (
             <span className="cq-duplicate"
                   title={`Tests the same thing as: "${duplicateOf}" — it could not be dropped without taking the set under the minimum, so pick one.`}>same as another</span>
+          )}
+          {retained && (
+            <span className={`cq-retained${retainedStatus === 'approved' ? ' cq-retained-approved' : ''}`}
+                  title={retainedStatus === 'approved'
+                    ? 'Already in this topic\'s set and previously approved — carried over, not re-found this run.'
+                    : 'Carried over from this topic\'s set. It came from an earlier run\'s output and was never explicitly approved.'}>
+              {retainedStatus === 'approved' ? 'kept · approved' : 'kept · unreviewed'}
+            </span>
+          )}
+          {staleReason && (
+            <span className="cq-stale"
+                  title={`This carried-over question ${staleReason}. Flagged rather than removed — you approved it once, so the call is yours.`}>would fail today's gate</span>
           )}
           {typeof fit === 'number' && (
             <span
@@ -619,6 +632,9 @@ export default function Review() {
                     offSyllabus={q.off_syllabus_concept}
                     unvetted={q.unvetted_source}
                     duplicateOf={q.duplicate_of}
+                    retained={q.retained}
+                    retainedStatus={q.retained_status}
+                    staleReason={q.stale_reason}
                     role={q.role}
                     topic={q.topic}
                     subTopic={q.sub_topic}

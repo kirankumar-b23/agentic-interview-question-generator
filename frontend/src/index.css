@@ -1126,3 +1126,27 @@ kbd { display: inline-block; min-width: 1.15rem; padding: 0.05rem 0.3rem; backgr
   font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-3);
   border: 1px solid var(--border-soft); border-radius: 3px; padding: 0 4px; margin-left: var(--s-2);
 }
+
+/* ── Carried-over questions ─────────────────────────────────────────────────────────────────────
+   A re-run adds to a topic's existing set rather than producing another version, so most of a mature
+   set is carried over. These tags exist so triage is obviously only over the NEW questions.
+   Quieter than the danger tags: a kept question is normal, not a problem. Each declares its own
+   background/border/font — the `button`/element reset above means inheritance would give UA chrome. */
+.cq-retained {
+  font-size: var(--fs-2xs); font-family: var(--font-mono);
+  color: var(--text-3); background: var(--surface-2);
+  border: 1px solid var(--border-soft); border-radius: 4px;
+  padding: 1px var(--s-1); white-space: nowrap; cursor: help;
+}
+/* Reviewer-blessed reads a shade stronger than an unreviewed import, because the distinction is the
+   whole point of tracking status: 175 of the consolidated 251 were never explicitly approved. */
+.cq-retained-approved { color: var(--ok); border-color: var(--ok-soft); }
+
+/* A carried-over question today's gates would reject. Flagged, never removed — it was approved once,
+   so the reviewer decides. Warning weight, not danger: it is not wrong, it is dated. */
+.cq-stale {
+  font-size: var(--fs-2xs); font-family: var(--font-mono);
+  color: var(--warn); background: var(--warn-soft);
+  border: 1px dashed var(--warn); border-radius: 4px;
+  padding: 1px var(--s-1); white-space: nowrap; cursor: help;
+}

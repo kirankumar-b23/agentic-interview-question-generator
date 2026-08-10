@@ -559,6 +559,40 @@ class AgentPipeline:
              f"candidate(s) directly so the set is ranked and trimmed.")
         return True
 
+    def _score_unscored_fits(self, state, emit):
+        """Give every shipped question a `session_fit`, dropping nothing.
+
+        Retained questions come from the topic's accumulated set, not from this run's pool, so they have
+        no fit. Left unscored they would repeat the exact defect the open-web tier hit: `grounding_score`
+        averages only non-None fits, so `session_grounding` would silently describe just the freshly-found
+        subset, and `_rank_key` reads None as 0.0, sinking settled questions to the bottom of Review.
+
+        This deliberately does NOT reuse `_score_session_fit(only_ids=…)`: that applies the relative floor
+        and DROPS what falls below it. A retained question is already settled — it gets flagged
+        (`stale_reason`), never removed, so the reviewer decides.
+        """
+        unscored = [q for q in state.questions.values() if q.session_fit is None]
+        if not unscored or not state.session_context:
+            return
+        from src import embeddings
+        from src.config import SESSION_PROFILE_RM_WEIGHT
+
+        curated, rm_chunks = _session_profile(state.config.session_names, state.session_context)
+        if not curated and not rm_chunks:
+            return
+        contents = [q.content for q in unscored]
+        cur_sim = embeddings.cosine_matrix(contents, curated) if curated else None
+        rm_sim = embeddings.cosine_matrix(contents, rm_chunks) if rm_chunks else None
+        if cur_sim is None and rm_sim is None:
+            return
+        for i, q in enumerate(unscored):
+            best_curated = float(max(cur_sim[i])) if cur_sim is not None else 0.0
+            best_rm = float(max(rm_sim[i])) * SESSION_PROFILE_RM_WEIGHT if rm_sim is not None else 0.0
+            q.session_fit = round(max(best_curated, best_rm), 4)
+        emit("session_fit", "done",
+             f"Scored {len(unscored)} carried-over question(s) so grounding covers the whole set.",
+             kept=len(unscored), dropped=0)
+
     def _evaluate_and_gate(self, state, emit) -> int:
         """Stage 4 + quality-gate loop. Returns revision rounds used."""
         eval_agent = EvaluationAgent()
@@ -569,6 +603,9 @@ class AgentPipeline:
             # Do this BEFORE the critique so the gate judges the set the reviewer will actually see.
             if self._enforce_submission(state, emit):
                 state.submit_forced = True
+            # Retained questions arrive from the topic set with no `session_fit`. Score them here, and
+            # drop NOTHING — see `_score_unscored_fits`.
+            self._score_unscored_fits(state, emit)
 
             emit("critique", "running", "Quality gate — critiquing final set...")
             critique = _critique_question_set(state)
@@ -999,6 +1036,25 @@ def _build_quality_report(state: AgentState, revision_round: int) -> QualityRepo
             f"off-syllabus clause was removed); they are marked 'adapted' in review and keep their "
             f"original text for comparison."
         )
+    # Name the retained/new split. With the topic's accumulated set carried in, a re-run that finds
+    # NOTHING new would otherwise read as a healthy 40-question run. Reported, never gated — gating on
+    # new-questions-found would fail every mature topic that is simply finished, the same reason
+    # `topic_coverage` is reported and not gated.
+    _retained = [q for q in state.questions.values() if getattr(q, "retained", False)]
+    if _retained:
+        _fresh = len(state.questions) - len(_retained)
+        _stale = [q for q in _retained if getattr(q, "stale_reason", None)]
+        _unrev = [q for q in _retained if getattr(q, "retained_status", None) != "approved"]
+        notes.append(
+            f"{len(state.questions)} question(s): {len(_retained)} carried over from this topic's "
+            f"existing set, {_fresh} newly found this run."
+            + (f" {len(_unrev)} of the carried-over ones were never reviewer-approved (imported from run "
+               f"history)." if _unrev else "")
+            + (f" {len(_stale)} would be rejected by today's gates and are flagged for you rather than "
+               f"removed." if _stale else ""))
+        if _fresh == 0:
+            notes.append("No NEW questions were found for this topic — the set is unchanged. That is a "
+                         "supply result, not a quality failure.")
     # Say what the conversational filter cost. A pool filter that silently shrinks the supply reads as
     # "this session has few questions", which is the misdiagnosis the yield harness exists to prevent.
     _hands_on = sum(1 for r in (state.removed or []) if r.get("stage") == "hands_on")

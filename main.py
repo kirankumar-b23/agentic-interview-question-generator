@@ -773,6 +773,25 @@ def api_approve(run_id: str, body: ReviewRequest):
         for q in result.curated_output.question_details:
             memory.save_question_to_bank(q.question_id, session_name, q.content, q.source)
 
+        # Fold the approved set into this TOPIC's accumulating set, and make this run the topic's
+        # canonical holder. That is what stops the next re-run producing another version: the following
+        # run carries these questions in (`tools._add_retained`) and adds only what is new, while this
+        # run's predecessor is flagged so History keeps one row per topic.
+        try:
+            topic_key = memory.topic_key_for(session_name)
+            previous = memory.get_canonical_run(topic_key)
+            memory.upsert_topic_questions(topic_key, [
+                {"content": q.content, "detail": q.model_dump(mode="json"), "status": "approved",
+                 "first_run_id": run_id, "session_name": session_name,
+                 "difficulty": q.difficulty, "company": q.asked_in_company,
+                 "source": q.source, "kp_label": q.kp_label}
+                for q in result.curated_output.question_details])
+            memory.set_canonical_run(topic_key, run_id)
+            if previous and previous != run_id:
+                memory.mark_superseded(previous, run_id)
+        except Exception as e:  # noqa: BLE001 — the approval itself must not be lost to this
+            log.error("failed to update the topic set for run %s: %s", run_id, e)
+
         sheet_url = sheet_error = None
         try:
             from src.sheets_writer import write_to_sheets

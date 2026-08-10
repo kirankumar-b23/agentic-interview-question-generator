@@ -129,22 +129,52 @@ def write_to_sheets(
     client = _get_gspread_client()
     cat = (category or "GEN_AI").strip().upper().replace(" ", "_")
 
-    # Per-run IDs and derived values — include coding-question IDs in the count
-    org_id = str(uuid.uuid4())
-    interview_id = str(uuid.uuid4())
+    # ONE SHEET PER TOPIC, reused across exports.
+    #
+    # This used to `client.create(...)` unconditionally and never persist the URL, so every approve minted
+    # another spreadsheet and there was no single reference for a topic. The id, and the LMS identifiers,
+    # are remembered against the topic: org_id/interview_id were fresh uuid4()s per call, so a re-export
+    # would look like a brand-new interview to the LMS import rather than an update of the same one.
+    from src import memory as _memory
+    topic = get_topic_for_session(session_name)
+    topic_key = _memory.topic_key_for(session_name)
+    saved = _memory.get_topic_sheet(topic_key) or {}
+    org_id = saved.get("org_id") or str(uuid.uuid4())
+    interview_id = saved.get("interview_id") or str(uuid.uuid4())
+
     all_ids = ([q.question_id for q in output.question_details]
                + [q.id for q in output.coding_questions])
     question_ids_str = ", ".join(all_ids)
     q_count = len(all_ids)
 
-    # Create new spreadsheet — name: "<Topic> - <session(s)> (NxtMock)"
-    topic = get_topic_for_session(session_name)
-    title = f"{topic} - {session_name} (NxtMock)" if topic else f"{session_name} (NxtMock)"
-    spreadsheet = client.create(title)
+    # Named after the TOPIC only. Including every session name was misleading once the sheet became
+    # per-topic — a differently-grouped re-run updates this same sheet, so a title describing one
+    # grouping would be wrong. Real titles also ran past 100 characters.
+    title = f"{topic} - NxtMock" if topic else f"{session_name} - NxtMock"
+    spreadsheet = None
+    if saved.get("spreadsheet_id"):
+        try:
+            spreadsheet = client.open_by_key(saved["spreadsheet_id"])
+            # Rewrite from scratch so the sheet always shows the CURRENT set; stale tabs would otherwise
+            # accumulate alongside the new ones.
+            for ws in spreadsheet.worksheets()[1:]:
+                spreadsheet.del_worksheet(ws)
+            if spreadsheet.title != title:
+                spreadsheet.update_title(title)
+        except Exception as exc:  # noqa: BLE001 — a deleted or inaccessible sheet must not fail an approve
+            print(f"[sheets] saved sheet unusable ({type(exc).__name__}: {exc}); creating a new one")
+            spreadsheet = None
+    if spreadsheet is None:
+        spreadsheet = client.create(title)
+    _memory.save_topic_sheet(topic_key, spreadsheet.id, spreadsheet.url, org_id, interview_id)
 
     # --- Tab 1: QuestionDetails ---
     ws_qd = spreadsheet.sheet1
     ws_qd.update_title("QuestionDetails")
+    # Tab 1 is REUSED when the topic already has a sheet, and the write below starts at A1 — so a
+    # previous export with more rows would leave its tail behind, silently mixing removed questions into
+    # the current set. Clear before writing.
+    ws_qd.clear()
 
     qd_headers = [
         "question_id", "category", "content", "topic", "sub_topic",

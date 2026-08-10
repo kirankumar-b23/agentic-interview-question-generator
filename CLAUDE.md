@@ -505,6 +505,54 @@ from the ones it kept. `coverage_efficiency` was replayed too and holds at 1.0 a
 sets do not cost the gate. **The FLOOR stays absolute**: a thin on-topic pool returns FEWER questions, never
 loosely-related filler.
 
+## A re-run ADDS to a topic's set — it does not make another version
+
+`tools._add_retained` unions the topic's accumulated set into the shipped output, so re-running after a
+pipeline improvement keeps what exists and adds only what is new.
+
+- **The accumulation already existed and pointed the wrong way.** Approved questions have always banked on
+  approve, and cross-run dedup already removed candidates duplicating them — so a re-run computed the
+  delta correctly and then shipped ONLY the delta, looking like a fresh, smaller set. The missing piece
+  was putting the set back into the output.
+- **`_add_retained` runs after `_same_thing_pass` and before `_syllabus_audit`**: the same-thing pass
+  should judge only this run's own picks against each other, not re-litigate settled questions, and the
+  audit should flag retained questions like everything else.
+- **A retained question today's gates reject is FLAGGED (`stale_reason`), never dropped.** A reviewer
+  approved it and the improvements post-date parts of the set; a silent removal is a surprise.
+- **`_score_unscored_fits` gives retained questions a `session_fit`, and drops NOTHING.** It deliberately
+  does not reuse `_score_session_fit(only_ids=…)`, which applies the relative floor and removes what falls
+  below. Leaving them unscored is the open-web trap: `grounding_score` averages non-None fits only, so
+  `session_grounding` would describe just the freshly-found subset, and `_rank_key` reads None as 0.0.
+- **The report names the retained/new split, reported never gated** — a re-run that finds nothing new
+  would otherwise read as a healthy 40-question run. Gating on new-questions-found would fail every mature
+  topic that is simply finished, the same reason `topic_coverage` is not gated.
+- **`retained_status` keeps 'approved' distinct from 'backfilled'** (76 vs 175 after consolidation), so a
+  one-off import of unreviewed questions does not silently acquire reviewer blessing.
+- **Tests that call these helpers directly prove nothing about wiring.** A mutation check showed that
+  unwiring both `_add_retained` and `_score_unscored_fits` left every unit test green — they call the
+  functions directly. `TestItIsActuallyWiredIn` goes through `tool_submit_question_set` and
+  `TestRetainedQuestionsThroughTheWholePipeline` through `AgentPipeline.run`. Third time this class of
+  vacuous test appeared in this codebase; assert through the caller.
+- **Trim assertions must count NEWLY-FOUND questions.** Four tests asserted the shipped total was <= the
+  requested count; retained questions legitimately break that, and the invariant they protect is that the
+  raw pool was trimmed.
+
+## One spreadsheet per topic
+
+`write_to_sheets` reuses the topic's sheet instead of creating one per approve.
+
+- It used to `client.create(...)` unconditionally and never persist the URL, so every approve minted
+  another spreadsheet and no topic had a single reference. `topic_sheets` now stores the id.
+- **`org_id`/`interview_id` are persisted and reused.** They were fresh `uuid4()`s per call, so a
+  re-export would look like a brand-new interview to the LMS import rather than an update.
+- **Title is `"<Topic> - NxtMock"`** — no session names. Including them was misleading once the sheet
+  became per-topic, since a differently-grouped re-run updates that same sheet; real titles also ran past
+  100 characters.
+- **Tab 1 is cleared before writing.** The write starts at A1 on a REUSED sheet, so a previous, longer
+  export would leave its tail behind and silently mix removed questions into the current set.
+- A deleted or inaccessible sheet falls back to create-and-re-save: an approve must not fail because a
+  spreadsheet went away. Accepted knowingly: rewriting in place overwrites manual edits.
+
 ## Two different "slicing" mechanisms — do not merge them
 
 - **`_trim_to_topic` + `split_into_clauses`** cut a COMPOUND question at boundaries between separate
@@ -637,7 +685,7 @@ because they're part of the LMS unit import format.
 
 ## Tests
 
-`pytest tests/ -q` — 587 tests. **No LLM or network required, and that is now ENFORCED** by an
+`pytest tests/ -q` — 617 tests. **No LLM or network required, and that is now ENFORCED** by an
 autouse guard in `tests/conftest.py` (see "The suite must cost nothing" below) rather than being a
 hopeful claim. Beyond unit coverage:
 - `tests/test_pipeline_integration.py` drives the REAL pipeline with only the LLM boundary stubbed,

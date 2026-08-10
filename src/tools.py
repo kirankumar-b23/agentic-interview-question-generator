@@ -1904,6 +1904,86 @@ def _same_thing_pass(state: AgentState, questions: list) -> dict:
     return {"pairs_judged": len(pairs), "removed": removed, "flagged": flagged}
 
 
+def _add_retained(state: AgentState, selected: list) -> dict:
+    """Union this topic's accumulated set into the shipped set. Returns the retained/new split.
+
+    This is what makes a re-run ADD rather than produce another version. The accumulated set already
+    existed — `memory.save_question_to_bank` has banked approved questions on every approve, and
+    `scripts/consolidate_topic_sets.py` merged the historical runs in — but nothing put it back into a
+    run's output, so a re-run shipped only the delta and looked like a fresh, smaller set.
+
+    Order matters: this runs AFTER `_same_thing_pass` (which should judge only this run's own picks
+    against each other, not re-litigate settled questions) and BEFORE `_syllabus_audit` (so retained
+    questions are audited and flagged like everything else).
+
+    A retained question that today's gates would reject is FLAGGED, never dropped — a reviewer approved
+    it, and the pipeline improvements post-date some of the set. `_drop_rejected` already keeps anything
+    the reviewer rejected from coming back, and cross-run dedup already removed this run's candidates that
+    duplicate the set, so nothing here can produce a duplicate.
+    """
+    ctx = state.session_context
+    if not ctx or not getattr(ctx, "session_name", None):
+        return {"retained": 0, "newly_found": len(selected), "stale": 0}
+    from src import memory as _memory
+    from src.assessment_items import is_assessment_item
+    from src.interview_format import is_hands_on_task
+    from src.quality import is_quality_question
+
+    newly_found = len(selected)
+    try:
+        topic_key = _memory.topic_key_for(ctx.session_name)
+        rows = _memory.get_topic_questions(topic_key)
+    except Exception as exc:  # noqa: BLE001 — a missing set must not lose this run's questions
+        print(f"[retained] skipped ({type(exc).__name__}: {exc})")
+        return {"retained": 0, "newly_found": newly_found, "stale": 0}
+    if not rows:
+        return {"retained": 0, "newly_found": newly_found, "stale": 0}
+
+    have = {_memory.normalize_content(q.content) for q in selected}
+    added = stale = 0
+    for row in rows:
+        norm = row.get("content_norm") or _memory.normalize_content(row["content"])
+        if norm in have:
+            continue                      # this run found it too; keep the freshly-scored copy
+        content = row["content"]
+        reason = None
+        if not is_quality_question(content):
+            reason = "would fail today's form gate"
+        elif is_hands_on_task(content):
+            reason = "hands-on task — not answerable in a conversational interview"
+        elif is_assessment_item(content):
+            reason = "multiple-choice assessment item"
+        detail = {}
+        if row.get("detail_json"):
+            try:
+                detail = json.loads(row["detail_json"])
+            except Exception:  # noqa: BLE001 — fall back to the plain columns
+                detail = {}
+        q = QuestionDetail(
+            question_id=str(uuid.uuid4()),
+            category=detail.get("category") or getattr(state.config, "category", "GEN_AI"),
+            content=content,
+            topic=detail.get("topic") or "Gen AI",
+            sub_topic=detail.get("sub_topic"),
+            difficulty=row.get("difficulty") or detail.get("difficulty") or "Medium",
+            role=detail.get("role"),
+            source=row.get("source") or detail.get("source") or "interview_db",
+            asked_in_company=row.get("company") or detail.get("asked_in_company"),
+            source_url=detail.get("source_url") or "",
+            kp_label=row.get("kp_label") or detail.get("kp_label"),
+            relevance_score=detail.get("relevance_score"),
+            retained=True,
+            retained_status=row.get("status") or "backfilled",
+            stale_reason=reason,
+        )
+        selected.append(q)
+        state.questions[q.question_id] = q
+        have.add(norm)
+        added += 1
+        stale += 1 if reason else 0
+    return {"retained": added, "newly_found": newly_found, "stale": stale}
+
+
 _TRIM_SYSTEM = """You remove OFF-SYLLABUS sub-clauses from real interview questions.
 
 You are given a session's scope and a list of questions already judged relevant to it. For each
@@ -2427,6 +2507,10 @@ def tool_submit_question_set(state: AgentState) -> dict:
     # AFTER the trim, because trimming can pull two questions onto the same core ask, and the pass
     # should judge the text that will actually ship. Mutates `selected` and `state.questions` together.
     same = _same_thing_pass(state, selected)
+    # Carry this topic's existing set in, so a re-run ADDS to it instead of shipping a new version.
+    # After the same-thing pass (so it judges only this run's picks against each other) and before the
+    # syllabus audit (so retained questions are audited and flagged like everything else).
+    retained = _add_retained(state, selected)
     state.questions = {q.question_id: q for q in selected}
     audit = _syllabus_audit(state, selected)
     state.off_syllabus = audit["off_syllabus"]
@@ -2439,6 +2523,8 @@ def tool_submit_question_set(state: AgentState) -> dict:
             "reserve": len(state.reserve), "kp_tagged": kp_tagged,
             "scope_trimmed": len(trims), "off_syllabus": len(state.off_syllabus),
             "same_thing_removed": same["removed"], "same_thing_flagged": same["flagged"],
+            "retained": retained["retained"], "newly_found": retained["newly_found"],
+            "retained_stale": retained["stale"],
             "per_session": session_rep.get("per_session") or {},
             "sessions_without_candidates": session_rep.get("no_candidates") or []}
 

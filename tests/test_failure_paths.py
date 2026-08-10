@@ -63,7 +63,11 @@ class TestSelectionIsGuaranteed:
         pipeline = AgentPipeline()
         forced = pipeline._enforce_submission(st, lambda *a, **k: None)
         assert forced is True
-        assert len(st.questions) == 5, "the pool must be trimmed to the requested count"
+        # Count only what THIS run selected: submit also carries the topic's accumulated set in
+        # (`tools._add_retained`), so the shipped total legitimately exceeds the requested count. The
+        # invariant here is that the raw 40-question pool was trimmed, not that the set is small.
+        fresh = [q for q in st.questions.values() if not q.retained]
+        assert len(fresh) == 5, "the pool must be trimmed to the requested count"
 
     def test_no_op_when_the_agent_did_submit(self):
         st = _state(n_questions=40, max_questions=5)
