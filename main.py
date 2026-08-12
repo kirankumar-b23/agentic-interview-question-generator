@@ -73,6 +73,17 @@ app = FastAPI(
     version="2.0.0",
 )
 
+# Auto-import exported runs on startup so a fresh clone gets the shared question sets.
+memory.init_db()
+_export_path = os.path.join(os.path.dirname(__file__), "data", "exported_runs.json")
+if os.path.exists(_export_path):
+    conn = memory.get_connection()
+    count = conn.execute("SELECT COUNT(*) FROM run_history").fetchone()[0]
+    conn.close()
+    if count == 0:
+        from scripts.import_runs import import_runs
+        import_runs()
+
 # In-memory store for pipeline results (keyed by run_id). Completed runs are also persisted to
 # SQLite by _persist_result, so a restart loses only in-flight runs.
 _results: dict[str, PipelineResult] = {}
